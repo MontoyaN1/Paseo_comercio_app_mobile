@@ -6,3 +6,4 @@
 *.swp
 .buildlog/
 .history
+.env
