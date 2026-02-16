@@ -1,2 +1,0 @@
-/mnt/Data/Proyectos/flutter/paseo-del-comercio-app-mobile-flutter/build/.cxx/debug/641o5o42/arm64-v8a/CMakeFiles/edit_cache.dir
-/mnt/Data/Proyectos/flutter/paseo-del-comercio-app-mobile-flutter/build/.cxx/debug/641o5o42/arm64-v8a/CMakeFiles/rebuild_cache.dir
