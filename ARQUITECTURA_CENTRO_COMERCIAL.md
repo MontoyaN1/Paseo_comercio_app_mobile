@@ -147,7 +147,6 @@ DEBUG_MODE=true
 ### Configuración en Flutter
 Usar el paquete `flutter_dotenv` para cargar variables de entorno:
 
-
 ```yaml
 dependencies:
   flutter_dotenv: ^5.1.0
