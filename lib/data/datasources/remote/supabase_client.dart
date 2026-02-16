@@ -25,7 +25,7 @@ class SupabaseClientService {
     try {
       await Supabase.initialize(
         url: appConfig.supabaseUrl,
-        anonKey: appConfig.supabaseAnonKey,
+        anonKey: appConfig.supabaseServiceRoleKey,
       );
 
       _client = Supabase.instance.client;
@@ -135,11 +135,7 @@ class SupabaseClientService {
   Future<Map<String, dynamic>?> getUsuarioByClerkId(String clerkUserId) async {
     try {
       final response =
-          await usuarios
-              .select()
-              .eq('clerk_user_id', clerkUserId)
-              .single()
-              .execute();
+          await usuarios.select().eq('clerk_user_id', clerkUserId).single();
 
       if (response.error != null) {
         _logger.e('Error getting user by Clerk ID: ${response.error}');
@@ -177,7 +173,7 @@ class SupabaseClientService {
       final to = from + limit - 1;
       query = query.range(from, to);
 
-      final response = await query.execute();
+      final response = await query;
 
       if (response.error != null) {
         _logger.e('Error getting tiendas: ${response.error}');
@@ -214,7 +210,7 @@ class SupabaseClientService {
       final to = from + limit - 1;
       query = query.range(from, to);
 
-      final response = await query.execute();
+      final response = await query;
 
       if (response.error != null) {
         _logger.e('Error getting productos by tienda: ${response.error}');
@@ -258,7 +254,7 @@ class SupabaseClientService {
 
       query = query.order('orden').eq('activa', true);
 
-      final response = await query.execute();
+      final response = await query;
 
       if (response.error != null) {
         _logger.e('Error getting imágenes: ${response.error}');
@@ -286,14 +282,12 @@ class SupabaseClientService {
 
       if (existingUser != null) {
         // Actualizar último login
-        final updateResponse =
-            await usuarios
-                .update({
-                  'ultimo_login': DateTime.now().toIso8601String(),
-                  'updated_at': DateTime.now().toIso8601String(),
-                })
-                .eq('clerk_user_id', clerkUserId)
-                .execute();
+        final updateResponse = await usuarios
+            .update({
+              'ultimo_login': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('clerk_user_id', clerkUserId);
 
         if (updateResponse.error != null) {
           _logger.e('Error updating user: ${updateResponse.error}');
@@ -303,19 +297,18 @@ class SupabaseClientService {
         return existingUser;
       } else {
         // Crear nuevo usuario
-        final insertResponse =
-            await usuarios.insert({
-              'clerk_user_id': clerkUserId,
-              'nombre_completo': nombreCompleto,
-              'email': email,
-              'telefono': telefono ?? '',
-              'fecha_registro': DateTime.now().toIso8601String(),
-              'ultimo_login': DateTime.now().toIso8601String(),
-              'perfil_publico': true,
-              'estado_usuario': 'activo',
-              'created_at': DateTime.now().toIso8601String(),
-              'updated_at': DateTime.now().toIso8601String(),
-            }).execute();
+        final insertResponse = await usuarios.insert({
+          'clerk_user_id': clerkUserId,
+          'nombre_completo': nombreCompleto,
+          'email': email,
+          'telefono': telefono ?? '',
+          'fecha_registro': DateTime.now().toIso8601String(),
+          'ultimo_login': DateTime.now().toIso8601String(),
+          'perfil_publico': true,
+          'estado_usuario': 'activo',
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
 
         if (insertResponse.error != null) {
           _logger.e('Error creating user: ${insertResponse.error}');
@@ -340,17 +333,16 @@ class SupabaseClientService {
     String? ipCliente,
   }) async {
     try {
-      final response =
-          await interacciones.insert({
-            'tipo_interaccion': tipoInteraccion,
-            'producto_id': productoId,
-            'tienda_id': tiendaId,
-            'sesion_id': sesionId,
-            'dispositivo': dispositivo,
-            'ip_cliente': ipCliente,
-            'fecha_creacion': DateTime.now().toIso8601String(),
-            'fecha_actualizacion': DateTime.now().toIso8601String(),
-          }).execute();
+      final response = await interacciones.insert({
+        'tipo_interaccion': tipoInteraccion,
+        'producto_id': productoId,
+        'tienda_id': tiendaId,
+        'sesion_id': sesionId,
+        'dispositivo': dispositivo,
+        'ip_cliente': ipCliente,
+        'fecha_creacion': DateTime.now().toIso8601String(),
+        'fecha_actualizacion': DateTime.now().toIso8601String(),
+      });
 
       if (response.error != null) {
         _logger.e('Error registering interaction: ${response.error}');
@@ -368,9 +360,9 @@ class SupabaseClientService {
   Future<Map<String, dynamic>> getEstadisticasResumen() async {
     try {
       // Ejemplo: contar tiendas, productos, etc.
-      final tiendasCount = await tiendas.select('count').execute();
-      final productosCount = await productos.select('count').execute();
-      final categoriasCount = await categorias.select('count').execute();
+      final tiendasCount = await tiendas.select('count');
+      final productosCount = await productos.select('count');
+      final categoriasCount = await categorias.select('count');
 
       return {
         'total_tiendas': (tiendasCount.data as List).first['count'] ?? 0,
@@ -394,7 +386,7 @@ class SupabaseClientService {
   Future<bool> checkConnection() async {
     try {
       // Intentar una consulta simple
-      final response = await usuarios.select('count').limit(1).execute();
+      final response = await usuarios.select('count').limit(1);
       return response.error == null;
     } catch (e) {
       _logger.e('Connection check failed: $e');

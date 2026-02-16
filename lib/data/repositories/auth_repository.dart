@@ -1,8 +1,6 @@
 // lib/data/repositories/auth_repository.dart
 
 import 'dart:async';
-import 'package:clerk_flutter/clerk_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logger/logger.dart';
 
 import '../../core/app/app_config.dart';
@@ -10,10 +8,11 @@ import '../datasources/remote/supabase_client.dart';
 import '../datasources/local/local_database.dart';
 
 /// Repositorio para manejar autenticación y sincronización de usuarios
+/// NOTA: La integración con Clerk Flutter está pendiente de implementación
+/// debido a que la versión beta (0.0.14-beta) tiene una API limitada.
 class AuthRepository {
   final SupabaseClientService _supabaseClient;
   final LocalCacheService _localCache;
-  final ClerkAuth _clerkAuth;
   final Logger _logger;
 
   // Stream para notificar cambios en el usuario
@@ -23,10 +22,8 @@ class AuthRepository {
   AuthRepository({
     required SupabaseClientService supabaseClient,
     required LocalCacheService localCache,
-    required ClerkAuth clerkAuth,
   }) : _supabaseClient = supabaseClient,
        _localCache = localCache,
-       _clerkAuth = clerkAuth,
        _logger = Logger(
          printer: PrettyPrinter(
            methodCount: 0,
@@ -37,41 +34,25 @@ class AuthRepository {
            printTime: false,
          ),
        ) {
-    // Escuchar cambios en la autenticación de Clerk
-    _setupAuthListener();
+    _logger.i('AuthRepository initialized (Clerk integration pending)');
   }
 
-  /// Configurar listener para cambios de autenticación
-  void _setupAuthListener() {
-    _clerkAuth.addListener(() {
-      final user = _clerkAuth.user;
-      if (user != null) {
-        // Cuando el usuario inicia sesión en Clerk, sincronizar con Supabase
-        _syncUserWithSupabase(user).then((supabaseUser) {
-          if (supabaseUser != null) {
-            _userController.add(supabaseUser);
-          }
-        });
-      } else {
-        // Cuando el usuario cierra sesión
-        _userController.add(null);
-      }
-    });
-  }
-
-  /// Sincronizar usuario de Clerk con Supabase
-  Future<Map<String, dynamic>?> _syncUserWithSupabase(
-    ClerkUser clerkUser,
-  ) async {
+  /// Sincronizar usuario con Supabase
+  Future<Map<String, dynamic>?> _syncUserWithSupabase({
+    required String clerkUserId,
+    required String nombreCompleto,
+    required String email,
+    required String telefono,
+  }) async {
     try {
-      _logger.i('Syncing Clerk user with Supabase: ${clerkUser.id}');
+      _logger.i('Syncing user with Supabase: $clerkUserId');
 
       // Sincronizar con Supabase
       final supabaseUser = await _supabaseClient.syncUsuarioFromClerk(
-        clerkUserId: clerkUser.id,
-        nombreCompleto: clerkUser.fullName ?? 'Usuario',
-        email: clerkUser.primaryEmailAddress?.emailAddress ?? '',
-        telefono: clerkUser.primaryPhoneNumber?.phoneNumber ?? '',
+        clerkUserId: clerkUserId,
+        nombreCompleto: nombreCompleto,
+        email: email,
+        telefono: telefono,
       );
 
       if (supabaseUser != null) {
@@ -89,17 +70,25 @@ class AuthRepository {
     }
   }
 
-  /// Obtener usuario actual (combinando Clerk + Supabase)
+  /// Obtener usuario actual (placeholder hasta que implementemos Clerk)
   Future<Map<String, dynamic>?> getCurrentUser() async {
     try {
-      final clerkUser = _clerkAuth.user;
-      if (clerkUser == null) {
-        _logger.d('No Clerk user found');
-        return null;
-      }
+      _logger.d('Clerk integration pending - using placeholder user');
 
+      // TODO: Implementar integración real con Clerk Flutter
+      // Por ahora, retornamos null o un usuario de prueba
+      return null;
+    } catch (e) {
+      _logger.e('Error getting current user: $e');
+      return null;
+    }
+  }
+
+  /// Obtener usuario por ID de Clerk
+  Future<Map<String, dynamic>?> getUserByClerkId(String clerkUserId) async {
+    try {
       // Primero intentar obtener de caché local
-      final cachedUser = await _localCache.getCachedUsuario(clerkUser.id);
+      final cachedUser = await _localCache.getCachedUsuario(clerkUserId);
       if (cachedUser != null) {
         _logger.d('User found in local cache');
         return cachedUser;
@@ -107,7 +96,7 @@ class AuthRepository {
 
       // Si no está en caché, obtener de Supabase
       final supabaseUser = await _supabaseClient.getUsuarioByClerkId(
-        clerkUser.id,
+        clerkUserId,
       );
       if (supabaseUser != null) {
         // Guardar en caché
@@ -116,46 +105,65 @@ class AuthRepository {
         return supabaseUser;
       }
 
-      // Si no existe en Supabase, crear nuevo usuario
-      _logger.d('User not found in Supabase, creating new...');
-      return await _syncUserWithSupabase(clerkUser);
+      return null;
     } catch (e) {
-      _logger.e('Error getting current user: $e');
+      _logger.e('Error getting user by Clerk ID: $e');
       return null;
     }
   }
 
   /// Verificar si el usuario está autenticado
-  bool get isAuthenticated => _clerkAuth.user != null;
+  bool get isAuthenticated {
+    // TODO: Implementar verificación real con Clerk
+    _logger.d('Clerk authentication check pending implementation');
+    return false;
+  }
 
   /// Obtener ID del usuario actual
-  String? get currentUserId => _clerkAuth.user?.id;
+  String? get currentUserId {
+    // TODO: Implementar obtención real con Clerk
+    _logger.d('Clerk user ID retrieval pending implementation');
+    return null;
+  }
 
   /// Obtener email del usuario actual
-  String? get currentUserEmail =>
-      _clerkAuth.user?.primaryEmailAddress?.emailAddress;
+  String? get currentUserEmail {
+    // TODO: Implementar obtención real con Clerk
+    _logger.d('Clerk user email retrieval pending implementation');
+    return null;
+  }
 
   /// Obtener nombre del usuario actual
-  String? get currentUserName => _clerkAuth.user?.fullName;
+  String? get currentUserName {
+    // TODO: Implementar obtención real con Clerk
+    _logger.d('Clerk user name retrieval pending implementation');
+    return null;
+  }
 
   /// Obtener imagen del usuario actual
-  String? get currentUserImage => _clerkAuth.user?.imageUrl;
+  String? get currentUserImage {
+    // TODO: Implementar obtención real con Clerk
+    _logger.d('Clerk user image retrieval pending implementation');
+    return null;
+  }
 
-  /// Iniciar sesión con Clerk
+  /// Iniciar sesión (placeholder)
   Future<void> signIn() async {
     try {
-      await _clerkAuth.signIn();
-      _logger.i('Sign in initiated');
+      // TODO: Implementar inicio de sesión real con Clerk
+      _logger.i('Sign in functionality pending Clerk implementation');
+      throw UnimplementedError('Clerk signIn not implemented');
     } catch (e) {
       _logger.e('Error during sign in: $e');
       rethrow;
     }
   }
 
-  /// Cerrar sesión
+  /// Cerrar sesión (placeholder)
   Future<void> signOut() async {
     try {
-      await _clerkAuth.signOut();
+      // TODO: Implementar cierre de sesión real con Clerk
+      _logger.i('Sign out functionality pending Clerk implementation');
 
       // Limpiar caché de usuario
       final userId = currentUserId;
@@ -163,14 +171,14 @@ class AuthRepository {
         await _localCache.removePreference('current_user_$userId');
       }
 
-      _logger.i('Sign out completed');
+      _logger.i('Sign out completed (placeholder)');
     } catch (e) {
       _logger.e('Error during sign out: $e');
       rethrow;
     }
   }
 
-  /// Registrar nuevo usuario
+  /// Registrar nuevo usuario (placeholder)
   Future<void> signUp({
     required String email,
     required String password,
@@ -179,14 +187,9 @@ class AuthRepository {
     String? phoneNumber,
   }) async {
     try {
-      await _clerkAuth.signUp(
-        emailAddress: email,
-        password: password,
-        firstName: firstName,
-        lastName: lastName,
-      );
-
-      _logger.i('Sign up initiated for: $email');
+      // TODO: Implementar registro real con Clerk
+      _logger.i('Sign up functionality pending Clerk implementation: $email');
+      throw UnimplementedError('Clerk signUp not implemented');
     } catch (e) {
       _logger.e('Error during sign up: $e');
       rethrow;
@@ -221,19 +224,14 @@ class AuthRepository {
     return await hasRole('emprendedor') || await hasRole('anfitrión');
   }
 
-  /// Actualizar perfil del usuario
+  /// Actualizar perfil del usuario en Supabase
   Future<bool> updateProfile({
+    required String clerkUserId,
     String? nombreCompleto,
     String? telefono,
     bool? perfilPublico,
   }) async {
     try {
-      final clerkUser = _clerkAuth.user;
-      if (clerkUser == null) {
-        _logger.w('No user authenticated');
-        return false;
-      }
-
       // Actualizar en Supabase
       final updates = <String, dynamic>{};
       if (nombreCompleto != null) updates['nombre_completo'] = nombreCompleto;
@@ -245,7 +243,7 @@ class AuthRepository {
         final response =
             await _supabaseClient.usuarios
                 .update(updates)
-                .eq('clerk_user_id', clerkUser.id)
+                .eq('clerk_user_id', clerkUserId)
                 .execute();
 
         if (response.error != null) {
@@ -254,7 +252,7 @@ class AuthRepository {
         }
 
         // Actualizar caché local
-        final currentUser = await getCurrentUser();
+        final currentUser = await getUserByClerkId(clerkUserId);
         if (currentUser != null) {
           final updatedUser = {...currentUser, ...updates};
           await _localCache.cacheUsuario(updatedUser);
@@ -280,16 +278,16 @@ class AuthRepository {
     final results = <String, bool>{};
 
     try {
-      // Verificar Clerk
-      results['clerk'] = _clerkAuth.user != null;
-
       // Verificar Supabase
       results['supabase'] = await _supabaseClient.checkConnection();
 
       // Verificar caché local
       results['local_cache'] = _localCache.isInitialized;
 
-      _logger.i('Services status: $results');
+      // Clerk está pendiente de implementación
+      results['clerk'] = false;
+
+      _logger.i('Services status: $results (Clerk pending)');
     } catch (e) {
       _logger.e('Error checking services status: $e');
       results['error'] = false;
@@ -299,15 +297,8 @@ class AuthRepository {
   }
 
   /// Obtener estadísticas del usuario
-  Future<Map<String, dynamic>> getUserStats() async {
+  Future<Map<String, dynamic>> getUserStats(String userId) async {
     try {
-      final user = await getCurrentUser();
-      if (user == null) {
-        return {'error': 'No authenticated user'};
-      }
-
-      final userId = user['id'];
-
       // Obtener estadísticas desde Supabase
       final tiendasResponse =
           await _supabaseClient.tiendas
@@ -318,10 +309,7 @@ class AuthRepository {
       final productosResponse =
           await _supabaseClient.productos
               .select('count')
-              .eq(
-                'tienda_id',
-                userId,
-              ) // Esto asume que el usuario es dueño de tienda
+              .eq('tienda_id', userId)
               .execute();
 
       final valoracionesResponse =
@@ -335,14 +323,16 @@ class AuthRepository {
         'productos_count': (productosResponse.data as List).first['count'] ?? 0,
         'valoraciones_count':
             (valoracionesResponse.data as List).first['count'] ?? 0,
-        'member_since': user['fecha_registro'],
-        'last_login': user['ultimo_login'],
-        'profile_public': user['perfil_publico'] ?? true,
       };
     } catch (e) {
       _logger.e('Error getting user stats: $e');
       return {'error': e.toString()};
     }
+  }
+
+  /// Notificar cambio en el usuario
+  void notifyUserChange(Map<String, dynamic>? user) {
+    _userController.add(user);
   }
 
   /// Disposer para limpiar recursos

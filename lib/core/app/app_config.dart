@@ -101,7 +101,8 @@ class AppConfig {
     final errors = <String>[];
 
     if (supabaseUrl.isEmpty) errors.add('SUPABASE_URL es requerido');
-    if (supabaseAnonKey.isEmpty) errors.add('SUPABASE_ANON_KEY es requerido');
+    if (supabaseServiceRoleKey.isEmpty)
+      errors.add('SUPABASE_SERVICE_ROLE_KEY es requerido');
     if (clerkPublishableKey.isEmpty) {
       errors.add('CLERK_PUBLISHABLE_KEY es requerido');
     }
@@ -120,7 +121,7 @@ class AppConfig {
 
   /// Verificar si la configuración de Supabase está completa
   bool get isSupabaseConfigured =>
-      supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
+      supabaseUrl.isNotEmpty && supabaseServiceRoleKey.isNotEmpty;
 
   /// Verificar si la configuración de Clerk está completa
   bool get isClerkConfigured => clerkPublishableKey.isNotEmpty;

@@ -22,14 +22,10 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
   // Registrar configuración de la aplicación
   getIt.registerSingleton<AppConfig>(appConfig);
 
-  // Inicializar Clerk
-  final clerkAuth = ClerkAuth.instance;
-  getIt.registerSingleton<ClerkAuth>(clerkAuth);
-
   // Inicializar Supabase
   await Supabase.initialize(
     url: appConfig.supabaseUrl,
-    anonKey: appConfig.supabaseAnonKey,
+    anonKey: appConfig.supabaseServiceRoleKey,
   );
   final supabaseClient = Supabase.instance.client;
   getIt.registerSingleton<SupabaseClient>(supabaseClient);
@@ -60,7 +56,10 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
 
   // Registrar repositorios
   getIt.registerLazySingleton<AuthRepository>(
-    () => AuthRepository(getIt<SupabaseClient>(), getIt<ClerkAuth>()),
+    () => AuthRepository(
+      supabaseClient: getIt<SupabaseClientService>(),
+      localCache: getIt<LocalCacheService>(),
+    ),
   );
 
   getIt.registerLazySingleton<TiendaRepository>(

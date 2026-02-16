@@ -1,0 +1,1 @@
+{"applicationId":"com.example.paseo_del_comercio","deeplinkingFlagEnabled":false,"deeplinks":[{"scheme":"paseodelcomercio","host":"callback","path":".*","intentFilterCheck":{"hasAutoVerify":false,"hasActionView":true,"hasDefaultCategory":true,"hasBrowsableCategory":true}}]}

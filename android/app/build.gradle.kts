@@ -5,6 +5,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("com.baseflow.permissionhandler:permission_handler_android:13.0.1")
+    }
+}
+
 android {
     namespace = "com.example.paseo_del_comercio"
     compileSdk = flutter.compileSdkVersion

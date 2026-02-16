@@ -355,8 +355,8 @@ class LocalCacheService {
       'imagenes_count': imagenesBox.length,
       'usuarios_count': usuariosBox.length,
       'total_size_bytes': await _calculateTotalSize(),
-      'last_cleanup': metadata['last_cleanup'] ?? 'Never',
-      'cleanup_count': metadata['cleanup_count'] ?? 0,
+      'last_cleanup': metadata?['last_cleanup'] ?? 'Never',
+      'cleanup_count': metadata?['cleanup_count'] ?? 0,
       'timestamp': now.toIso8601String(),
     };
   }
@@ -438,9 +438,10 @@ class LocalCacheService {
 
     // Actualizar metadata
     final metadata = metadataBox.get('stats', defaultValue: {});
+    metadata ??= {};
     metadata['last_cleanup'] = DateTime.now().toIso8601String();
     metadata['cleanup_count'] = (metadata['cleanup_count'] ?? 0) + 1;
-    await metadataBox.put('stats', metadata);
+    await metadataBox.put('stats', metadata as Map<String, dynamic>);
   }
 
   /// Limpiar caché de imágenes si excede límite
@@ -533,10 +534,11 @@ class LocalCacheService {
   /// Actualizar metadata
   Future<void> _updateMetadata(String entityType, int count) async {
     final metadata = metadataBox.get('stats', defaultValue: {});
+    metadata ??= {};
     metadata[entityType] = {
       'count': count,
       'last_update': DateTime.now().toIso8601String(),
     };
-    await metadataBox.put('stats', metadata);
+    await metadataBox.put('stats', metadata as Map<String, dynamic>);
   }
 }

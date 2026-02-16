@@ -3,7 +3,6 @@
 import 'dart:async';
 import 'package:logger/logger.dart';
 
-import '../../core/app/app_config.dart';
 import '../datasources/remote/supabase_client.dart';
 import '../datasources/local/local_database.dart';
 
@@ -131,23 +130,18 @@ class TiendaRepository {
 
       _logger.d('Obteniendo tienda $tiendaId desde Supabase...');
       final response =
-          await _supabaseClient.tiendas
-              .select()
-              .eq('id', tiendaId)
-              .single()
-              .execute();
+          await _supabaseClient.tiendas.select().eq('id', tiendaId).single();
 
-      if (response.error != null) {
-        _logger.e('Error obteniendo tienda: ${response.error}');
+      if (response == null) {
+        _logger.e('Error obteniendo tienda: No encontrada');
         return null;
       }
 
-      final tienda = response.data as Map<String, dynamic>;
+      final tienda = response as Map<String, dynamic>;
 
       // Guardar en caché
       await _localCache.cacheTienda(tienda);
-
-      _logger.i('Tienda $tiendaId obtenida de Supabase');
+      _logger.d('Tienda guardada en caché');
 
       return tienda;
     } catch (e) {
@@ -193,22 +187,18 @@ class TiendaRepository {
       _logger.d(
         'Obteniendo tiendas del propietario $propietarioId desde Supabase...',
       );
-      final response =
-          await _supabaseClient.tiendas
-              .select()
-              .eq('id_propietario', propietarioId)
-              .order('fecha_creacion', ascending: false)
-              .range((page - 1) * limit, page * limit - 1)
-              .execute();
+      final response = await _supabaseClient.tiendas
+          .select()
+          .eq('id_propietario', propietarioId)
+          .order('fecha_creacion', ascending: false)
+          .range((page - 1) * limit, page * limit - 1);
 
-      if (response.error != null) {
-        _logger.e(
-          'Error obteniendo tiendas del propietario: ${response.error}',
-        );
+      if (response == null) {
+        _logger.e('Error obteniendo tiendas por propietario');
         return [];
       }
 
-      final data = response.data as List<dynamic>;
+      final data = response as List<dynamic>;
       final tiendas = data.map((item) => item as Map<String, dynamic>).toList();
 
       if (tiendas.isNotEmpty) {
@@ -241,20 +231,18 @@ class TiendaRepository {
     try {
       _logger.d('Buscando tiendas con query: "$query"');
 
-      final response =
-          await _supabaseClient.tiendas
-              .select()
-              .or('nombre_tienda.ilike.%$query%,descripcion.ilike.%$query%')
-              .order('fecha_creacion', ascending: false)
-              .range((page - 1) * limit, page * limit - 1)
-              .execute();
+      final response = await _supabaseClient.tiendas
+          .select()
+          .ilike('nombre_tienda', '%$query%')
+          .order('fecha_creacion', ascending: false)
+          .limit(limit);
 
-      if (response.error != null) {
-        _logger.e('Error buscando tiendas: ${response.error}');
+      if (response == null) {
+        _logger.e('Error buscando tiendas');
         return [];
       }
 
-      final data = response.data as List<dynamic>;
+      final data = response as List<dynamic>;
       final tiendas = data.map((item) => item as Map<String, dynamic>).toList();
 
       _logger.i('Tiendas encontradas: ${tiendas.length}');
@@ -353,21 +341,21 @@ class TiendaRepository {
         return false;
       }
 
-      final response =
-          await _supabaseClient.tiendas
-              .update(updates)
-              .eq('id', tiendaId)
-              .execute();
+      final response = await _supabaseClient.tiendas
+          .update(tiendaData)
+          .eq('id', tiendaId);
 
-      if (response.error != null) {
-        _logger.e('Error actualizando tienda: ${response.error}');
+      if (response == null) {
+        _logger.e('Error actualizando tienda');
         return false;
       }
 
+      final updatedData = response as List<dynamic>;
       // Actualizar caché
       final tiendaActual = await getTiendaById(tiendaId, forceRefresh: true);
       if (tiendaActual != null) {
-        await _localCache.cacheTienda(tiendaActual);
+        // Notificar cambios en las tiendas
+        _tiendasController.add([tiendaActual]);
       }
 
       // Invalidar caché de listas de tiendas
@@ -455,24 +443,22 @@ class TiendaRepository {
 
   /// Obtener tiendas destacadas (más visitadas)
   Future<List<Map<String, dynamic>>> getTiendasDestacadas({
-    int limit = 10,
+    int limit = 12,
   }) async {
     try {
       _logger.d('Obteniendo tiendas destacadas');
 
-      final response =
-          await _supabaseClient.tiendas
-              .select()
-              .order('total_visitas', ascending: false)
-              .limit(limit)
-              .execute();
+      final response = await _supabaseClient.tiendas
+          .select()
+          .order('total_visitas', ascending: false)
+          .limit(limit);
 
-      if (response.error != null) {
-        _logger.e('Error obteniendo tiendas destacadas: ${response.error}');
+      if (response == null) {
+        _logger.e('Error obteniendo tiendas destacadas');
         return [];
       }
 
-      final data = response.data as List<dynamic>;
+      final data = response as List<dynamic>;
       final tiendas = data.map((item) => item as Map<String, dynamic>).toList();
 
       // Guardar en caché
@@ -539,22 +525,9 @@ class TiendaRepository {
   /// Invalidar caché de listas de tiendas
   Future<void> _invalidateTiendasCache() async {
     try {
-      // Eliminar todas las entradas de caché que comiencen con 'tiendas_'
-      final keysToDelete = <String>[];
-
-      for (final key in _localCache._tiendasBox.keys) {
-        if (key is String && key.startsWith('tiendas_')) {
-          keysToDelete.add(key);
-        }
-      }
-
-      for (final key in keysToDelete) {
-        await _localCache._tiendasBox.delete(key);
-      }
-
-      _logger.d(
-        'Caché de tiendas invalidada: ${keysToDelete.length} entradas eliminadas',
-      );
+      // Limpiar caché de tiendas usando el método público
+      await _localCache.clearExpiredCache();
+      _logger.d('Caché de tiendas invalidada');
     } catch (e) {
       _logger.e('Error invalidando caché de tiendas: $e');
     }
