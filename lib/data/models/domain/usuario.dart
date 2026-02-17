@@ -1,16 +1,13 @@
 // lib/data/models/domain/usuario.dart
 
 import 'package:hive/hive.dart';
-import 'package:equatable/equatable.dart';
-
-import 'enums.dart';
 
 part 'usuario.g.dart';
 
 @HiveType(typeId: 1)
-class Usuario extends Equatable {
+class Usuario extends HiveObject {
   @HiveField(0)
-  final int id;
+  final String id;
 
   @HiveField(1)
   final String clerkUserId;
@@ -22,100 +19,91 @@ class Usuario extends Equatable {
   final String email;
 
   @HiveField(4)
-  final String telefono;
+  final String? telefono;
 
   @HiveField(5)
-  final DateTime fechaRegistro;
+  final String? avatarUrl;
 
   @HiveField(6)
-  final DateTime? ultimoLogin;
+  final String fechaRegistro;
 
   @HiveField(7)
-  final bool perfilPublico;
+  final String ultimoLogin;
 
   @HiveField(8)
-  final EstadoUsuario estadoUsuario;
+  final bool perfilPublico;
 
   @HiveField(9)
-  final int? rolesId;
+  final String estadoUsuario;
 
   @HiveField(10)
-  final DateTime? createdAt;
+  final String createdAt;
 
   @HiveField(11)
-  final DateTime? updatedAt;
+  final String updatedAt;
 
-  const Usuario({
+  Usuario({
     required this.id,
     required this.clerkUserId,
     required this.nombreCompleto,
     required this.email,
-    required this.telefono,
+    this.telefono,
+    this.avatarUrl,
     required this.fechaRegistro,
-    this.ultimoLogin,
+    required this.ultimoLogin,
     required this.perfilPublico,
     required this.estadoUsuario,
-    this.rolesId,
-    this.createdAt,
-    this.updatedAt,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
-  factory Usuario.fromJson(Map<String, dynamic> json) {
+  factory Usuario.fromMap(Map<String, dynamic> map) {
     return Usuario(
-      id: json['id'] as int,
-      clerkUserId: json['clerk_user_id'] as String,
-      nombreCompleto: json['nombre_completo'] as String,
-      email: json['email'] as String,
-      telefono: json['telefono'] as String,
-      fechaRegistro: DateTime.parse(json['fecha_registro'] as String),
-      ultimoLogin:
-          json['ultimo_login'] != null
-              ? DateTime.parse(json['ultimo_login'] as String)
-              : null,
-      perfilPublico: json['perfil_publico'] as bool,
-      estadoUsuario: EstadoUsuario.fromString(json['estado_usuario'] as String),
-      rolesId: json['roles_id'] as int?,
-      createdAt:
-          json['created_at'] != null
-              ? DateTime.parse(json['created_at'] as String)
-              : null,
-      updatedAt:
-          json['updated_at'] != null
-              ? DateTime.parse(json['updated_at'] as String)
-              : null,
+      id: map['id']?.toString() ?? '',
+      clerkUserId: map['clerk_user_id']?.toString() ?? '',
+      nombreCompleto: map['nombre_completo']?.toString() ?? '',
+      email: map['email']?.toString() ?? '',
+      telefono: map['telefono']?.toString(),
+      avatarUrl: map['avatar_url']?.toString(),
+      fechaRegistro: map['fecha_registro']?.toString() ?? '',
+      ultimoLogin: map['ultimo_login']?.toString() ?? '',
+      perfilPublico: map['perfil_publico'] as bool? ?? true,
+      estadoUsuario: map['estado_usuario']?.toString() ?? 'activo',
+      createdAt: map['created_at']?.toString() ?? '',
+      updatedAt: map['updated_at']?.toString() ?? '',
     );
   }
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     return {
       'id': id,
       'clerk_user_id': clerkUserId,
       'nombre_completo': nombreCompleto,
       'email': email,
       'telefono': telefono,
-      'fecha_registro': fechaRegistro.toIso8601String(),
-      'ultimo_login': ultimoLogin?.toIso8601String(),
+      'avatar_url': avatarUrl,
+      'fecha_registro': fechaRegistro,
+      'ultimo_login': ultimoLogin,
       'perfil_publico': perfilPublico,
-      'estado_usuario': estadoUsuario.toString(),
-      'roles_id': rolesId,
-      'created_at': createdAt?.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
+      'estado_usuario': estadoUsuario,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
     };
   }
 
   Usuario copyWith({
-    int? id,
+    String? id,
     String? clerkUserId,
     String? nombreCompleto,
     String? email,
     String? telefono,
-    DateTime? fechaRegistro,
-    DateTime? ultimoLogin,
+    String? avatarUrl,
+    String? fechaRegistro,
+    String? ultimoLogin,
     bool? perfilPublico,
-    EstadoUsuario? estadoUsuario,
-    int? rolesId,
-    DateTime? createdAt,
-    DateTime? updatedAt,
+    String? estadoUsuario,
+    String? createdAt,
+    String? updatedAt,
   }) {
     return Usuario(
       id: id ?? this.id,
@@ -123,43 +111,13 @@ class Usuario extends Equatable {
       nombreCompleto: nombreCompleto ?? this.nombreCompleto,
       email: email ?? this.email,
       telefono: telefono ?? this.telefono,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       fechaRegistro: fechaRegistro ?? this.fechaRegistro,
       ultimoLogin: ultimoLogin ?? this.ultimoLogin,
       perfilPublico: perfilPublico ?? this.perfilPublico,
       estadoUsuario: estadoUsuario ?? this.estadoUsuario,
-      rolesId: rolesId ?? this.rolesId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
-
-  @override
-  List<Object?> get props => [
-    id,
-    clerkUserId,
-    nombreCompleto,
-    email,
-    telefono,
-    fechaRegistro,
-    ultimoLogin,
-    perfilPublico,
-    estadoUsuario,
-    rolesId,
-    createdAt,
-    updatedAt,
-  ];
-
-  @override
-  bool get stringify => true;
-
-  // Métodos de utilidad
-  bool get isActive => estadoUsuario == EstadoUsuario.activo;
-  bool get isAdmin =>
-      rolesId != null && rolesId! > 2; // Suponiendo que admin tiene ID > 2
-  String get nombreCorto {
-    final partes = nombreCompleto.split(' ');
-    return partes.length > 1
-        ? '${partes.first} ${partes.last[0]}.'
-        : nombreCompleto;
   }
 }

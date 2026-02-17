@@ -5,11 +5,14 @@ import 'package:logger/logger.dart';
 
 import '../datasources/remote/supabase_client.dart';
 import '../datasources/local/local_database.dart';
+import '../../domain/repositories/tienda_repository_interface.dart';
+import '../../core/utils/connectivity_service.dart';
 
 /// Repositorio para manejar operaciones de tiendas
-class TiendaRepository {
+class TiendaRepository implements TiendaRepositoryInterface {
   final SupabaseClientService _supabaseClient;
   final LocalCacheService _localCache;
+  final ConnectivityService _connectivityService;
   final Logger _logger;
 
   // Stream para notificar cambios en las tiendas
@@ -19,8 +22,10 @@ class TiendaRepository {
   TiendaRepository({
     required SupabaseClientService supabaseClient,
     required LocalCacheService localCache,
+    required ConnectivityService connectivityService,
   }) : _supabaseClient = supabaseClient,
        _localCache = localCache,
+       _connectivityService = connectivityService,
        _logger = Logger(
          printer: PrettyPrinter(
            methodCount: 0,
@@ -33,6 +38,7 @@ class TiendaRepository {
        );
 
   /// Obtener todas las tiendas con estrategia cache-first
+  @override
   Future<List<Map<String, dynamic>>> getTiendas({
     int page = 1,
     int limit = 20,
@@ -51,118 +57,98 @@ class TiendaRepository {
         final cachedTiendas = await _localCache.getCachedTiendas(key: cacheKey);
         if (cachedTiendas != null && cachedTiendas.isNotEmpty) {
           _logger.d('Tiendas obtenidas de caché: ${cachedTiendas.length}');
-
-          // Actualizar en segundo plano
-          _updateTiendasInBackground(
-            page: page,
-            limit: limit,
-            categoriaId: categoriaId,
-            soloActivas: soloActivas,
-          );
-
           return cachedTiendas;
         }
       }
 
       _logger.d('Obteniendo tiendas desde Supabase...');
-      final tiendas = await _supabaseClient.getTiendas(
-        page: page,
-        limit: limit,
-        categoriaId: categoriaId,
-        soloActivas: soloActivas,
-      );
 
-      if (tiendas.isNotEmpty) {
-        // Guardar en caché
-        await _localCache.cacheTiendas(
-          tiendas,
-          key: cacheKey,
-          ttl: const Duration(hours: 1),
-          priority: 1,
-        );
+      // Usar método básico de Supabase
+      var query = _supabaseClient.tiendas.select();
 
-        // Notificar a los listeners
-        _tiendasController.add(tiendas);
-
-        _logger.i('Tiendas obtenidas de Supabase: ${tiendas.length}');
+      if (categoriaId != null) {
+        query = query.eq('categoria_id', categoriaId);
       }
 
-      return tiendas;
+      if (soloActivas == true) {
+        query = query.eq('activa', true);
+      }
+
+      final response = await query
+          .order('fecha_creacion', ascending: false)
+          .range((page - 1) * limit, page * limit - 1);
+
+      if (response == null) {
+        _logger.e('Error obteniendo tiendas: response is null');
+        return [];
+      }
+
+      if (response is! List) {
+        _logger.e('Error obteniendo tiendas: response is not a List');
+        return [];
+      }
+
+      final tiendas = response as List<dynamic>;
+      final result = tiendas.whereType<Map<String, dynamic>>().toList();
+
+      // Guardar en caché
+      await _localCache.cacheTiendas(result, key: cacheKey);
+
+      _logger.i('Tiendas obtenidas: ${result.length}');
+      return result;
     } catch (e) {
       _logger.e('Error obteniendo tiendas: $e');
-
-      // Si hay error, intentar obtener de caché aunque esté expirada
-      if (!forceRefresh) {
-        final cachedTiendas = await _localCache.getCachedTiendas(
-          key: 'tiendas_page_${page}_limit_${limit}',
-          checkExpiry: false,
-        );
-        if (cachedTiendas != null && cachedTiendas.isNotEmpty) {
-          _logger.w(
-            'Usando tiendas de caché (posiblemente expiradas) debido a error',
-          );
-          return cachedTiendas;
-        }
-      }
-
       return [];
     }
   }
 
-  /// Obtener una tienda por ID
+  /// Obtener tienda por ID
+  @override
   Future<Map<String, dynamic>?> getTiendaById(
     int tiendaId, {
     bool forceRefresh = false,
   }) async {
     try {
+      final cacheKey = 'tienda_$tiendaId';
+
       // Si no es forzado, intentar obtener de caché primero
       if (!forceRefresh) {
         final cachedTienda = await _localCache.getCachedTienda(tiendaId);
         if (cachedTienda != null) {
-          _logger.d('Tienda $tiendaId obtenida de caché');
-
-          // Actualizar en segundo plano
-          _updateTiendaInBackground(tiendaId);
-
+          _logger.d('Tienda obtenida de caché: $tiendaId');
           return cachedTienda;
         }
       }
 
       _logger.d('Obteniendo tienda $tiendaId desde Supabase...');
-      final response =
-          await _supabaseClient.tiendas.select().eq('id', tiendaId).single();
 
-      if (response == null) {
-        _logger.e('Error obteniendo tienda: No encontrada');
+      final response = await _supabaseClient.tiendas
+          .select()
+          .eq('id', tiendaId)
+          .limit(1);
+
+      if (response == null || response.isEmpty) {
+        _logger.w('Tienda no encontrada: $tiendaId');
         return null;
       }
 
-      final tienda = response as Map<String, dynamic>;
+      final tienda = response.first as Map<String, dynamic>?;
 
-      // Guardar en caché
-      await _localCache.cacheTienda(tienda);
-      _logger.d('Tienda guardada en caché');
+      if (tienda != null) {
+        // Guardar en caché
+        await _localCache.cacheTienda(tienda);
+        _logger.i('Tienda obtenida: $tiendaId');
+      }
 
       return tienda;
     } catch (e) {
       _logger.e('Error obteniendo tienda $tiendaId: $e');
-
-      // Si hay error, intentar obtener de caché aunque esté expirada
-      if (!forceRefresh) {
-        final cachedTienda = await _localCache.getCachedTienda(tiendaId);
-        if (cachedTienda != null) {
-          _logger.w(
-            'Usando tienda de caché (posiblemente expirada) debido a error',
-          );
-          return cachedTienda;
-        }
-      }
-
       return null;
     }
   }
 
   /// Obtener tiendas por propietario
+  @override
   Future<List<Map<String, dynamic>>> getTiendasByPropietario(
     int propietarioId, {
     int page = 1,
@@ -187,6 +173,7 @@ class TiendaRepository {
       _logger.d(
         'Obteniendo tiendas del propietario $propietarioId desde Supabase...',
       );
+
       final response = await _supabaseClient.tiendas
           .select()
           .eq('id_propietario', propietarioId)
@@ -194,28 +181,25 @@ class TiendaRepository {
           .range((page - 1) * limit, page * limit - 1);
 
       if (response == null) {
-        _logger.e('Error obteniendo tiendas por propietario');
+        _logger.e('Error obteniendo tiendas del propietario');
         return [];
       }
 
-      final data = response as List<dynamic>;
-      final tiendas = data.map((item) => item as Map<String, dynamic>).toList();
-
-      if (tiendas.isNotEmpty) {
-        // Guardar en caché
-        await _localCache.cacheTiendas(
-          tiendas,
-          key: cacheKey,
-          ttl: const Duration(minutes: 30),
-          priority: 2,
+      if (response is! List) {
+        _logger.e(
+          'Error obteniendo tiendas del propietario: response is not a List',
         );
-
-        _logger.i(
-          'Tiendas del propietario obtenidas de Supabase: ${tiendas.length}',
-        );
+        return [];
       }
 
-      return tiendas;
+      final tiendas = response as List<dynamic>;
+      final result = tiendas.whereType<Map<String, dynamic>>().toList();
+
+      // Guardar en caché
+      await _localCache.cacheTiendas(result, key: cacheKey);
+
+      _logger.i('Tiendas del propietario obtenidas: ${result.length}');
+      return result;
     } catch (e) {
       _logger.e('Error obteniendo tiendas del propietario $propietarioId: $e');
       return [];
@@ -223,6 +207,7 @@ class TiendaRepository {
   }
 
   /// Buscar tiendas por término
+  @override
   Future<List<Map<String, dynamic>>> searchTiendas(
     String query, {
     int page = 1,
@@ -242,12 +227,16 @@ class TiendaRepository {
         return [];
       }
 
-      final data = response as List<dynamic>;
-      final tiendas = data.map((item) => item as Map<String, dynamic>).toList();
+      if (response is! List) {
+        _logger.e('Error buscando tiendas: response is not a List');
+        return [];
+      }
 
-      _logger.i('Tiendas encontradas: ${tiendas.length}');
+      final tiendas = response as List<dynamic>;
+      final result = tiendas.whereType<Map<String, dynamic>>().toList();
 
-      return tiendas;
+      _logger.i('Tiendas encontradas: ${result.length}');
+      return result;
     } catch (e) {
       _logger.e('Error buscando tiendas: $e');
       return [];
@@ -255,6 +244,7 @@ class TiendaRepository {
   }
 
   /// Crear nueva tienda
+  @override
   Future<Map<String, dynamic>?> createTienda({
     required int idPropietario,
     required String nombreTienda,
@@ -283,26 +273,27 @@ class TiendaRepository {
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      final response =
-          await _supabaseClient.tiendas.insert(nuevaTienda).execute();
+      final response = await _supabaseClient.tiendas.insert(nuevaTienda);
 
-      if (response.error != null) {
-        _logger.e('Error creando tienda: ${response.error}');
+      if (response == null) {
+        _logger.e('Error creando tienda: response is null');
         return null;
       }
 
-      final tiendaCreada = response.data as Map<String, dynamic>;
+      final tiendaCreada = response as Map<String, dynamic>?;
 
-      // Guardar en caché
-      await _localCache.cacheTienda(tiendaCreada);
+      if (tiendaCreada != null) {
+        // Guardar en caché
+        await _localCache.cacheTienda(tiendaCreada);
 
-      // Invalidar caché de listas de tiendas
-      await _invalidateTiendasCache();
+        // Invalidar caché de listas de tiendas
+        await _invalidateTiendasCache();
 
-      // Notificar a los listeners
-      _tiendasController.add([tiendaCreada]);
+        // Notificar a los listeners
+        _tiendasController.add([tiendaCreada]);
 
-      _logger.i('Tienda creada exitosamente: ${tiendaCreada['id']}');
+        _logger.i('Tienda creada exitosamente: ${tiendaCreada['id']}');
+      }
 
       return tiendaCreada;
     } catch (e) {
@@ -312,6 +303,7 @@ class TiendaRepository {
   }
 
   /// Actualizar tienda
+  @override
   Future<bool> updateTienda(
     int tiendaId, {
     String? nombreTienda,
@@ -342,7 +334,7 @@ class TiendaRepository {
       }
 
       final response = await _supabaseClient.tiendas
-          .update(tiendaData)
+          .update(updates)
           .eq('id', tiendaId);
 
       if (response == null) {
@@ -350,19 +342,19 @@ class TiendaRepository {
         return false;
       }
 
-      final updatedData = response as List<dynamic>;
-      // Actualizar caché
-      final tiendaActual = await getTiendaById(tiendaId, forceRefresh: true);
-      if (tiendaActual != null) {
-        // Notificar cambios en las tiendas
-        _tiendasController.add([tiendaActual]);
-      }
+      // Invalidar caché de esta tienda
+      await _localCache.removePreference('tienda_$tiendaId');
 
       // Invalidar caché de listas de tiendas
       await _invalidateTiendasCache();
 
-      _logger.i('Tienda $tiendaId actualizada exitosamente');
+      // Obtener tienda actualizada y notificar
+      final tiendaActual = await getTiendaById(tiendaId, forceRefresh: true);
+      if (tiendaActual != null) {
+        _tiendasController.add([tiendaActual]);
+      }
 
+      _logger.i('Tienda $tiendaId actualizada exitosamente');
       return true;
     } catch (e) {
       _logger.e('Error actualizando tienda $tiendaId: $e');
@@ -371,15 +363,18 @@ class TiendaRepository {
   }
 
   /// Eliminar tienda
+  @override
   Future<bool> deleteTienda(int tiendaId) async {
     try {
       _logger.d('Eliminando tienda $tiendaId');
 
-      final response =
-          await _supabaseClient.tiendas.delete().eq('id', tiendaId).execute();
+      final response = await _supabaseClient.tiendas.delete().eq(
+        'id',
+        tiendaId,
+      );
 
-      if (response.error != null) {
-        _logger.e('Error eliminando tienda: ${response.error}');
+      if (response == null) {
+        _logger.e('Error eliminando tienda: response is null');
         return false;
       }
 
@@ -390,7 +385,6 @@ class TiendaRepository {
       await _invalidateTiendasCache();
 
       _logger.i('Tienda $tiendaId eliminada exitosamente');
-
       return true;
     } catch (e) {
       _logger.e('Error eliminando tienda $tiendaId: $e');
@@ -399,6 +393,7 @@ class TiendaRepository {
   }
 
   /// Registrar visita a tienda
+  @override
   Future<bool> registrarVisitaTienda(int tiendaId) async {
     try {
       _logger.d('Registrando visita a tienda $tiendaId');
@@ -412,18 +407,16 @@ class TiendaRepository {
 
       final totalVisitas = (tienda['total_visitas'] as int? ?? 0) + 1;
 
-      final response =
-          await _supabaseClient.tiendas
-              .update({
-                'total_visitas': totalVisitas,
-                'fecha_ultima_visita': DateTime.now().toIso8601String(),
-                'updated_at': DateTime.now().toIso8601String(),
-              })
-              .eq('id', tiendaId)
-              .execute();
+      final response = await _supabaseClient.tiendas
+          .update({
+            'total_visitas': totalVisitas,
+            'fecha_ultima_visita': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', tiendaId);
 
-      if (response.error != null) {
-        _logger.e('Error registrando visita: ${response.error}');
+      if (response == null) {
+        _logger.e('Error registrando visita: response is null');
         return false;
       }
 
@@ -433,7 +426,6 @@ class TiendaRepository {
       await _localCache.cacheTienda(tienda);
 
       _logger.i('Visita registrada a tienda $tiendaId');
-
       return true;
     } catch (e) {
       _logger.e('Error registrando visita a tienda $tiendaId: $e');
@@ -442,6 +434,7 @@ class TiendaRepository {
   }
 
   /// Obtener tiendas destacadas (más visitadas)
+  @override
   Future<List<Map<String, dynamic>>> getTiendasDestacadas({
     int limit = 12,
   }) async {
@@ -458,20 +451,25 @@ class TiendaRepository {
         return [];
       }
 
-      final data = response as List<dynamic>;
-      final tiendas = data.map((item) => item as Map<String, dynamic>).toList();
+      if (response is! List) {
+        _logger.e(
+          'Error obteniendo tiendas destacadas: response is not a List',
+        );
+        return [];
+      }
 
-      // Guardar en caché
+      final tiendas = response as List<dynamic>;
+      final result = tiendas.whereType<Map<String, dynamic>>().toList();
+
+      // Guardar en caché con prioridad alta
       await _localCache.cacheTiendas(
-        tiendas,
+        result,
         key: 'tiendas_destacadas',
-        ttl: const Duration(hours: 2),
-        priority: 3, // Alta prioridad para contenido destacado
+        priority: 3,
       );
 
-      _logger.i('Tiendas destacadas obtenidas: ${tiendas.length}');
-
-      return tiendas;
+      _logger.i('Tiendas destacadas obtenidas: ${result.length}');
+      return result;
     } catch (e) {
       _logger.e('Error obteniendo tiendas destacadas: $e');
       return [];
@@ -479,50 +477,11 @@ class TiendaRepository {
   }
 
   /// Obtener stream de cambios en las tiendas
+  @override
   Stream<List<Map<String, dynamic>>> get tiendasStream =>
       _tiendasController.stream;
 
-  // ========== MÉTODOS PRIVADOS ==========
-
-  /// Actualizar tiendas en segundo plano
-  Future<void> _updateTiendasInBackground({
-    int page = 1,
-    int limit = 20,
-    String? categoriaId,
-    bool? soloActivas,
-  }) async {
-    try {
-      final tiendas = await _supabaseClient.getTiendas(
-        page: page,
-        limit: limit,
-        categoriaId: categoriaId,
-        soloActivas: soloActivas,
-      );
-
-      if (tiendas.isNotEmpty) {
-        final cacheKey =
-            'tiendas_page_${page}_limit_${limit}'
-            '${categoriaId != null ? '_cat_$categoriaId' : ''}'
-            '${soloActivas == true ? '_activas' : ''}';
-
-        await _localCache.cacheTiendas(
-          tiendas,
-          key: cacheKey,
-          ttl: const Duration(hours: 1),
-          priority: 1,
-        );
-
-        // Notificar a los listeners
-        _tiendasController.add(tiendas);
-
-        _logger.d('Tiendas actualizadas en segundo plano: ${tiendas.length}');
-      }
-    } catch (e) {
-      _logger.d('Error actualizando tiendas en segundo plano: $e');
-    }
-  }
-
-  /// Invalidar caché de listas de tiendas
+  /// Invalidar caché de tiendas
   Future<void> _invalidateTiendasCache() async {
     try {
       // Limpiar caché de tiendas usando el método público
@@ -534,6 +493,7 @@ class TiendaRepository {
   }
 
   /// Disposer para limpiar recursos
+  @override
   void dispose() {
     _tiendasController.close();
     _logger.i('TiendaRepository disposed');

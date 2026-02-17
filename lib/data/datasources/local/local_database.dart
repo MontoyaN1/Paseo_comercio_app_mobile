@@ -5,10 +5,6 @@ import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:logger/logger.dart';
 
-import '../../../core/app/app_config.dart';
-import '../../../data/models/domain/usuario.dart';
-import '../../../data/models/domain/tienda.dart';
-
 /// Servicio de caché local usando Hive
 class LocalCacheService {
   static final LocalCacheService _instance = LocalCacheService._internal();
@@ -47,9 +43,9 @@ class LocalCacheService {
       final appDir = await getApplicationDocumentsDirectory();
       Hive.init(appDir.path);
 
-      // Registrar adaptadores
-      Hive.registerAdapter(UsuarioAdapter());
-      Hive.registerAdapter(TiendaAdapter());
+      // Registrar adaptadores (comentado temporalmente hasta generar con build_runner)
+      // Hive.registerAdapter(UsuarioAdapter());
+      // Hive.registerAdapter(TiendaAdapter());
       // Nota: Necesitarás generar los adaptadores con build_runner
 
       _logger = Logger(
@@ -78,7 +74,12 @@ class LocalCacheService {
       _logger.i('Cache directory: ${appDir.path}');
 
       // Limpiar caché expirada al iniciar
-      await _cleanupExpiredCache();
+      try {
+        await _cleanupExpiredCache();
+      } catch (e) {
+        _logger.w('⚠️ Error cleaning expired cache during initialization: $e');
+        // No rethrow - continuar con la inicialización
+      }
     } catch (e) {
       _logger.e('❌ Failed to initialize local cache: $e');
       rethrow;
@@ -133,13 +134,29 @@ class LocalCacheService {
       return null;
     }
 
-    // Actualizar último acceso
-    cacheEntry['last_access'] = DateTime.now().toIso8601String();
-    cacheEntry['access_count'] = (cacheEntry['access_count'] ?? 0) + 1;
-    await tiendasBox.put(cacheKey, cacheEntry);
+    // Convertir cacheEntry a Map<String, dynamic> si es necesario
+    final Map<String, dynamic> entry = _convertToMapStringDynamic(cacheEntry);
 
-    final data = cacheEntry['data'] as List<dynamic>;
-    return data.map((item) => item as Map<String, dynamic>).toList();
+    // Actualizar último acceso
+    entry['last_access'] = DateTime.now().toIso8601String();
+    entry['access_count'] = (entry['access_count'] ?? 0) + 1;
+    await tiendasBox.put(cacheKey, entry);
+
+    final data = entry['data'];
+    if (data is List) {
+      final convertedList = _convertListDynamic(data);
+      // Filtrar solo los elementos que son Map<String, dynamic>
+      final result = <Map<String, dynamic>>[];
+      for (final item in convertedList) {
+        if (item is Map<String, dynamic>) {
+          result.add(item);
+        } else if (item is Map) {
+          result.add(_convertToMapStringDynamic(item));
+        }
+      }
+      return result;
+    }
+    return null;
   }
 
   /// Guardar una tienda individual
@@ -178,12 +195,22 @@ class LocalCacheService {
       return null;
     }
 
-    // Actualizar último acceso
-    cacheEntry['last_access'] = DateTime.now().toIso8601String();
-    cacheEntry['access_count'] = (cacheEntry['access_count'] ?? 0) + 1;
-    await tiendasBox.put(cacheKey, cacheEntry);
+    // Convertir cacheEntry a Map<String, dynamic> si es necesario
+    final Map<String, dynamic> entry = _convertToMapStringDynamic(cacheEntry);
 
-    return cacheEntry['data'] as Map<String, dynamic>;
+    // Actualizar último acceso
+    entry['last_access'] = DateTime.now().toIso8601String();
+    entry['access_count'] = (entry['access_count'] ?? 0) + 1;
+    await tiendasBox.put(cacheKey, entry);
+
+    final data = entry['data'];
+    if (data is Map) {
+      return _convertToMapStringDynamic(data);
+    } else if (data != null) {
+      // Intentar convertir si no es null pero tampoco es Map
+      return _convertToMapStringDynamic({'data': data});
+    }
+    return null;
   }
 
   // ========== MÉTODOS PARA IMÁGENES ==========
@@ -228,12 +255,22 @@ class LocalCacheService {
       return null;
     }
 
-    // Actualizar estadísticas de acceso
-    cacheEntry['last_access'] = DateTime.now().toIso8601String();
-    cacheEntry['access_count'] = (cacheEntry['access_count'] ?? 0) + 1;
-    await imagenesBox.put(cacheKey, cacheEntry);
+    // Convertir cacheEntry a Map<String, dynamic> si es necesario
+    final Map<String, dynamic> entry = _convertToMapStringDynamic(cacheEntry);
 
-    return cacheEntry['data'] as Uint8List;
+    // Actualizar último acceso
+    entry['last_access'] = DateTime.now().toIso8601String();
+    entry['access_count'] = (entry['access_count'] ?? 0) + 1;
+    await imagenesBox.put(cacheKey, entry);
+
+    final data = entry['data'];
+    if (data is Uint8List) {
+      return data;
+    } else if (data is List<int>) {
+      // Convertir List<int> a Uint8List si es necesario
+      return Uint8List.fromList(data.cast<int>());
+    }
+    return null;
   }
 
   /// Verificar si una imagen está en caché
@@ -290,12 +327,22 @@ class LocalCacheService {
       return null;
     }
 
-    // Actualizar último acceso
-    cacheEntry['last_access'] = DateTime.now().toIso8601String();
-    cacheEntry['access_count'] = (cacheEntry['access_count'] ?? 0) + 1;
-    await usuariosBox.put(cacheKey, cacheEntry);
+    // Convertir cacheEntry a Map<String, dynamic> si es necesario
+    final Map<String, dynamic> entry = _convertToMapStringDynamic(cacheEntry);
 
-    return cacheEntry['data'] as Map<String, dynamic>;
+    // Actualizar último acceso
+    entry['last_access'] = DateTime.now().toIso8601String();
+    entry['access_count'] = (entry['access_count'] ?? 0) + 1;
+    await usuariosBox.put(cacheKey, entry);
+
+    final data = entry['data'];
+    if (data is Map) {
+      return _convertToMapStringDynamic(data);
+    } else if (data != null) {
+      // Intentar convertir si no es null pero tampoco es Map
+      return _convertToMapStringDynamic({'data': data});
+    }
+    return null;
   }
 
   // ========== MÉTODOS PARA PREFERENCIAS ==========
@@ -391,9 +438,40 @@ class LocalCacheService {
   }
 
   /// Verificar si la caché está expirada
-  bool _isCacheExpired(Map<String, dynamic> cacheEntry) {
-    final expiresAt = DateTime.parse(cacheEntry['expires_at'] as String);
-    return DateTime.now().isAfter(expiresAt);
+  bool _isCacheExpired(dynamic cacheEntry) {
+    try {
+      if (cacheEntry == null) {
+        return true;
+      }
+
+      // Manejar Map<dynamic, dynamic> o Map<String, dynamic>
+      final Map<dynamic, dynamic> entryMap;
+      if (cacheEntry is Map<String, dynamic>) {
+        entryMap = cacheEntry;
+      } else if (cacheEntry is Map) {
+        entryMap = cacheEntry;
+      } else {
+        return true;
+      }
+
+      // Obtener expires_at de forma segura
+      final expiresAtDynamic = entryMap['expires_at'];
+      if (expiresAtDynamic == null) {
+        return true;
+      }
+
+      // Convertir a String si es necesario
+      final expiresAtString = expiresAtDynamic.toString();
+
+      try {
+        final expiresAt = DateTime.parse(expiresAtString);
+        return DateTime.now().isAfter(expiresAt);
+      } catch (e) {
+        return true;
+      }
+    } catch (e) {
+      return true;
+    }
   }
 
   /// Generar clave de caché para imágenes
@@ -403,51 +481,176 @@ class LocalCacheService {
     return 'img_${hash.abs()}';
   }
 
+  /// Convertir dynamic a Map<String, dynamic>
+  Map<String, dynamic> _convertToMapStringDynamic(dynamic data) {
+    if (data == null) return {};
+    if (data is Map<String, dynamic>) {
+      return data;
+    } else if (data is Map) {
+      final result = <String, dynamic>{};
+      for (final key in data.keys) {
+        final value = data[key];
+        if (value is Map) {
+          result[key.toString()] = _convertToMapStringDynamic(value);
+        } else if (value is List) {
+          result[key.toString()] = _convertListDynamic(value);
+        } else {
+          result[key.toString()] = value;
+        }
+      }
+      return result;
+    }
+    return {};
+  }
+
+  /// Convertir List<dynamic> con tipos adecuados
+  List<dynamic> _convertListDynamic(dynamic data) {
+    if (data == null) return [];
+    if (data is! List) return [];
+
+    final result = <dynamic>[];
+    for (final item in data) {
+      if (item is Map) {
+        result.add(_convertToMapStringDynamic(item));
+      } else if (item is List) {
+        result.add(_convertListDynamic(item));
+      } else {
+        result.add(item);
+      }
+    }
+    return result;
+  }
+
   /// Limpiar caché expirada
   Future<void> _cleanupExpiredCache() async {
-    final boxes = [
-      tiendasBox,
-      productosBox,
-      categoriasBox,
-      plazoletasBox,
-      imagenesBox,
-      usuariosBox,
-    ];
+    try {
+      final boxes = [
+        tiendasBox,
+        productosBox,
+        categoriasBox,
+        plazoletasBox,
+        imagenesBox,
+        usuariosBox,
+      ];
 
-    int totalCleaned = 0;
+      int totalCleaned = 0;
 
-    for (final box in boxes) {
-      final keysToDelete = <dynamic>[];
+      for (final box in boxes) {
+        final keysToDelete = <dynamic>[];
 
-      for (final key in box.keys) {
-        final entry = box.get(key);
-        if (entry != null && _isCacheExpired(entry)) {
-          keysToDelete.add(key);
+        for (final key in box.keys) {
+          try {
+            final entry = box.get(key);
+            if (entry != null && _isCacheExpired(entry)) {
+              keysToDelete.add(key);
+            }
+          } catch (e) {
+            // Continuar con la siguiente clave
+            _logger.d('Error checking cache key $key: $e');
+          }
+        }
+
+        for (final key in keysToDelete) {
+          try {
+            await box.delete(key);
+            totalCleaned++;
+          } catch (e) {
+            // Ignorar errores al eliminar
+            _logger.d('Error deleting cache key $key: $e');
+          }
         }
       }
 
-      for (final key in keysToDelete) {
-        await box.delete(key);
-        totalCleaned++;
+      // Actualizar metadata de forma segura
+      try {
+        final metadataResult = metadataBox.get('stats', defaultValue: {});
+        Map<String, dynamic> metadata = <String, dynamic>{};
+
+        // Manejar el resultado de forma segura
+        if (metadataResult != null && metadataResult is Map) {
+          final map = metadataResult;
+          for (final key in map.keys) {
+            final value = map[key];
+            // Asegurar que el valor sea serializable
+            if (value is String ||
+                value is num ||
+                value is bool ||
+                value == null) {
+              metadata[key.toString()] = value;
+            } else if (value is Map) {
+              // Convertir Map anidado
+              final nestedMap = <String, dynamic>{};
+              for (final nestedKey in value.keys) {
+                final nestedValue = value[nestedKey];
+                if (nestedValue is String ||
+                    nestedValue is num ||
+                    nestedValue is bool ||
+                    nestedValue == null) {
+                  nestedMap[nestedKey.toString()] = nestedValue;
+                } else {
+                  nestedMap[nestedKey.toString()] = nestedValue.toString();
+                }
+              }
+              metadata[key.toString()] = nestedMap;
+            } else {
+              metadata[key.toString()] = value.toString();
+            }
+          }
+        }
+
+        metadata['last_cleanup'] = DateTime.now().toIso8601String();
+        metadata['cleanup_count'] = (metadata['cleanup_count'] ?? 0) + 1;
+
+        // Asegurar que todos los valores sean serializables
+        final serializableMetadata = <String, dynamic>{};
+        for (final key in metadata.keys) {
+          final value = metadata[key];
+          if (value is String ||
+              value is num ||
+              value is bool ||
+              value == null) {
+            serializableMetadata[key] = value;
+          } else if (value is Map<String, dynamic>) {
+            serializableMetadata[key] = value;
+          } else if (value is Map) {
+            // Convertir Map<dynamic, dynamic> a Map<String, dynamic>
+            final convertedMap = <String, dynamic>{};
+            for (final mapKey in value.keys) {
+              final mapValue = value[mapKey];
+              if (mapValue is String ||
+                  mapValue is num ||
+                  mapValue is bool ||
+                  mapValue == null) {
+                convertedMap[mapKey.toString()] = mapValue;
+              } else {
+                convertedMap[mapKey.toString()] = mapValue.toString();
+              }
+            }
+            serializableMetadata[key] = convertedMap;
+          } else {
+            serializableMetadata[key] = value.toString();
+          }
+        }
+
+        await metadataBox.put('stats', serializableMetadata);
+      } catch (e) {
+        _logger.d('Error updating cleanup metadata: $e');
       }
-    }
 
-    if (totalCleaned > 0) {
-      _logger.i('Cleaned $totalCleaned expired cache entries');
+      if (totalCleaned > 0) {
+        _logger.i('Cleaned $totalCleaned expired cache entries');
+      }
+    } catch (e, stackTrace) {
+      _logger.e('Error in _cleanupExpiredCache: $e');
+      _logger.e('Stack trace: $stackTrace');
+      // No rethrow - solo loguear el error
     }
-
-    // Actualizar metadata
-    final metadata = metadataBox.get('stats', defaultValue: {});
-    metadata ??= {};
-    metadata['last_cleanup'] = DateTime.now().toIso8601String();
-    metadata['cleanup_count'] = (metadata['cleanup_count'] ?? 0) + 1;
-    await metadataBox.put('stats', metadata as Map<String, dynamic>);
   }
 
   /// Limpiar caché de imágenes si excede límite
   Future<void> _cleanupImageCache() async {
-    final appConfig = AppConfig();
-    final maxItems = appConfig.maxImageCacheItems;
+    // No usar AppConfig directamente, usar valores por defecto
+    final maxItems = 100; // Valor por defecto
     const maxSizeMB = 100; // 100MB máximo
 
     if (imagenesBox.length <= maxItems) {
@@ -533,12 +736,71 @@ class LocalCacheService {
 
   /// Actualizar metadata
   Future<void> _updateMetadata(String entityType, int count) async {
-    final metadata = metadataBox.get('stats', defaultValue: {});
-    metadata ??= {};
+    final metadataResult = metadataBox.get('stats', defaultValue: {});
+    Map<String, dynamic> metadata = <String, dynamic>{};
+
+    // Manejar el resultado de forma segura
+    if (metadataResult != null && metadataResult is Map) {
+      final map = metadataResult;
+      for (final key in map.keys) {
+        final value = map[key];
+        // Asegurar que el valor sea serializable
+        if (value is String || value is num || value is bool || value == null) {
+          metadata[key.toString()] = value;
+        } else if (value is Map) {
+          // Convertir Map anidado
+          final nestedMap = <String, dynamic>{};
+          for (final nestedKey in value.keys) {
+            final nestedValue = value[nestedKey];
+            if (nestedValue is String ||
+                nestedValue is num ||
+                nestedValue is bool ||
+                nestedValue == null) {
+              nestedMap[nestedKey.toString()] = nestedValue;
+            } else {
+              nestedMap[nestedKey.toString()] = nestedValue.toString();
+            }
+          }
+          metadata[key.toString()] = nestedMap;
+        } else {
+          metadata[key.toString()] = value.toString();
+        }
+      }
+    }
+
     metadata[entityType] = {
       'count': count,
       'last_update': DateTime.now().toIso8601String(),
     };
-    await metadataBox.put('stats', metadata as Map<String, dynamic>);
+
+    // Asegurar que todos los valores sean serializables
+    final serializableMetadata = <String, dynamic>{};
+    for (final key in metadata.keys) {
+      final value = metadata[key];
+      if (value is String || value is num || value is bool || value == null) {
+        serializableMetadata[key] = value;
+      } else if (value is Map<String, dynamic>) {
+        serializableMetadata[key] = value;
+      } else if (value is Map) {
+        // Convertir Map<dynamic, dynamic> a Map<String, dynamic>
+        final convertedMap = <String, dynamic>{};
+        for (final mapKey in value.keys) {
+          final mapValue = value[mapKey];
+          if (mapValue is String ||
+              mapValue is num ||
+              mapValue is bool ||
+              mapValue == null) {
+            convertedMap[mapKey.toString()] = mapValue;
+          } else {
+            convertedMap[mapKey.toString()] = mapValue.toString();
+          }
+        }
+        serializableMetadata[key] = convertedMap;
+      } else {
+        serializableMetadata[key] = value.toString();
+      }
+    }
+
+    await metadataBox.put('stats', serializableMetadata);
   }
 }

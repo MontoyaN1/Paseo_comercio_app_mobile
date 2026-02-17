@@ -1,200 +1,182 @@
 // lib/data/models/domain/tienda.dart
 
 import 'package:hive/hive.dart';
-import 'package:equatable/equatable.dart';
 
 part 'tienda.g.dart';
 
 @HiveType(typeId: 2)
-class Tienda extends Equatable {
+class Tienda extends HiveObject {
   @HiveField(0)
-  final int id;
+  final String id;
 
   @HiveField(1)
-  final DateTime fechaCreacion;
-
-  @HiveField(2)
-  final int idPropietario;
-
-  @HiveField(3)
   final String nombreTienda;
 
-  @HiveField(4)
+  @HiveField(2)
   final String? descripcion;
 
+  @HiveField(3)
+  final String? logoUrl;
+
+  @HiveField(4)
+  final String? portadaUrl;
+
   @HiveField(5)
-  final Map<String, dynamic>? redesSociales;
-
-  @HiveField(6)
-  final int? organizacionId;
-
-  @HiveField(7)
-  final String? emailContacto;
-
-  @HiveField(8)
-  final String? telefonoContacto;
-
-  @HiveField(9)
   final String? direccion;
 
+  @HiveField(6)
+  final String? telefono;
+
+  @HiveField(7)
+  final String? email;
+
+  @HiveField(8)
+  final String? sitioWeb;
+
+  @HiveField(9)
+  final String? horarioAtencion;
+
   @HiveField(10)
-  final int totalVisitas;
+  final double? latitud;
 
   @HiveField(11)
-  final int totalContactosWhatsapp;
+  final double? longitud;
 
   @HiveField(12)
-  final DateTime? fechaUltimaVisita;
+  final String? categoriaId;
 
   @HiveField(13)
-  final DateTime? updatedAt;
+  final String? idPropietario;
 
-  const Tienda({
+  @HiveField(14)
+  final int totalVisitas;
+
+  @HiveField(15)
+  final String? fechaUltimaVisita;
+
+  @HiveField(16)
+  final String estadoTienda;
+
+  @HiveField(17)
+  final String fechaCreacion;
+
+  @HiveField(18)
+  final String fechaActualizacion;
+
+  Tienda({
     required this.id,
-    required this.fechaCreacion,
-    required this.idPropietario,
     required this.nombreTienda,
     this.descripcion,
-    this.redesSociales,
-    this.organizacionId,
-    this.emailContacto,
-    this.telefonoContacto,
+    this.logoUrl,
+    this.portadaUrl,
     this.direccion,
-    this.totalVisitas = 0,
-    this.totalContactosWhatsapp = 0,
+    this.telefono,
+    this.email,
+    this.sitioWeb,
+    this.horarioAtencion,
+    this.latitud,
+    this.longitud,
+    this.categoriaId,
+    this.idPropietario,
+    required this.totalVisitas,
     this.fechaUltimaVisita,
-    this.updatedAt,
+    required this.estadoTienda,
+    required this.fechaCreacion,
+    required this.fechaActualizacion,
   });
 
-  factory Tienda.fromJson(Map<String, dynamic> json) {
+  factory Tienda.fromMap(Map<String, dynamic> map) {
     return Tienda(
-      id: json['id'] as int,
-      fechaCreacion: DateTime.parse(json['fecha_creacion'] as String),
-      idPropietario: json['id_propietario'] as int,
-      nombreTienda: json['nombre_tienda'] as String,
-      descripcion: json['descripcion'] as String?,
-      redesSociales:
-          json['redes_sociales'] != null
-              ? Map<String, dynamic>.from(json['redes_sociales'] as Map)
-              : null,
-      organizacionId: json['organizacion_id'] as int?,
-      emailContacto: json['email_contacto'] as String?,
-      telefonoContacto: json['telefono_contacto'] as String?,
-      direccion: json['direccion'] as String?,
-      totalVisitas: json['total_visitas'] as int? ?? 0,
-      totalContactosWhatsapp: json['total_contactos_whatsapp'] as int? ?? 0,
-      fechaUltimaVisita:
-          json['fecha_ultima_visita'] != null
-              ? DateTime.parse(json['fecha_ultima_visita'] as String)
-              : null,
-      updatedAt:
-          json['updated_at'] != null
-              ? DateTime.parse(json['updated_at'] as String)
-              : null,
+      id: map['id']?.toString() ?? '',
+      nombreTienda: map['nombre_tienda']?.toString() ?? '',
+      descripcion: map['descripcion']?.toString(),
+      logoUrl: map['logo_url']?.toString(),
+      portadaUrl: map['portada_url']?.toString(),
+      direccion: map['direccion']?.toString(),
+      telefono: map['telefono']?.toString(),
+      email: map['email']?.toString(),
+      sitioWeb: map['sitio_web']?.toString(),
+      horarioAtencion: map['horario_atencion']?.toString(),
+      latitud:
+          map['latitud'] is num ? (map['latitud'] as num).toDouble() : null,
+      longitud:
+          map['longitud'] is num ? (map['longitud'] as num).toDouble() : null,
+      categoriaId: map['categoria_id']?.toString(),
+      idPropietario: map['id_propietario']?.toString(),
+      totalVisitas:
+          map['total_visitas'] is int ? map['total_visitas'] as int : 0,
+      fechaUltimaVisita: map['fecha_ultima_visita']?.toString(),
+      estadoTienda: map['estado_tienda']?.toString() ?? 'activa',
+      fechaCreacion: map['fecha_creacion']?.toString() ?? '',
+      fechaActualizacion: map['fecha_actualizacion']?.toString() ?? '',
     );
   }
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'fecha_creacion': fechaCreacion.toIso8601String(),
-      'id_propietario': idPropietario,
       'nombre_tienda': nombreTienda,
       'descripcion': descripcion,
-      'redes_sociales': redesSociales,
-      'organizacion_id': organizacionId,
-      'email_contacto': emailContacto,
-      'telefono_contacto': telefonoContacto,
+      'logo_url': logoUrl,
+      'portada_url': portadaUrl,
       'direccion': direccion,
+      'telefono': telefono,
+      'email': email,
+      'sitio_web': sitioWeb,
+      'horario_atencion': horarioAtencion,
+      'latitud': latitud,
+      'longitud': longitud,
+      'categoria_id': categoriaId,
+      'id_propietario': idPropietario,
       'total_visitas': totalVisitas,
-      'total_contactos_whatsapp': totalContactosWhatsapp,
-      'fecha_ultima_visita': fechaUltimaVisita?.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
+      'fecha_ultima_visita': fechaUltimaVisita,
+      'estado_tienda': estadoTienda,
+      'fecha_creacion': fechaCreacion,
+      'fecha_actualizacion': fechaActualizacion,
     };
   }
 
   Tienda copyWith({
-    int? id,
-    DateTime? fechaCreacion,
-    int? idPropietario,
+    String? id,
     String? nombreTienda,
     String? descripcion,
-    Map<String, dynamic>? redesSociales,
-    int? organizacionId,
-    String? emailContacto,
-    String? telefonoContacto,
+    String? logoUrl,
+    String? portadaUrl,
     String? direccion,
+    String? telefono,
+    String? email,
+    String? sitioWeb,
+    String? horarioAtencion,
+    double? latitud,
+    double? longitud,
+    String? categoriaId,
+    String? idPropietario,
     int? totalVisitas,
-    int? totalContactosWhatsapp,
-    DateTime? fechaUltimaVisita,
-    DateTime? updatedAt,
+    String? fechaUltimaVisita,
+    String? estadoTienda,
+    String? fechaCreacion,
+    String? fechaActualizacion,
   }) {
     return Tienda(
       id: id ?? this.id,
-      fechaCreacion: fechaCreacion ?? this.fechaCreacion,
-      idPropietario: idPropietario ?? this.idPropietario,
       nombreTienda: nombreTienda ?? this.nombreTienda,
       descripcion: descripcion ?? this.descripcion,
-      redesSociales: redesSociales ?? this.redesSociales,
-      organizacionId: organizacionId ?? this.organizacionId,
-      emailContacto: emailContacto ?? this.emailContacto,
-      telefonoContacto: telefonoContacto ?? this.telefonoContacto,
+      logoUrl: logoUrl ?? this.logoUrl,
+      portadaUrl: portadaUrl ?? this.portadaUrl,
       direccion: direccion ?? this.direccion,
+      telefono: telefono ?? this.telefono,
+      email: email ?? this.email,
+      sitioWeb: sitioWeb ?? this.sitioWeb,
+      horarioAtencion: horarioAtencion ?? this.horarioAtencion,
+      latitud: latitud ?? this.latitud,
+      longitud: longitud ?? this.longitud,
+      categoriaId: categoriaId ?? this.categoriaId,
+      idPropietario: idPropietario ?? this.idPropietario,
       totalVisitas: totalVisitas ?? this.totalVisitas,
-      totalContactosWhatsapp:
-          totalContactosWhatsapp ?? this.totalContactosWhatsapp,
       fechaUltimaVisita: fechaUltimaVisita ?? this.fechaUltimaVisita,
-      updatedAt: updatedAt ?? this.updatedAt,
+      estadoTienda: estadoTienda ?? this.estadoTienda,
+      fechaCreacion: fechaCreacion ?? this.fechaCreacion,
+      fechaActualizacion: fechaActualizacion ?? this.fechaActualizacion,
     );
-  }
-
-  @override
-  List<Object?> get props => [
-    id,
-    fechaCreacion,
-    idPropietario,
-    nombreTienda,
-    descripcion,
-    redesSociales,
-    organizacionId,
-    emailContacto,
-    telefonoContacto,
-    direccion,
-    totalVisitas,
-    totalContactosWhatsapp,
-    fechaUltimaVisita,
-    updatedAt,
-  ];
-
-  @override
-  bool get stringify => true;
-
-  // Métodos de utilidad
-  bool get tieneRedesSociales =>
-      redesSociales != null && redesSociales!.isNotEmpty;
-  bool get tieneContacto => emailContacto != null || telefonoContacto != null;
-  bool get tieneDireccion => direccion != null && direccion!.isNotEmpty;
-
-  List<String>? get redesSocialesList {
-    if (redesSociales == null) return null;
-    return redesSociales!.keys.toList();
-  }
-
-  String? getRedSocialUrl(String redSocial) {
-    return redesSociales?[redSocial] as String?;
-  }
-
-  bool get esPopular => totalVisitas > 100;
-  bool get esMuyVisitada => totalVisitas > 500;
-
-  String get resumenContacto {
-    if (emailContacto != null && telefonoContacto != null) {
-      return '$emailContacto | $telefonoContacto';
-    } else if (emailContacto != null) {
-      return emailContacto!;
-    } else if (telefonoContacto != null) {
-      return telefonoContacto!;
-    }
-    return 'Sin contacto';
   }
 }

@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:clerk_flutter/generated/clerk_sdk_localizations.dart';
+import 'package:go_router/go_router.dart';
 
 import 'core/app/app_config.dart';
+import 'core/routing/app_router.dart';
 import 'di/service_locator.dart';
 import 'presentation/pages/auth/login_page.dart';
 
@@ -50,7 +52,7 @@ class PaseoDelComercioApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClerkAuth(
       config: ClerkAuthConfig(publishableKey: AppConfig().clerkPublishableKey),
-      child: MaterialApp(
+      child: MaterialApp.router(
         debugShowCheckedModeBanner: AppConfig().debugMode,
         title: AppConfig().appName,
 
@@ -99,8 +101,8 @@ class PaseoDelComercioApp extends StatelessWidget {
           ),
         ),
 
-        // Ruta inicial
-        home: const AppInitializer(),
+        // Router configuration
+        routerConfig: AppRouter.router,
       ),
     );
   }
@@ -191,7 +193,7 @@ class _AppInitializerState extends State<AppInitializer> {
     }
 
     return ClerkAuthBuilder(
-      signedOutBuilder: (context, state) => const LoginPage(),
+      signedOutBuilder: (context, state) => LoginPage(),
       signedInBuilder: (context, state) => const HomePage(),
     );
   }
@@ -221,11 +223,8 @@ class HomePage extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 12),
                 child: GestureDetector(
                   onTap: () {
-                    // Navegar a perfil
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ProfilePage()),
-                    );
+                    // Navegar a perfil usando GoRouter
+                    context.go('/profile');
                   },
                   child: CircleAvatar(
                     radius: 18,
@@ -244,10 +243,8 @@ class HomePage extends StatelessWidget {
             signedOutBuilder: (context, state) {
               return TextButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginPage()),
-                  );
+                  // Navegar a login usando GoRouter
+                  context.go('/login');
                 },
                 child: const Text(
                   'Iniciar sesión',
@@ -293,94 +290,22 @@ class HomePage extends StatelessWidget {
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
         onTap: (index) {
-          // Navegación entre páginas
-          // TODO: Implementar navegación
+          // Navegación entre páginas usando GoRouter
+          switch (index) {
+            case 0:
+              context.go('/');
+              break;
+            case 1:
+              context.go('/tiendas');
+              break;
+            case 2:
+              context.go('/categorias');
+              break;
+            case 3:
+              context.go('/profile');
+              break;
+          }
         },
-      ),
-    );
-  }
-}
-
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Perfil')),
-      body: ClerkAuthBuilder(
-        signedInBuilder: (context, state) {
-          final user = ClerkAuth.of(context).user;
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundImage:
-                      (user?.imageUrl != null && user!.imageUrl!.isNotEmpty)
-                          ? NetworkImage(user.imageUrl!)
-                          : null,
-                  child:
-                      (user?.imageUrl == null || user!.imageUrl!.isEmpty)
-                          ? const Icon(Icons.person, size: 40)
-                          : null,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  user?.fullName ?? 'Usuario',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  user?.primaryEmailAddress?.emailAddress ?? '',
-                  style: const TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-                const SizedBox(height: 30),
-                ListTile(
-                  leading: const Icon(Icons.settings),
-                  title: const Text('Configuración'),
-                  onTap: () {
-                    // Navegar a configuración
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.favorite),
-                  title: const Text('Favoritos'),
-                  onTap: () {
-                    // Navegar a favoritos
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.history),
-                  title: const Text('Historial'),
-                  onTap: () {
-                    // Navegar a historial
-                  },
-                ),
-                const SizedBox(height: 30),
-                ElevatedButton(
-                  onPressed: () {
-                    ClerkAuth.of(context).signOut();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                  child: const Text(
-                    'Cerrar sesión',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-        signedOutBuilder: (context, state) => const LoginPage(),
       ),
     );
   }

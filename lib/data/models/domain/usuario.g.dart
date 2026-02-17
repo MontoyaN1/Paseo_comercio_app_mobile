@@ -17,18 +17,18 @@ class UsuarioAdapter extends TypeAdapter<Usuario> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Usuario(
-      id: fields[0] as int,
+      id: fields[0] as String,
       clerkUserId: fields[1] as String,
       nombreCompleto: fields[2] as String,
       email: fields[3] as String,
-      telefono: fields[4] as String,
-      fechaRegistro: fields[5] as DateTime,
-      ultimoLogin: fields[6] as DateTime?,
-      perfilPublico: fields[7] as bool,
-      estadoUsuario: fields[8] as EstadoUsuario,
-      rolesId: fields[9] as int?,
-      createdAt: fields[10] as DateTime?,
-      updatedAt: fields[11] as DateTime?,
+      telefono: fields[4] as String?,
+      avatarUrl: fields[5] as String?,
+      fechaRegistro: fields[6] as String,
+      ultimoLogin: fields[7] as String,
+      perfilPublico: fields[8] as bool,
+      estadoUsuario: fields[9] as String,
+      createdAt: fields[10] as String,
+      updatedAt: fields[11] as String,
     );
   }
 
@@ -47,15 +47,15 @@ class UsuarioAdapter extends TypeAdapter<Usuario> {
       ..writeByte(4)
       ..write(obj.telefono)
       ..writeByte(5)
-      ..write(obj.fechaRegistro)
+      ..write(obj.avatarUrl)
       ..writeByte(6)
-      ..write(obj.ultimoLogin)
+      ..write(obj.fechaRegistro)
       ..writeByte(7)
-      ..write(obj.perfilPublico)
+      ..write(obj.ultimoLogin)
       ..writeByte(8)
-      ..write(obj.estadoUsuario)
+      ..write(obj.perfilPublico)
       ..writeByte(9)
-      ..write(obj.rolesId)
+      ..write(obj.estadoUsuario)
       ..writeByte(10)
       ..write(obj.createdAt)
       ..writeByte(11)

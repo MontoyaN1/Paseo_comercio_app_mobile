@@ -1,59 +1,45 @@
-// lib/presentation/pages/auth/login_page.dart
-
 import 'package:flutter/material.dart';
+import 'package:clerk_flutter/clerk_flutter.dart';
+import 'package:go_router/go_router.dart';
 
-/// Página de inicio de sesión (stub)
-/// TODO: Implementar autenticación real con Clerk/Supabase
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Iniciar Sesión')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.store, size: 80, color: Colors.blue),
-              const SizedBox(height: 20),
-              const Text(
-                'Paseo del Comercio',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF121212),
+        elevation: 6,
+        title: const Text(
+          'Login',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: SafeArea(
+        child: ClerkAuthBuilder(
+          signedOutBuilder: (context, state) {
+            return const Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(16),
+                child: ClerkAuthentication(),
               ),
-              const SizedBox(height: 10),
-              const Text(
-                'Centro Comercial Virtual',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () {
-                  // TODO: Implementar autenticación con Clerk
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Autenticación pendiente de implementación',
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                child: const Text('Iniciar Sesión con Clerk'),
-              ),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Volver'),
-              ),
-            ],
-          ),
+            );
+          },
+          signedInBuilder: (context, state) {
+            // ✅ Cuando ya está logeado, redirigir al Home
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              // Usar GoRouter para navegar a la página principal
+              final router = GoRouter.of(context);
+              if (router.location != '/') {
+                router.go('/');
+              }
+            });
+
+            return const Center(child: CircularProgressIndicator());
+          },
         ),
       ),
     );

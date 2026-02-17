@@ -17,11 +17,18 @@ class AppConfig {
   String supabaseAnonKey = '';
   String supabaseServiceRoleKey = '';
 
-  // Configuración de Clerk
+  // Configuración de Clerk (solo publishableKey necesaria)
   String clerkPublishableKey = '';
-  String clerkSecretKey = '';
+  String clerkSecretKey = ''; // Para sincronización con Supabase
 
-  // Configuración de Contabo Object Storage
+  // Configuración de Cloudflare R2
+  String cloudflareAccountId = '';
+  String cloudflareR2AccessKeyId = '';
+  String cloudflareR2SecretAccessKey = '';
+  String cloudflareR2BucketName = '';
+  String cloudflareR2PublicUrl = '';
+
+  // Configuración de Contabo Object Storage (fallback)
   String awsAccessKeyId = '';
   String awsSecretAccessKey = '';
   String awsS3BucketName = '';
@@ -66,7 +73,14 @@ class AppConfig {
     clerkPublishableKey = env['CLERK_PUBLISHABLE_KEY'] ?? '';
     clerkSecretKey = env['CLERK_SECRET_KEY'] ?? '';
 
-    // Contabo S3
+    // Cloudflare R2
+    cloudflareAccountId = env['CLOUDFLARE_ACCOUNT_ID'] ?? '';
+    cloudflareR2AccessKeyId = env['CLOUDFLARE_R2_ACCESS_KEY_ID'] ?? '';
+    cloudflareR2SecretAccessKey = env['CLOUDFLARE_R2_SECRET_ACCESS_KEY'] ?? '';
+    cloudflareR2BucketName = env['CLOUDFLARE_R2_BUCKET_NAME'] ?? '';
+    cloudflareR2PublicUrl = env['CLOUDFLARE_R2_PUBLIC_URL'] ?? '';
+
+    // Contabo S3 (fallback)
     awsAccessKeyId = env['AWS_ACCESS_KEY_ID'] ?? '';
     awsSecretAccessKey = env['AWS_SECRET_ACCESS_KEY'] ?? '';
     awsS3BucketName = env['AWS_S3_BUCKET_NAME'] ?? '';
@@ -101,8 +115,9 @@ class AppConfig {
     final errors = <String>[];
 
     if (supabaseUrl.isEmpty) errors.add('SUPABASE_URL es requerido');
-    if (supabaseServiceRoleKey.isEmpty)
+    if (supabaseServiceRoleKey.isEmpty) {
       errors.add('SUPABASE_SERVICE_ROLE_KEY es requerido');
+    }
     if (clerkPublishableKey.isEmpty) {
       errors.add('CLERK_PUBLISHABLE_KEY es requerido');
     }
@@ -119,6 +134,14 @@ class AppConfig {
       awsS3BucketName.isNotEmpty &&
       s3EndpointUrl.isNotEmpty;
 
+  /// Verificar si la configuración de R2 está completa
+  bool get isR2Configured =>
+      cloudflareAccountId.isNotEmpty &&
+      cloudflareR2AccessKeyId.isNotEmpty &&
+      cloudflareR2SecretAccessKey.isNotEmpty &&
+      cloudflareR2BucketName.isNotEmpty &&
+      cloudflareR2PublicUrl.isNotEmpty;
+
   /// Verificar si la configuración de Supabase está completa
   bool get isSupabaseConfigured =>
       supabaseUrl.isNotEmpty && supabaseServiceRoleKey.isNotEmpty;
@@ -126,10 +149,14 @@ class AppConfig {
   /// Verificar si la configuración de Clerk está completa
   bool get isClerkConfigured => clerkPublishableKey.isNotEmpty;
 
-  /// Obtener URL base para imágenes
+  /// Obtener URL base para imágenes (prioriza R2, luego S3)
   String getImageBaseUrl(String entityType, String entityId) {
-    if (!isS3Configured) return '';
-    return '$s3BaseUrl/$contaboBucketFolder/$entityType/$entityId';
+    if (isR2Configured) {
+      return '$cloudflareR2PublicUrl/$entityType/$entityId';
+    } else if (isS3Configured) {
+      return '$s3BaseUrl/$contaboBucketFolder/$entityType/$entityId';
+    }
+    return '';
   }
 
   /// Obtener variantes de URL para una imagen
@@ -157,6 +184,46 @@ class AppConfig {
     return variants;
   }
 
+  /// Obtener lista de variables de entorno requeridas
+  Map<String, String> getRequiredEnvVariables() {
+    return {
+      // Supabase (obligatorias)
+      'SUPABASE_URL': 'URL de tu proyecto Supabase',
+      'SUPABASE_ANON_KEY': 'Clave anónima de Supabase',
+      'SUPABASE_SERVICE_ROLE_KEY': 'Clave de rol de servicio de Supabase',
+
+      // Clerk (obligatorias)
+      'CLERK_PUBLISHABLE_KEY':
+          'Clave pública de Clerk (obtenida del dashboard)',
+      'CLERK_SECRET_KEY':
+          'Clave secreta de Clerk (para sincronización con Supabase)',
+
+      // Cloudflare R2 (opcionales, para migración)
+      'CLOUDFLARE_ACCOUNT_ID': 'ID de cuenta de Cloudflare',
+      'CLOUDFLARE_R2_ACCESS_KEY_ID': 'Access Key ID de R2',
+      'CLOUDFLARE_R2_SECRET_ACCESS_KEY': 'Secret Access Key de R2',
+      'CLOUDFLARE_R2_BUCKET_NAME': 'Nombre del bucket R2',
+      'CLOUDFLARE_R2_PUBLIC_URL': 'URL pública del bucket R2',
+
+      // Contabo S3 (opcionales, fallback)
+      'AWS_ACCESS_KEY_ID': 'Access Key ID de S3',
+      'AWS_SECRET_ACCESS_KEY': 'Secret Access Key de S3',
+      'AWS_S3_BUCKET_NAME': 'Nombre del bucket S3',
+      'AWS_REGION': 'Región de S3',
+      'S3_ENDPOINT_URL': 'URL del endpoint S3',
+      'S3_BASE_URL': 'URL base para imágenes S3',
+      'CONTABO_TENANT_ID': 'ID del tenant Contabo',
+      'CONTABO_BUCKET_FOLDER': 'Carpeta del bucket Contabo',
+
+      // Configuración (opcionales)
+      'DEBUG_MODE': 'true/false para modo debug',
+      'ENABLE_LOGGING': 'true/false para logging',
+      'ENABLE_ANALYTICS': 'true/false para analytics',
+      'CACHE_TTL_HOURS': 'TTL de caché en horas (default: 1)',
+      'MAX_CACHE_SIZE_MB': 'Tamaño máximo de caché en MB (default: 100)',
+    };
+  }
+
   @override
   String toString() {
     return '''
@@ -164,7 +231,8 @@ AppConfig:
   App: $appName v$appVersion
   Supabase: ${isSupabaseConfigured ? 'Configurado' : 'No configurado'}
   Clerk: ${isClerkConfigured ? 'Configurado' : 'No configurado'}
-  S3: ${isS3Configured ? 'Configurado' : 'No configurado'}
+  Cloudflare R2: ${isR2Configured ? 'Configurado' : 'No configurado'}
+  Contabo S3: ${isS3Configured ? 'Configurado' : 'No configurado'}
   Cache: ${cacheTtlHours}h, ${maxCacheSizeMB}MB
   Debug: $debugMode
 ''';

@@ -39,6 +39,9 @@ dependencies:
   # UI
   cupertino_icons: ^1.0.8
 
+  # Navigation
+  go_router: ^17.1.0
+
   # Authentication
   clerk_flutter: ^0.0.14-beta
 

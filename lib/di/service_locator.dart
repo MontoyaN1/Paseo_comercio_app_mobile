@@ -5,15 +5,35 @@ import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app/app_config.dart';
+import '../core/utils/cache_service.dart';
+import '../core/utils/connectivity_service.dart';
+import '../core/utils/image_service.dart';
+import '../core/utils/auth_service_simple.dart';
+import '../core/utils/app_utils_simple.dart';
 import '../data/datasources/remote/supabase_client.dart';
 import '../data/datasources/remote/s3_client.dart';
 import '../data/datasources/local/local_database.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/tienda_repository.dart';
-import '../data/repositories/producto_repository.dart';
-import '../data/repositories/categoria_repository.dart';
-import '../data/repositories/imagen_repository.dart';
-import '../data/repositories/cache_repository.dart';
+import '../domain/repositories/auth_repository_interface.dart';
+import '../domain/repositories/tienda_repository_interface.dart';
+// Los siguientes repositorios no existen aún, se comentan temporalmente
+// import '../data/repositories/producto_repository.dart';
+// import '../data/repositories/categoria_repository.dart';
+// import '../data/repositories/imagen_repository.dart';
+// import '../data/repositories/cache_repository.dart';
+import '../domain/usecases/get_tiendas_usecase.dart';
+import '../domain/usecases/get_tienda_by_id_usecase.dart';
+import '../domain/usecases/search_tiendas_usecase.dart';
+import '../domain/usecases/authenticate_user_usecase.dart';
+// Los siguientes use cases no existen aún, se comentan temporalmente
+// import '../domain/usecases/get_productos_usecase.dart';
+// import '../domain/usecases/get_producto_by_id_usecase.dart';
+import '../presentation/blocs/auth/auth_bloc.dart';
+import '../presentation/blocs/tienda/tienda_bloc.dart';
+// ProductoBloc está comentado temporalmente porque depende de repositorios no implementados
+// import '../presentation/blocs/producto/producto_bloc.dart';
+import '../presentation/blocs/image/image_bloc.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -21,6 +41,39 @@ final GetIt getIt = GetIt.instance;
 Future<void> setupServiceLocator(AppConfig appConfig) async {
   // Registrar configuración de la aplicación
   getIt.registerSingleton<AppConfig>(appConfig);
+
+  // Registrar utilidades generales (versión simplificada)
+  getIt.registerSingleton<AppUtilsSimple>(AppUtilsSimple());
+
+  // Inicializar y registrar servicios de conectividad
+  final connectivityService = ConnectivityService();
+  await connectivityService.initialize();
+  getIt.registerSingleton<ConnectivityService>(connectivityService);
+
+  // Inicializar y registrar servicio de caché
+  final cacheService = CacheService();
+  await cacheService.initialize();
+  getIt.registerSingleton<CacheService>(cacheService);
+
+  // Inicializar y registrar servicio de autenticación (versión simplificada)
+  final authService = AuthServiceSimple();
+  await authService.initialize(
+    clerkPublishableKey: appConfig.clerkPublishableKey,
+    supabaseUrl: appConfig.supabaseUrl,
+    supabaseAnonKey: appConfig.supabaseAnonKey,
+  );
+  getIt.registerSingleton<AuthServiceSimple>(authService);
+
+  // Configurar y registrar servicio de imágenes
+  final imageService = ImageService();
+  imageService.configure(
+    r2BaseUrl:
+        appConfig.cloudflareR2PublicUrl, // Usar URL pública de Cloudflare R2
+    s3BaseUrl: appConfig.s3BaseUrl,
+    supabaseUrl: appConfig.supabaseUrl,
+    supabaseBucket: appConfig.awsS3BucketName,
+  );
+  getIt.registerSingleton<ImageService>(imageService);
 
   // Inicializar Supabase
   await Supabase.initialize(
@@ -36,14 +89,12 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
   getIt.registerSingleton<SupabaseClientService>(supabaseClientService);
 
   // Registrar servicio S3 si está configurado
-  if (appConfig.isS3Configured) {
+  if (appConfig.isS3Configured && appConfig.awsAccessKeyId.isNotEmpty) {
     final s3Service = S3ImageService(
+      endpoint: appConfig.s3EndpointUrl,
+      bucketName: appConfig.awsS3BucketName,
       accessKey: appConfig.awsAccessKeyId,
       secretKey: appConfig.awsSecretAccessKey,
-      bucketName: appConfig.awsS3BucketName,
-      endpointUrl: appConfig.s3EndpointUrl,
-      baseUrl: appConfig.s3BaseUrl,
-      folder: appConfig.contaboBucketFolder,
       region: appConfig.awsRegion,
     );
     getIt.registerSingleton<S3ImageService>(s3Service);
@@ -55,38 +106,44 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
   getIt.registerSingleton<LocalCacheService>(localDatabase);
 
   // Registrar repositorios
-  getIt.registerLazySingleton<AuthRepository>(
+  getIt.registerLazySingleton<AuthRepositoryInterface>(
     () => AuthRepository(
       supabaseClient: getIt<SupabaseClientService>(),
       localCache: getIt<LocalCacheService>(),
     ),
   );
 
-  getIt.registerLazySingleton<TiendaRepository>(
+  getIt.registerLazySingleton<TiendaRepositoryInterface>(
     () => TiendaRepository(
       supabaseClient: getIt<SupabaseClientService>(),
-      cacheService: getIt<LocalCacheService>(),
+      localCache: getIt<LocalCacheService>(),
+      connectivityService: getIt<ConnectivityService>(),
     ),
   );
 
+  // Los siguientes repositorios están comentados porque no existen aún
+  /*
   getIt.registerLazySingleton<ProductoRepository>(
     () => ProductoRepository(
       supabaseClient: getIt<SupabaseClientService>(),
-      cacheService: getIt<LocalCacheService>(),
+      cacheService: getIt<CacheService>(),
+      connectivityService: getIt<ConnectivityService>(),
     ),
   );
 
   getIt.registerLazySingleton<CategoriaRepository>(
     () => CategoriaRepository(
       supabaseClient: getIt<SupabaseClientService>(),
-      cacheService: getIt<LocalCacheService>(),
+      cacheService: getIt<CacheService>(),
+      connectivityService: getIt<ConnectivityService>(),
     ),
   );
 
   getIt.registerLazySingleton<ImagenRepository>(
     () => ImagenRepository(
       supabaseClient: getIt<SupabaseClientService>(),
-      cacheService: getIt<LocalCacheService>(),
+      cacheService: getIt<CacheService>(),
+      imageService: getIt<ImageService>(),
       s3Service:
           getIt.isRegistered<S3ImageService>() ? getIt<S3ImageService>() : null,
     ),
@@ -94,6 +151,66 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
 
   getIt.registerLazySingleton<CacheRepository>(
     () => CacheRepository(localDatabase: getIt<LocalCacheService>()),
+  );
+  */
+
+  // Registrar casos de uso
+  getIt.registerLazySingleton<GetTiendasUseCase>(
+    () => GetTiendasUseCase(getIt<TiendaRepositoryInterface>()),
+  );
+
+  getIt.registerLazySingleton<GetTiendaByIdUseCase>(
+    () => GetTiendaByIdUseCase(getIt<TiendaRepositoryInterface>()),
+  );
+
+  getIt.registerLazySingleton<SearchTiendasUseCase>(
+    () => SearchTiendasUseCase(getIt<TiendaRepositoryInterface>()),
+  );
+
+  getIt.registerLazySingleton<AuthenticateUserUseCase>(
+    () => AuthenticateUserUseCase(getIt<AuthRepositoryInterface>()),
+  );
+
+  // Los siguientes casos de uso están comentados porque dependen de repositorios no implementados
+  /*
+  getIt.registerLazySingleton<GetProductosUseCase>(
+    () => GetProductosUseCase(getIt<ProductoRepository>()),
+  );
+
+  getIt.registerLazySingleton<GetProductoByIdUseCase>(
+    () => GetProductoByIdUseCase(getIt<ProductoRepository>()),
+  );
+  */
+
+  // Registrar BLoCs
+  getIt.registerLazySingleton<AuthBloc>(
+    () => AuthBloc(getIt<AuthenticateUserUseCase>()),
+  );
+
+  getIt.registerLazySingleton<TiendaBloc>(
+    () => TiendaBloc(
+      getTiendasUseCase: getIt<GetTiendasUseCase>(),
+      getTiendaByIdUseCase: getIt<GetTiendaByIdUseCase>(),
+      searchTiendasUseCase: getIt<SearchTiendasUseCase>(),
+    ),
+  );
+
+  // ProductoBloc está comentado porque depende de casos de uso no implementados
+  /*
+  getIt.registerLazySingleton<ProductoBloc>(
+    () => ProductoBloc(
+      getProductosUseCase: getIt<GetProductosUseCase>(),
+      getProductoByIdUseCase: getIt<GetProductoByIdUseCase>(),
+    ),
+  );
+  */
+
+  getIt.registerLazySingleton<ImageBloc>(
+    () => ImageBloc(
+      imageService: getIt<ImageService>(),
+      cacheService: getIt<CacheService>(),
+      connectivityService: getIt<ConnectivityService>(),
+    ),
   );
 
   // Verificar que todas las dependencias estén listas
