@@ -803,18 +803,4 @@ class LocalCacheService {
 
     await metadataBox.put('stats', serializableMetadata);
   }
-  /// Generic get method for cache
-  Future<dynamic> get(String key) async {
-    _checkInitialized();
-    // Try to find in appropriate box based on key pattern
-    // For simplicity, search all boxes (inefficient but works for compilation)
-    // This is a stub implementation.
-    return null;
-  }
-
-  /// Generic set method for cache
-  Future<void> set(String key, dynamic value) async {
-    _checkInitialized();
-    // Stub implementation
-  }
 }

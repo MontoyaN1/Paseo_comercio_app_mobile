@@ -1,0 +1,905 @@
+// lib/data/repositories/plazoleta_repository.dart
+
+import 'dart:async';
+import 'package:logger/logger.dart';
+
+import '../datasources/remote/supabase_client.dart';
+import '../datasources/local/local_database.dart';
+import '../../domain/repositories/plazoleta_repository_interface.dart';
+import '../../domain/entities/plazoleta.dart';
+import '../../domain/entities/imagen_base.dart';
+import '../../domain/entities/producto.dart';
+import '../../domain/entities/tienda.dart';
+import '../../domain/entities/enums.dart';
+import '../../core/utils/connectivity_service.dart';
+import '../../core/utils/cache_service.dart';
+import '../../core/errors/app_exceptions.dart';
+
+// Implementaciones simplificadas de métodos no críticos
+
+/// Repositorio para manejar operaciones de plazoletas
+class PlazoletaRepository implements PlazoletaRepositoryInterface {
+  final SupabaseClientService _supabaseClient;
+  final LocalCacheService _localCache;
+  final ConnectivityService _connectivityService;
+  final CacheService _cacheService;
+  final Logger _logger;
+
+  PlazoletaRepository({
+    required SupabaseClientService supabaseClient,
+    required LocalCacheService localCache,
+    required ConnectivityService connectivityService,
+    required CacheService cacheService,
+  }) : _supabaseClient = supabaseClient,
+       _localCache = localCache,
+       _connectivityService = connectivityService,
+       _cacheService = cacheService,
+       _logger = Logger(
+         printer: PrettyPrinter(
+           methodCount: 0,
+           errorMethodCount: 3,
+           lineLength: 50,
+           colors: true,
+           printEmojis: true,
+           printTime: false,
+         ),
+       );
+
+  // ========== OPERACIONES BÁSICAS DE PLAZOLETAS ==========
+
+  @override
+  Future<List<Plazoleta>> getPlazoletasActivas({
+    int? page,
+    int? limit,
+    String? search,
+    String? piso,
+    String? sector,
+    bool? tieneZonaComida,
+    bool? tieneEstacionamiento,
+  }) async {
+    try {
+      final cacheKey =
+          'plazoletas_activas_${search}_${piso}_${sector}_${tieneZonaComida}_${tieneEstacionamiento}';
+
+      // Verificar si hay conexión a internet
+      final tieneConexion = await _connectivityService.hasConnection();
+
+      if (!tieneConexion) {
+        // Intentar obtener de caché local
+        final cachedData = await _localCache.get(cacheKey);
+        if (cachedData != null) {
+          return _parsePlazoletasFromJson(cachedData);
+        }
+        throw Exception('No hay conexión a internet');
+      }
+
+      // Construir query
+      var query = _supabaseClient.client
+          .from('plazoletas')
+          .select('*')
+          .eq('activa', true)
+          .order('orden_visual', ascending: true);
+
+      // Aplicar filtros
+      if (search != null && search.isNotEmpty) {
+        query = query.or('nombre.ilike.%$search%,descripcion.ilike.%$search%');
+      }
+
+      if (piso != null) {
+        query = query.eq('piso', piso);
+      }
+
+      if (sector != null) {
+        query = query.eq('sector', sector);
+      }
+
+      if (tieneZonaComida != null) {
+        query = query.eq('tiene_zona_comida', tieneZonaComida);
+      }
+
+      if (tieneEstacionamiento != null) {
+        query = query.eq('tiene_estacionamiento', tieneEstacionamiento);
+      }
+
+      // Aplicar paginación
+      if (page != null && limit != null) {
+        final from = (page - 1) * limit;
+        query = query.range(from, from + limit - 1);
+      }
+
+      final response = await query;
+
+      if (response.error != null) {
+        _logger.e('Error al obtener plazoletas activas: ${response.error}');
+        throw Exception('Error del servidor: ${response.error!.message}');
+      }
+
+      final plazoletas = _parsePlazoletasFromJson(response.data);
+
+      // Guardar en caché
+      await _localCache.set(cacheKey, response.data, ttl: Duration(hours: 1));
+
+      return plazoletas;
+    } catch (e) {
+      _logger.e('Excepción en getPlazoletasActivas: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Plazoleta> getPlazoletaById(int id) async {
+    try {
+      final cacheKey = 'plazoleta_$id';
+
+      // Verificar si hay conexión a internet
+      final tieneConexion = await _connectivityService.hasConnection();
+
+      if (!tieneConexion) {
+        // Intentar obtener de caché local
+        final cachedData = await _localCache.get(cacheKey);
+        if (cachedData != null) {
+          return _parsePlazoletaFromJson(cachedData);
+        }
+        throw Exception('No hay conexión a internet');
+      }
+
+      final response =
+          await _supabaseClient.client
+              .from('plazoletas')
+              .select('*')
+              .eq('id', id)
+              .single();
+
+      if (response.error != null) {
+        _logger.e('Error al obtener plazoleta por ID: ${response.error}');
+        throw Exception('Error del servidor: ${response.error!.message}');
+      }
+
+      final plazoleta = _parsePlazoletaFromJson(response.data);
+
+      // Guardar en caché
+      await _localCache.set(cacheKey, response.data, ttl: Duration(hours: 2));
+
+      return plazoleta;
+    } catch (e) {
+      _logger.e('Excepción en getPlazoletaById: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<Plazoleta>> getPlazoletasByIds(List<int> ids) async {
+    try {
+      if (ids.isEmpty) return [];
+
+      final cacheKey = 'plazoletas_ids_${ids.join('_')}';
+
+      // Verificar si hay conexión a internet
+      final tieneConexion = await _connectivityService.hasConnection();
+
+      if (!tieneConexion) {
+        // Intentar obtener de caché local
+        final cachedData = await _localCache.get(cacheKey);
+        if (cachedData != null) {
+          return _parsePlazoletasFromJson(cachedData);
+        }
+        throw Exception('No hay conexión a internet');
+      }
+
+      final response = await _supabaseClient.client
+          .from('plazoletas')
+          .select('*')
+          .in_('id', ids)
+          .order('orden_visual', ascending: true);
+
+      if (response.error != null) {
+        _logger.e('Error al obtener plazoletas por IDs: ${response.error}');
+        throw Exception('Error del servidor: ${response.error!.message}');
+      }
+
+      final plazoletas = _parsePlazoletasFromJson(response.data);
+
+      // Guardar en caché
+      await _localCache.set(cacheKey, response.data, ttl: Duration(hours: 1));
+
+      return plazoletas;
+    } catch (e) {
+      _logger.e('Excepción en getPlazoletasByIds: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<Plazoleta>> getPlazoletasPopulares({int? limit}) async {
+    try {
+      final cacheKey = 'plazoletas_populares_$limit';
+
+      // Verificar si hay conexión a internet
+      final tieneConexion = await _connectivityService.hasConnection();
+
+      if (!tieneConexion) {
+        // Intentar obtener de caché local
+        final cachedData = await _localCache.get(cacheKey);
+        if (cachedData != null) {
+          return _parsePlazoletasFromJson(cachedData);
+        }
+        throw Exception('No hay conexión a internet');
+      }
+
+      var query = _supabaseClient.client
+          .from('plazoletas')
+          .select('*')
+          .eq('activa', true)
+          .order('total_visitas', ascending: false);
+
+      if (limit != null) {
+        query = query.limit(limit);
+      }
+
+      final response = await query;
+
+      if (response.error != null) {
+        _logger.e('Error al obtener plazoletas populares: ${response.error}');
+        throw Exception('Error del servidor: ${response.error!.message}');
+      }
+
+      final plazoletas = _parsePlazoletasFromJson(response.data);
+
+      // Guardar en caché
+      await _localCache.set(cacheKey, response.data, ttl: Duration(hours: 1));
+
+      return plazoletas;
+    } catch (e) {
+      _logger.e('Excepción en getPlazoletasPopulares: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<Plazoleta>> getPlazoletasDisponibles({
+    int? page,
+    int? limit,
+  }) async {
+    try {
+      final cacheKey = 'plazoletas_disponibles_${page}_$limit';
+
+      // Verificar si hay conexión a internet
+      final tieneConexion = await _connectivityService.hasConnection();
+
+      if (!tieneConexion) {
+        // Intentar obtener de caché local
+        final cachedData = await _localCache.get(cacheKey);
+        if (cachedData != null) {
+          return _parsePlazoletasFromJson(cachedData);
+        }
+        throw Exception('No hay conexión a internet');
+      }
+
+      var query = _supabaseClient.client
+          .from('plazoletas')
+          .select('*')
+          .eq('activa', true)
+          .lt('total_tiendas', 'capacidad_maxima')
+          .order('orden_visual', ascending: true);
+
+      if (page != null && limit != null) {
+        final from = (page - 1) * limit;
+        query = query.range(from, from + limit - 1);
+      }
+
+      final response = await query;
+
+      if (response.error != null) {
+        _logger.e('Error al obtener plazoletas disponibles: ${response.error}');
+        throw Exception('Error del servidor: ${response.error!.message}');
+      }
+
+      final plazoletas = _parsePlazoletasFromJson(response.data);
+
+      // Guardar en caché
+      await _localCache.set(cacheKey, response.data, ttl: Duration(hours: 1));
+
+      return plazoletas;
+    } catch (e) {
+      _logger.e('Excepción en getPlazoletasDisponibles: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<Plazoleta>> searchPlazoletas(String query) async {
+    try {
+      final cacheKey = 'plazoletas_search_$query';
+
+      // Verificar si hay conexión a internet
+      final tieneConexion = await _connectivityService.hasConnection();
+
+      if (!tieneConexion) {
+        // Intentar obtener de caché local
+        final cachedData = await _localCache.get(cacheKey);
+        if (cachedData != null) {
+          return _parsePlazoletasFromJson(cachedData);
+        }
+        throw Exception('No hay conexión a internet');
+      }
+
+      final response = await _supabaseClient.client
+          .from('plazoletas')
+          .select('*')
+          .or(
+            'nombre.ilike.%$query%,descripcion.ilike.%$query%,ubicacion.ilike.%$query%',
+          )
+          .eq('activa', true)
+          .order('orden_visual', ascending: true)
+          .limit(20);
+
+      if (response.error != null) {
+        _logger.e('Error al buscar plazoletas: ${response.error}');
+        throw Exception('Error del servidor: ${response.error!.message}');
+      }
+
+      final plazoletas = _parsePlazoletasFromJson(response.data);
+
+      // Guardar en caché
+      await _localCache.set(
+        cacheKey,
+        response.data,
+        ttl: Duration(minutes: 30),
+      );
+
+      return plazoletas;
+    } catch (e) {
+      _logger.e('Excepción en searchPlazoletas: $e');
+      rethrow;
+    }
+  }
+
+  // ========== IMÁGENES DE PLAZOLETAS ==========
+
+  @override
+  Future<List<ImagenBase>> getImagenesPlazoleta(
+    int plazoletaId, {
+    TipoImagen? tipoImagen,
+    bool? soloActivas,
+  }) async {
+    try {
+      final cacheKey =
+          'imagenes_plazoleta_${plazoletaId}_${tipoImagen}_${soloActivas}';
+
+      // Verificar si hay conexión a internet
+      final tieneConexion = await _connectivityService.hasConnection();
+
+      if (!tieneConexion) {
+        // Intentar obtener de caché local
+        final cachedData = await _localCache.get(cacheKey);
+        if (cachedData != null) {
+          return _parseImagenesFromJson(cachedData);
+        }
+        throw Exception('No hay conexión a internet');
+      }
+
+      var query = _supabaseClient.client
+          .from('imagen_plazoleta')
+          .select('*')
+          .eq('id_ubicacion', plazoletaId);
+
+      if (tipoImagen != null) {
+        query = query.eq('tipo_imagen', tipoImagen.toString().split('.').last);
+      }
+
+      if (soloActivas == true) {
+        query = query.eq('activa', true);
+      }
+
+      query = query.order('orden', ascending: true);
+
+      final response = await query;
+
+      if (response.error != null) {
+        _logger.e('Error al obtener imágenes de plazoleta: ${response.error}');
+        throw Exception('Error del servidor: ${response.error!.message}');
+      }
+
+      final imagenes = _parseImagenesFromJson(response.data);
+
+      // Guardar en caché
+      await _localCache.set(cacheKey, response.data, ttl: Duration(hours: 2));
+
+      return imagenes;
+    } catch (e) {
+      _logger.e('Excepción en getImagenesPlazoleta: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<ImagenBase?> getImagenPrincipalPlazoleta(int plazoletaId) async {
+    try {
+      final cacheKey = 'imagen_principal_plazoleta_$plazoletaId';
+
+      // Verificar si hay conexión a internet
+      final tieneConexion = await _connectivityService.hasConnection();
+
+      if (!tieneConexion) {
+        // Intentar obtener de caché local
+        final cachedData = await _localCache.get(cacheKey);
+        if (cachedData != null) {
+          return _parseImagenFromJson(cachedData);
+        }
+        throw Exception('No hay conexión a internet');
+      }
+
+      final response =
+          await _supabaseClient.client
+              .from('imagen_plazoleta')
+              .select('*')
+              .eq('id_ubicacion', plazoletaId)
+              .eq('tipo_imagen', 'principal')
+              .eq('activa', true)
+              .order('orden', ascending: true)
+              .limit(1)
+              .single();
+
+      if (response.error != null) {
+        // Si no se encuentra imagen principal, no es un error
+        if (response.error!.message.contains('No rows found')) {
+          return null;
+        }
+        _logger.e(
+          'Error al obtener imagen principal de plazoleta: ${response.error}',
+        );
+        throw Exception('Error del servidor: ${response.error!.message}');
+      }
+
+      final imagen = _parseImagenFromJson(response.data);
+
+      // Guardar en caché
+      await _localCache.set(cacheKey, response.data, ttl: Duration(hours: 2));
+
+      return imagen;
+    } catch (e) {
+      _logger.e('Excepción en getImagenPrincipalPlazoleta: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<List<ImagenBase>> getImagenesPlazoletaPorTipo(
+    int plazoletaId,
+    TipoImagen tipoImagen,
+  ) async {
+    try {
+      final cacheKey = 'imagenes_plazoleta_tipo_${plazoletaId}_${tipoImagen}';
+
+      // Verificar si hay conexión a internet
+      final tieneConexion = await _connectivityService.hasConnection();
+
+      if (!tieneConexion) {
+        // Intentar obtener de caché local
+        final cachedData = await _localCache.get(cacheKey);
+        if (cachedData != null) {
+          return _parseImagenesFromJson(cachedData);
+        }
+        throw Exception('No hay conexión a internet');
+      }
+
+      final response = await _supabaseClient.client
+          .from('imagen_plazoleta')
+          .select('*')
+          .eq('id_ubicacion', plazoletaId)
+          .eq('tipo_imagen', tipoImagen.toString().split('.').last)
+          .eq('activa', true)
+          .order('orden', ascending: true);
+
+      if (response.error != null) {
+        _logger.e('Error al obtener imágenes por tipo: ${response.error}');
+        throw Exception('Error del servidor: ${response.error!.message}');
+      }
+
+      final imagenes = _parseImagenesFromJson(response.data);
+
+      // Guardar en caché
+      await _localCache.set(cacheKey, response.data, ttl: Duration(hours: 2));
+
+      return imagenes;
+    } catch (e) {
+      _logger.e('Excepción en getImagenesPlazoletaPorTipo: $e');
+      rethrow;
+    }
+  }
+
+  // ========== MÉTODOS DE PARSEO ==========
+
+  /// Parsear lista de plazoletas desde JSON
+  List<Plazoleta> _parsePlazoletasFromJson(List<dynamic> jsonList) {
+    return jsonList.map((json) => _parsePlazoletaFromJson(json)).toList();
+  }
+
+  /// Parsear una plazoleta desde JSON
+  Plazoleta _parsePlazoletaFromJson(Map<String, dynamic> json) {
+    return Plazoleta(
+      id: json['id'] as int,
+      nombre: json['nombre'] as String,
+      descripcion: json['descripcion'] as String?,
+      ubicacion: json['ubicacion'] as String?,
+      capacidadMaxima: json['capacidad_maxima'] as int?,
+      ordenVisual: json['orden_visual'] as int?,
+      activa: json['activa'] as bool,
+      fechaCreacion: DateTime.parse(json['fecha_creacion'] as String),
+      fechaActualizacion:
+          json['fecha_actualizacion'] != null
+              ? DateTime.parse(json['fecha_actualizacion'] as String)
+              : null,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+      totalTiendas: (json['total_tiendas'] as int?) ?? 0,
+      totalVisitas: (json['total_visitas'] as int?) ?? 0,
+      latitud: (json['latitud'] as num?)?.toDouble(),
+      longitud: (json['longitud'] as num?)?.toDouble(),
+      piso: json['piso'] as String?,
+      sector: json['sector'] as String?,
+      icono: json['icono'] as String?,
+      color: json['color'] as String?,
+      tipoUbicacion: _parseTipoUbicacion(json['tipo_ubicacion'] as String?),
+      tieneAccesoDiscapacitados:
+          json['tiene_acceso_discapacitados'] as bool? ?? false,
+      tieneEstacionamiento: json['tiene_estacionamiento'] as bool? ?? false,
+      tieneZonaDescanso: json['tiene_zona_descanso'] as bool? ?? false,
+      tieneZonaComida: json['tiene_zona_comida'] as bool? ?? false,
+      serviciosDisponibles:
+          (json['servicios_disponibles'] as List<dynamic>?)
+              ?.cast<String>()
+              .toList(),
+      horarioAcceso: json['horario_acceso'] as String?,
+      normasUso: json['normas_uso'] as String?,
+    );
+  }
+
+  /// Parsear lista de imágenes desde JSON
+  List<ImagenBase> _parseImagenesFromJson(List<dynamic> jsonList) {
+    return jsonList.map((json) => _parseImagenFromJson(json)).toList();
+  }
+
+  /// Parsear una imagen desde JSON
+  ImagenBase _parseImagenFromJson(Map<String, dynamic> json) {
+    final tipoImagenStr = json['tipo_imagen'] as String? ?? 'principal';
+    final tipoImagen = _parseTipoImagen(tipoImagenStr);
+    final plazoletaId = json['id_ubicacion'] as int;
+
+    return ImagenPlazoleta(
+      id: json['id'] as int,
+      urlOriginal: json['url_imagen'] as String,
+      urlR2: json['url_r2'] as String?,
+      urlS3: json['url_s3'] as String?,
+      urlSupabase: json['url_supabase'] as String?,
+      nombreArchivo: _extractFileName(json['url_imagen'] as String),
+      extension: _extractFileExtension(json['url_imagen'] as String),
+      tamanoBytes: (json['tamaño_bytes'] as int?) ?? 0,
+      ancho: (json['ancho'] as int?) ?? 0,
+      alto: (json['alto'] as int?) ?? 0,
+      tipoImagen: tipoImagen,
+      esPrincipal: tipoImagen == TipoImagen.principal,
+      ordenVisual: (json['orden'] as int?) ?? 0,
+      titulo: json['titulo'] as String?,
+      descripcion: json['descripcion'] as String?,
+      altText: json['alt_text'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+      fechaCreacion: DateTime.parse(json['fecha_subida'] as String),
+      fechaActualizacion:
+          json['fecha_actualizacion'] != null
+              ? DateTime.parse(json['fecha_actualizacion'] as String)
+              : null,
+      activa: json['activa'] as bool? ?? true,
+      hashArchivo: json['hash_archivo'] as String?,
+      proveedorPrincipal: json['proveedor_principal'] as String?,
+      urlsVariantes: _parseUrlsVariantes(json),
+      mimeType: json['mime_type'] as String?,
+      optimizada: json['optimizada'] as bool? ?? false,
+      calidad: json['calidad'] as int?,
+      formatoOptimizado: json['formato_optimizado'] as String?,
+      plazoletaId: plazoletaId,
+    );
+  }
+
+  /// Parsear tipo de ubicación desde string
+  TipoUbicacion _parseTipoUbicacion(String? tipoStr) {
+    if (tipoStr == null) return TipoUbicacion.plazoleta;
+
+    switch (tipoStr.toLowerCase()) {
+      case 'plazoleta':
+        return TipoUbicacion.plazoleta;
+      case 'pasillo':
+        return TipoUbicacion.pasillo;
+      case 'entrada':
+        return TipoUbicacion.entrada;
+      case 'escalera':
+        return TipoUbicacion.escalera;
+      case 'ascensor':
+        return TipoUbicacion.ascensor;
+      case 'baño':
+        return TipoUbicacion.bano;
+      case 'estacionamiento':
+        return TipoUbicacion.estacionamiento;
+      default:
+        return TipoUbicacion.plazoleta;
+    }
+  }
+
+  /// Parsear tipo de imagen desde string
+  TipoImagen _parseTipoImagen(String tipoStr) {
+    switch (tipoStr.toLowerCase()) {
+      case 'principal':
+        return TipoImagen.principal;
+      case 'detalle':
+        return TipoImagen.detalle;
+      case 'plazoleta_productos_fondo':
+        return TipoImagen.plazoletaProductosFondo;
+      case 'galeria':
+        return TipoImagen.galeria;
+      case 'icono':
+        return TipoImagen.icono;
+      case 'banner':
+        return TipoImagen.banner;
+      case 'thumbnail':
+        return TipoImagen.thumbnail;
+      default:
+        return TipoImagen.principal;
+    }
+  }
+
+  /// Extraer nombre de archivo desde URL
+  String _extractFileName(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final pathSegments = uri.pathSegments;
+      return pathSegments.isNotEmpty ? pathSegments.last : 'imagen';
+    } catch (e) {
+      return 'imagen';
+    }
+  }
+
+  /// Extraer extensión de archivo desde URL
+  String _extractFileExtension(String url) {
+    try {
+      final fileName = _extractFileName(url);
+      final dotIndex = fileName.lastIndexOf('.');
+      if (dotIndex != -1 && dotIndex < fileName.length - 1) {
+        return fileName.substring(dotIndex + 1).toLowerCase();
+      }
+      return 'jpg';
+    } catch (e) {
+      return 'jpg';
+    }
+  }
+
+  /// Parsear URLs de variantes desde JSON
+  Map<String, String>? _parseUrlsVariantes(Map<String, dynamic> json) {
+    final variantes = <String, String>{};
+
+    // Agregar URLs de variantes si existen
+    if (json['url_thumb'] != null) {
+      variantes['thumb'] = json['url_thumb'] as String;
+    }
+    if (json['url_medium'] != null) {
+      variantes['medium'] = json['url_medium'] as String;
+    }
+    if (json['url_large'] != null) {
+      variantes['large'] = json['url_large'] as String;
+    }
+
+    // Parsear campo variantes si existe (JSON string)
+    if (json['variantes'] != null) {
+      try {
+        final variantesJson = json['variantes'] as Map<String, dynamic>;
+        for (final entry in variantesJson.entries) {
+          if (entry.value is Map<String, dynamic>) {
+            final variantData = entry.value as Map<String, dynamic>;
+            if (variantData['url'] != null) {
+              variantes[entry.key] = variantData['url'] as String;
+            }
+          }
+        }
+      } catch (e) {
+        _logger.w('Error al parsear variantes: $e');
+      }
+    }
+
+    return variantes.isNotEmpty ? variantes : null;
+  }
+
+  // ========== PRODUCTOS RELACIONADOS CON PLAZOLETAS ==========
+
+  @override
+  Future<List<Producto>> getProductosPorPlazoleta(
+    int plazoletaId, {
+    int? page,
+    int? limit,
+    String? search,
+    double? precioMin,
+    double? precioMax,
+    bool? soloDisponibles,
+  }) async {
+    try {
+      final cacheKey =
+          'productos_plazoleta_${plazoletaId}_${search}_${precioMin}_${precioMax}_${soloDisponibles}';
+
+      // Verificar si hay datos en caché
+      if (_cacheService.has(cacheKey)) {
+        final cachedData = _cacheService.get<List<dynamic>>(cacheKey);
+        if (cachedData != null) {
+          return cachedData.map((json) => Producto.fromJson(json)).toList();
+        }
+      }
+
+      // Verificar conectividad
+      final hasConnection = await _connectivityService.hasConnection();
+      if (!hasConnection) {
+        throw NetworkException();
+      }
+
+      // Construir query para Supabase
+      var query = _supabaseClient
+          .from('productos')
+          .select('*')
+          .eq('plazoleta_id', plazoletaId)
+          .order('nombre', ascending: true);
+
+      // Aplicar filtros
+      if (search != null && search.isNotEmpty) {
+        query = query.ilike('nombre', '%$search%');
+      }
+
+      if (precioMin != null) {
+        query = query.gte('precio', precioMin);
+      }
+
+      if (precioMax != null) {
+        query = query.lte('precio', precioMax);
+      }
+
+      if (soloDisponibles == true) {
+        query = query.eq('disponible', true);
+      }
+
+      // Aplicar paginación
+      if (page != null && limit != null) {
+        final from = (page - 1) * limit;
+        final to = from + limit - 1;
+        query = query.range(from, to);
+      }
+
+      // Ejecutar query
+      final response = await query;
+
+      if (response == null || response.isEmpty) {
+        return [];
+      }
+
+      // Parsear resultados
+      final productos =
+          response.map((json) => Producto.fromJson(json)).toList();
+
+      // Guardar en caché
+      _cacheService.set(
+        cacheKey,
+        response,
+        duration: const Duration(minutes: 10),
+      );
+
+      return productos;
+    } catch (e, stackTrace) {
+      _logger.e(
+        'Error en getProductosPorPlazoleta: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<Producto>> getProductosDestacadosPlazoleta(
+    int plazoletaId, {
+    int? limit,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Map<String, List<Producto>>> getProductosPorCategoriasPlazoleta(
+    int plazoletaId, {
+    int? productosPorCategoria,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Tienda>> getTiendasPlazoleta(
+    int plazoletaId, {
+    int? page,
+    int? limit,
+    String? search,
+    bool? soloAbiertas,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Tienda>> getTiendasDestacadasPlazoleta(
+    int plazoletaId, {
+    int? limit,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Map<String, List<Tienda>>> getTiendasPorCategoriaPlazoleta(
+    int plazoletaId, {
+    int? tiendasPorCategoria,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> incrementarVisitasPlazoleta(int plazoletaId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Map<String, dynamic>> getEstadisticasPlazoleta(int plazoletaId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<double> getNivelOcupacionPlazoleta(int plazoletaId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Plazoleta>> filtrarPlazoletas({
+    List<String>? pisos,
+    List<String>? sectores,
+    List<String>? servicios,
+    bool? tieneAccesoDiscapacitados,
+    bool? tieneEstacionamiento,
+    bool? tieneZonaDescanso,
+    bool? tieneZonaComida,
+    double? latitud,
+    double? longitud,
+    double? radioKm,
+    int? capacidadMinima,
+    int? capacidadMaxima,
+    bool? soloDisponibles,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Plazoleta>> getPlazoletasCercanas({
+    required double latitud,
+    required double longitud,
+    double? radioKm,
+    int? limit,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> sincronizarPlazoletas() async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> limpiarCachePlazoletas() async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> tieneCachePlazoletas() async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<DateTime?> getUltimaActualizacionPlazoletas() async {
+    throw UnimplementedError();
+  }
+}

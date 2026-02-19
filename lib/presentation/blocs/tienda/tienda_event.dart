@@ -1,5 +1,7 @@
 // lib/presentation/blocs/tienda/tienda_event.dart
 
+import 'package:equatable/equatable.dart';
+
 part of 'tienda_bloc.dart';
 
 /// Eventos base para TiendaBloc

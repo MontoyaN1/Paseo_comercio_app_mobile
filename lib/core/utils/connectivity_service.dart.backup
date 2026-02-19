@@ -32,8 +32,6 @@ class ConnectivityService {
 
   /// Verificar si hay conexión
   bool get isConnected => _currentStatus == ConnectionStatus.connected;
-  /// Check if there is connection (async version)
-  Future<bool> hasConnection() async => isConnected;
 
   /// Verificar si está desconectado
   bool get isDisconnected => _currentStatus == ConnectionStatus.disconnected;

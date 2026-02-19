@@ -12,6 +12,21 @@ import '../../widgets/common/error_state.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/producto/producto_card.dart';
 
+/// Wrapper para proporcionar el BLoC de productos
+class ProductoBlocProvider extends StatelessWidget {
+  final Widget child;
+
+  const ProductoBlocProvider({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider<ProductoBloc>(
+      create: (context) => getIt<ProductoBloc>(),
+      child: child,
+    );
+  }
+}
+
 /// Pantalla de lista de productos
 class ProductoListPage extends StatefulWidget {
   const ProductoListPage({super.key});

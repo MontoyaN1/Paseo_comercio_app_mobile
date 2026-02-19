@@ -66,6 +66,7 @@ dependencies:
   # State Management
   flutter_bloc: ^9.1.1
   equatable: ^2.0.5
+  dartz: ^0.10.1
 
   # Dependency Injection
   get_it: ^9.2.0

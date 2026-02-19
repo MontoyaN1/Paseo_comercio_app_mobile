@@ -5,8 +5,13 @@ import 'package:flutter/material.dart';
 
 import '../../presentation/pages/auth/login_page.dart';
 import '../../presentation/pages/profile/profile_page.dart';
-import '../../presentation/pages/tiendas/tienda_list_page.dart';
-import '../../presentation/pages/productos/producto_list_page.dart';
+import '../../presentation/pages/tiendas/tienda_list_page.dart'
+    show TiendaBlocProvider, TiendaListPage;
+import '../../presentation/pages/productos/producto_list_page.dart'
+    show ProductoBlocProvider, ProductoListPage;
+import '../../presentation/pages/plazoletas/plazoleta_list_page.dart'
+    show PlazoletaBlocProvider, PlazoletaListPage;
+import '../../presentation/pages/plazoletas/plazoleta_detail_page.dart';
 
 /// Configuración de rutas de la aplicación usando GoRouter
 class AppRouter {
@@ -14,13 +19,13 @@ class AppRouter {
     debugLogDiagnostics: true,
     initialLocation: '/',
     routes: [
-      // Ruta raíz - redirige a login o tiendas según autenticación
+      // Ruta raíz - redirige a login o plazoletas según autenticación
       GoRoute(
         path: '/',
         redirect: (context, state) {
           // TODO: Implementar lógica de redirección basada en autenticación
-          // Por ahora, redirigir a login
-          return '/login';
+          // Por ahora, redirigir a plazoletas
+          return '/plazoletas';
         },
       ),
 
@@ -46,6 +51,31 @@ class AppRouter {
             ),
       ),
 
+      // Plazoletas
+      GoRoute(
+        path: '/plazoletas',
+        name: 'plazoletas',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: PlazoletaBlocProvider(child: const PlazoletaListPage()),
+            ),
+      ),
+
+      // Detalle de plazoleta
+      GoRoute(
+        path: '/plazoletas/:id',
+        name: 'plazoleta_detail',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          final plazoletaId = int.tryParse(id) ?? 0;
+          return MaterialPage<void>(
+            key: state.pageKey,
+            child: PlazoletaDetailPage(plazoletaId: plazoletaId),
+          );
+        },
+      ),
+
       // Tiendas
       GoRoute(
         path: '/tiendas',
@@ -53,7 +83,7 @@ class AppRouter {
         pageBuilder:
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
-              child: const TiendaListPage(),
+              child: TiendaBlocProvider(child: const TiendaListPage()),
             ),
       ),
 
@@ -92,7 +122,7 @@ class AppRouter {
         pageBuilder:
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
-              child: const ProductoListPage(),
+              child: ProductoBlocProvider(child: const ProductoListPage()),
             ),
       ),
 

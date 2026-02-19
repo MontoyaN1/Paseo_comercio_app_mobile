@@ -1,6 +1,6 @@
 // lib/presentation/blocs/image/image_event.dart
 
-part of 'image_bloc.dart';
+import 'package:equatable/equatable.dart';
 
 /// Eventos base para ImageBloc
 abstract class ImageEvent extends Equatable {

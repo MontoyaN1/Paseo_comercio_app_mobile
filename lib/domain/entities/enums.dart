@@ -115,7 +115,9 @@ enum TipoImagen {
   zoom('zoom'),
   logo('logo'),
   plazoletaProductosFondo('plazoleta_productos_fondo'),
-  banner('banner');
+  banner('banner'),
+  icono('icono'),
+  thumbnail('thumbnail');
 
   final String value;
   const TipoImagen(this.value);
@@ -179,7 +181,12 @@ enum TipoRol {
 /// Tipo de ubicación
 enum TipoUbicacion {
   pasillo('pasillo'),
-  plazoleta('plazoleta');
+  plazoleta('plazoleta'),
+  entrada('entrada'),
+  escalera('escalera'),
+  ascensor('ascensor'),
+  bano('baño'),
+  estacionamiento('estacionamiento');
 
   final String value;
   const TipoUbicacion(this.value);

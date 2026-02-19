@@ -1,52 +1,34 @@
 // lib/data/models/domain/tienda.dart
 
-import 'package:hive/hive.dart';
 import 'package:equatable/equatable.dart';
 
-part 'tienda.g.dart';
-
-@HiveType(typeId: 2)
 class Tienda extends Equatable {
-  @HiveField(0)
   final int id;
 
-  @HiveField(1)
   final DateTime fechaCreacion;
 
-  @HiveField(2)
   final int idPropietario;
 
-  @HiveField(3)
   final String nombreTienda;
 
-  @HiveField(4)
   final String? descripcion;
 
-  @HiveField(5)
   final Map<String, dynamic>? redesSociales;
 
-  @HiveField(6)
   final int? organizacionId;
 
-  @HiveField(7)
   final String? emailContacto;
 
-  @HiveField(8)
   final String? telefonoContacto;
 
-  @HiveField(9)
   final String? direccion;
 
-  @HiveField(10)
   final int totalVisitas;
 
-  @HiveField(11)
   final int totalContactosWhatsapp;
 
-  @HiveField(12)
   final DateTime? fechaUltimaVisita;
 
-  @HiveField(13)
   final DateTime? updatedAt;
 
   const Tienda({

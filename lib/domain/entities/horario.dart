@@ -78,7 +78,8 @@ class Horario extends Equatable {
   }
 
   /// Verificar si es horario normal (no especial)
-  bool get esHorarioNormal => !esHorarioEspecial && tipoHorario == TipoHorario.normal;
+  bool get esHorarioNormal =>
+      !esHorarioEspecial && tipoHorario == TipoHorario.normal;
 
   /// Verificar si es horario festivo
   bool get esHorarioFestivo => tipoHorario == TipoHorario.festivo;
@@ -128,11 +129,16 @@ class Horario extends Equatable {
     final minutosCierre = horaCierre.hour * 60 + horaCierre.minute;
 
     // Verificar descanso si existe
-    if (tieneDescanso && horaInicioDescanso != null && horaFinDescanso != null) {
-      final minutosInicioDescanso = horaInicioDescanso!.hour * 60 + horaInicioDescanso!.minute;
-      final minutosFinDescanso = horaFinDescanso!.hour * 60 + horaFinDescanso!.minute;
+    if (tieneDescanso &&
+        horaInicioDescanso != null &&
+        horaFinDescanso != null) {
+      final minutosInicioDescanso =
+          horaInicioDescanso!.hour * 60 + horaInicioDescanso!.minute;
+      final minutosFinDescanso =
+          horaFinDescanso!.hour * 60 + horaFinDescanso!.minute;
 
-      if (minutosHorario >= minutosInicioDescanso && minutosHorario <= minutosFinDescanso) {
+      if (minutosHorario >= minutosInicioDescanso &&
+          minutosHorario <= minutosFinDescanso) {
         return false;
       }
     }
@@ -147,10 +153,12 @@ class Horario extends Equatable {
 
     if (horaInicioCitas != null && horaFinCitas != null) {
       final minutosHorario = horario.hour * 60 + horario.minute;
-      final minutosInicioCitas = horaInicioCitas!.hour * 60 + horaInicioCitas!.minute;
+      final minutosInicioCitas =
+          horaInicioCitas!.hour * 60 + horaInicioCitas!.minute;
       final minutosFinCitas = horaFinCitas!.hour * 60 + horaFinCitas!.minute;
 
-      return minutosHorario >= minutosInicioCitas && minutosHorario <= minutosFinCitas;
+      return minutosHorario >= minutosInicioCitas &&
+          minutosHorario <= minutosFinCitas;
     }
 
     return true;
@@ -201,7 +209,9 @@ class Horario extends Equatable {
     final apertura = _formatearTimeOfDay(horaApertura);
     final cierre = _formatearTimeOfDay(horaCierre);
 
-    if (tieneDescanso && horaInicioDescanso != null && horaFinDescanso != null) {
+    if (tieneDescanso &&
+        horaInicioDescanso != null &&
+        horaFinDescanso != null) {
       final inicioDescanso = _formatearTimeOfDay(horaInicioDescanso!);
       final finDescanso = _formatearTimeOfDay(horaFinDescanso!);
       return '$apertura - $cierre (Descanso: $inicioDescanso - $finDescanso)';
@@ -278,12 +288,15 @@ class Horario extends Equatable {
       horaInicioCitas: horaInicioCitas ?? this.horaInicioCitas,
       horaFinCitas: horaFinCitas ?? this.horaFinCitas,
       requiereReserva: requiereReserva ?? this.requiereReserva,
-      anticipacionMinimaReserva: anticipacionMinimaReserva ?? this.anticipacionMinimaReserva,
-      capacidadMaximaSimultanea: capacidadMaximaSimultanea ?? this.capacidadMaximaSimultanea,
+      anticipacionMinimaReserva:
+          anticipacionMinimaReserva ?? this.anticipacionMinimaReserva,
+      capacidadMaximaSimultanea:
+          capacidadMaximaSimultanea ?? this.capacidadMaximaSimultanea,
       tieneDescanso: tieneDescanso ?? this.tieneDescanso,
       horaInicioDescanso: horaInicioDescanso ?? this.horaInicioDescanso,
       horaFinDescanso: horaFinDescanso ?? this.horaFinDescanso,
-      duracionDescansoMinutos: duracionDescansoMinutos ?? this.duracionDescansoMinutos,
+      duracionDescansoMinutos:
+          duracionDescansoMinutos ?? this.duracionDescansoMinutos,
     );
   }
 
@@ -347,7 +360,12 @@ class Horario extends Equatable {
     final hour = time.hour;
     final minute = time.minute;
     final period = hour >= 12 ? 'PM' : 'AM';
-    final hour12 = hour > 12 ? hour - 12 : hour == 0 ? 12 : hour;
+    final hour12 =
+        hour > 12
+            ? hour - 12
+            : hour == 0
+            ? 12
+            : hour;
     return '$hour12:${minute.toString().padLeft(2, '0')} $period';
   }
 
@@ -358,8 +376,10 @@ class Horario extends Equatable {
 
     final thisStart = horaApertura.hour * 60 + horaApertura.minute;
     final thisEnd = horaCierre.hour * 60 + horaCierre.minute;
-    final otherStart = otroHorario.horaApertura.hour * 60 + otroHorario.horaApertura.minute;
-    final otherEnd = otroHorario.horaCierre.hour * 60 + otroHorario.horaCierre.minute;
+    final otherStart =
+        otroHorario.horaApertura.hour * 60 + otroHorario.horaApertura.minute;
+    final otherEnd =
+        otroHorario.horaCierre.hour * 60 + otroHorario.horaCierre.minute;
 
     // Verificar solapamiento
     return thisEnd <= otherStart || thisStart >= otherEnd;
@@ -375,7 +395,8 @@ class Horario extends Equatable {
 
     final tiempoDisponible = duracionTotalMinutos;
     if (tieneDescanso && duracionDescansoMinutos != null) {
-      return (tiempoDisponible - duracionDescansoMinutos!) ~/ duracionCitaMinutos!;
+      return (tiempoDisponible - duracionDescansoMinutos!) ~/
+          duracionCitaMinutos!;
     }
 
     return tiempoDisponible ~/ duracionCitaMinutos!;
@@ -411,7 +432,9 @@ class Horario extends Equatable {
   bool necesitaActualizacion() {
     // Horarios inactivos por más de 30 días
     if (!activo && fechaActualizacion != null) {
-      final treintaDiasAtras = DateTime.now().subtract(const Duration(days: 30));
+      final treintaDiasAtras = DateTime.now().subtract(
+        const Duration(days: 30),
+      );
       return fechaActualizacion!.isBefore(treintaDiasAtras);
     }
 
@@ -488,12 +511,17 @@ class Horario extends Equatable {
     }
 
     // Verificar descanso si existe
-    if (tieneDescanso && horaInicioDescanso != null && horaFinDescanso != null) {
-      final minutosInicioDescanso = horaInicioDescanso!.hour * 60 + horaInicioDescanso!.minute;
-      final minutosFinDescanso = horaFinDescanso!.hour * 60 + horaFinDescanso!.minute;
+    if (tieneDescanso &&
+        horaInicioDescanso != null &&
+        horaFinDescanso != null) {
+      final minutosInicioDescanso =
+          horaInicioDescanso!.hour * 60 + horaInicioDescanso!.minute;
+      final minutosFinDescanso =
+          horaFinDescanso!.hour * 60 + horaFinDescanso!.minute;
 
       // Verificar que el descanso esté dentro del horario
-      if (minutosInicioDescanso < minutosApertura || minutosFinDescanso > minutosCierre) {
+      if (minutosInicioDescanso < minutosApertura ||
+          minutosFinDescanso > minutosCierre) {
         return false;
       }
 
@@ -505,11 +533,13 @@ class Horario extends Equatable {
 
     // Verificar horario de citas si existe
     if (permiteCitas && horaInicioCitas != null && horaFinCitas != null) {
-      final minutosInicioCitas = horaInicioCitas!.hour * 60 + horaInicioCitas!.minute;
+      final minutosInicioCitas =
+          horaInicioCitas!.hour * 60 + horaInicioCitas!.minute;
       final minutosFinCitas = horaFinCitas!.hour * 60 + horaFinCitas!.minute;
 
       // Verificar que el horario de citas esté dentro del horario general
-      if (minutosInicioCitas < minutosApertura || minutosFinCitas > minutosCierre) {
+      if (minutosInicioCitas < minutosApertura ||
+          minutosFinCitas > minutosCierre) {
         return false;
       }
 
@@ -527,7 +557,7 @@ class Horario extends Equatable {
     return cantidad <= capacidadMaximaSimultanea!;
   }
 
-  TimeOfDay? get siguienteIntervaloCita(TimeOfDay horarioActual) {
+  TimeOfDay? siguienteIntervaloCita(TimeOfDay horarioActual) {
     if (!permiteCitas || intervaloCitaMinutos == null) return null;
 
     final minutosActual = horarioActual.hour * 60 + horarioActual.minute;
@@ -544,10 +574,12 @@ class Horario extends Equatable {
 
     // Verificar que esté dentro del horario de citas si existe
     if (horaInicioCitas != null && horaFinCitas != null) {
-      final minutosInicioCitas = horaInicioCitas!.hour * 60 + horaInicioCitas!.minute;
+      final minutosInicioCitas =
+          horaInicioCitas!.hour * 60 + horaInicioCitas!.minute;
       final minutosFinCitas = horaFinCitas!.hour * 60 + horaFinCitas!.minute;
 
-      if (siguienteMinuto < minutosInicioCitas || siguienteMinuto > minutosFinCitas) {
+      if (siguienteMinuto < minutosInicioCitas ||
+          siguienteMinuto > minutosFinCitas) {
         return null;
       }
     }
@@ -560,10 +592,11 @@ class Horario extends Equatable {
     if (fechaInicioEspecial == null || fechaFinEspecial == null) return false;
 
     final ahora = DateTime.now();
-    return ahora.isAfter(fechaInicioEspecial!) && ahora.isBefore(fechaFinEspecial!);
+    return ahora.isAfter(fechaInicioEspecial!) &&
+        ahora.isBefore(fechaFinEspecial!);
   }
 
-  int? get tiempoRestanteHorarioEspecial() {
+  int? get tiempoRestanteHorarioEspecial {
     if (!estaDentroDeHorarioEspecial() || fechaFinEspecial == null) return null;
 
     final ahora = DateTime.now();
@@ -596,8 +629,10 @@ class Horario extends Equatable {
       return duracionHoras > otro.duracionHoras;
     } else {
       // Comparar por flexibilidad
-      final flexibilidadEsta = esHorarioFlexible() ? 2 : (esHorarioEstricto() ? 0 : 1);
-      final flexibilidadOtro = otro.esHorarioFlexible() ? 2 : (otro.esHorarioEstricto() ? 0 : 1);
+      final flexibilidadEsta =
+          esHorarioFlexible() ? 2 : (esHorarioEstricto() ? 0 : 1);
+      final flexibilidadOtro =
+          otro.esHorarioFlexible() ? 2 : (otro.esHorarioEstricto() ? 0 : 1);
       return flexibilidadEsta > flexibilidadOtro;
     }
   }

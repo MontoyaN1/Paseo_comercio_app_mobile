@@ -270,4 +270,35 @@ class Notificacion extends Equatable {
   /// Verificar si la notificación es importante (prioridad media-alta)
   bool get esImportante => prioridad != null && prioridad! >= 3;
 
+  @override
+  List<Object?> get props => [
+        id,
+        usuarioId,
+        tipoNotificacion,
+        titulo,
+        mensaje,
+        leida,
+        fechaCreacion,
+        fechaLectura,
+        datosAdicionales,
+        accionUrl,
+        accionTexto,
+        entidadRelacionadaId,
+        tipoEntidadRelacionada,
+        enviadaPush,
+        enviadaEmail,
+        enviadaSms,
+        canalPreferido,
+        prioridad,
+        fechaExpiracion,
+        categoria,
+        metadata,
+        programada,
+        fechaProgramada,
+        enviada,
+        fechaEnvio,
+        errorEnvio,
+      ];
+
   ///
+}

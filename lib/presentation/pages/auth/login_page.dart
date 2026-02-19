@@ -29,13 +29,11 @@ class LoginPage extends StatelessWidget {
             );
           },
           signedInBuilder: (context, state) {
-            // ✅ Cuando ya está logeado, redirigir al Home
+            // ✅ Cuando ya está logeado, redirigir a plazoletas
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              // Usar GoRouter para navegar a la página principal
-              final router = GoRouter.of(context);
-              if (router.location != '/') {
-                router.go('/');
-              }
+              // Usar context.go para navegar directamente a plazoletas
+              // Esto evita problemas con router.location en go_router 17.1.0
+              context.go('/plazoletas');
             });
 
             return const Center(child: CircularProgressIndicator());

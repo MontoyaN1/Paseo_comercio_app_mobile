@@ -299,7 +299,7 @@ class HomePage extends StatelessWidget {
               context.go('/tiendas');
               break;
             case 2:
-              context.go('/categorias');
+              context.go('/productos');
               break;
             case 3:
               context.go('/profile');

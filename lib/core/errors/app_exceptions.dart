@@ -24,6 +24,15 @@ class NetworkException extends AppException {
   }) : super(message: message, code: code, cause: cause);
 }
 
+/// Excepción de falta de internet
+class NoInternetException extends NetworkException {
+  const NoInternetException({
+    String message = 'No hay conexión a internet',
+    String? code = 'NO_INTERNET',
+    dynamic cause,
+  }) : super(message: message, code: code, cause: cause);
+}
+
 /// Excepción de servidor
 class ServerException extends AppException {
   final int? statusCode;

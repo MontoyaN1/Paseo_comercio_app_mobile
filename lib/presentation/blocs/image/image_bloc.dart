@@ -12,9 +12,8 @@ import '../../../../core/utils/cache_service.dart';
 import '../../../../core/utils/connectivity_service.dart';
 
 import 'models/image_bloc_stats.dart';
-
-part 'image_event.dart';
-part 'image_state.dart';
+import 'image_event.dart';
+import 'image_state.dart';
 
 /// BLoC para gestión de imágenes con fallback multi-CDN
 class ImageBloc extends Bloc<ImageEvent, ImageState> {

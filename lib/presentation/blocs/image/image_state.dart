@@ -1,6 +1,7 @@
 // lib/presentation/blocs/image/image_state.dart
 
-part of 'image_bloc.dart';
+import 'package:equatable/equatable.dart';
+import 'models/image_bloc_stats.dart';
 
 /// Estados base para ImageBloc
 abstract class ImageState extends Equatable {

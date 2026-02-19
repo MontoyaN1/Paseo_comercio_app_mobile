@@ -1,5 +1,7 @@
 // lib/presentation/blocs/tienda/tienda_state.dart
 
+import 'package:equatable/equatable.dart';
+
 part of 'tienda_bloc.dart';
 
 /// Estados base para TiendaBloc

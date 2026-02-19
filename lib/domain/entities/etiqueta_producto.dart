@@ -241,7 +241,8 @@ class EtiquetaProducto extends Equatable {
       limiteUso: limiteUso ?? this.limiteUso,
       requiereAprobacion: requiereAprobacion ?? this.requiereAprobacion,
       normasUso: normasUso ?? this.normasUso,
-      etiquetasRelacionadas: etiquetasRelacionadas ?? this.etiquetasRelacionadas,
+      etiquetasRelacionadas:
+          etiquetasRelacionadas ?? this.etiquetasRelacionadas,
       imagenUrl: imagenUrl ?? this.imagenUrl,
       keywords: keywords ?? this.keywords,
       esExclusiva: esExclusiva ?? this.esExclusiva,
@@ -249,8 +250,10 @@ class EtiquetaProducto extends Equatable {
       grupo: grupo ?? this.grupo,
       visiblePublico: visiblePublico ?? this.visiblePublico,
       permiteAutoseleccion: permiteAutoseleccion ?? this.permiteAutoseleccion,
-      duracionPromocionDias: duracionPromocionDias ?? this.duracionPromocionDias,
-      condicionesEspeciales: condicionesEspeciales ?? this.condicionesEspeciales,
+      duracionPromocionDias:
+          duracionPromocionDias ?? this.duracionPromocionDias,
+      condicionesEspeciales:
+          condicionesEspeciales ?? this.condicionesEspeciales,
       aplicaVariantes: aplicaVariantes ?? this.aplicaVariantes,
       unidadMedida: unidadMedida ?? this.unidadMedida,
       rangoValores: rangoValores ?? this.rangoValores,
@@ -461,4 +464,12 @@ class EtiquetaProducto extends Equatable {
   }
 
   String get nivelRelevancia {
-    final puntuacion = (totalProductos *
+    final prioridad = nivelPrioridad ?? 0;
+    final puntuacion = (totalProductos * 0.5) + (prioridad * 0.5);
+    if (puntuacion >= 8) return 'Muy Alta';
+    if (puntuacion >= 6) return 'Alta';
+    if (puntuacion >= 4) return 'Media';
+    if (puntuacion >= 2) return 'Baja';
+    return 'Muy Baja';
+  }
+}

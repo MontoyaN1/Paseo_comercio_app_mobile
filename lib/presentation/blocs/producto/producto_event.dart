@@ -1,5 +1,7 @@
 // lib/presentation/blocs/producto/producto_event.dart
 
+import 'package:equatable/equatable.dart';
+
 part of 'producto_bloc.dart';
 
 /// Eventos base para ProductoBloc

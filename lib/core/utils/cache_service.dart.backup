@@ -527,15 +527,6 @@ class CacheService {
   bool _isType<T>(Type type) {
     return type == T;
   }
-  /// Check if key exists in cache (stub)
-  Future<bool> has(String key) async {
-    throw UnimplementedError("has not implemented");
-  }
-
-  /// Set value in cache (stub)
-  Future<void> set(String key, dynamic value) async {
-    throw UnimplementedError("set not implemented");
-  }
 }
 
 /// Metadatos de un item en caché

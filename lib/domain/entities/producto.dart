@@ -114,57 +114,71 @@ class Producto extends Equatable {
       precio: (json['precio'] as num).toDouble(),
       moneda: json['moneda'] as String?,
       categoriaId: json['categoria_id'] as int?,
-      estadoProducto: EstadoProducto.fromString(json['estado_producto'] as String),
+      estadoProducto: EstadoProducto.fromString(
+        json['estado_producto'] as String,
+      ),
       stockDisponible: json['stock_disponible'] as int,
       stockMinimo: json['stock_minimo'] as int?,
       stockMaximo: json['stock_maximo'] as int?,
-      caracteristicas: json['caracteristicas'] != null
-          ? Map<String, dynamic>.from(json['caracteristicas'] as Map)
-          : null,
-      etiquetas: json['etiquetas'] != null
-          ? Map<String, dynamic>.from(json['etiquetas'] as Map)
-          : null,
-      calificacionPromedio: json['calificacion_promedio'] != null
-          ? (json['calificacion_promedio'] as num).toDouble()
-          : null,
+      caracteristicas:
+          json['caracteristicas'] != null
+              ? Map<String, dynamic>.from(json['caracteristicas'] as Map)
+              : null,
+      etiquetas:
+          json['etiquetas'] != null
+              ? Map<String, dynamic>.from(json['etiquetas'] as Map)
+              : null,
+      calificacionPromedio:
+          json['calificacion_promedio'] != null
+              ? (json['calificacion_promedio'] as num).toDouble()
+              : null,
       totalValoraciones: json['total_valoraciones'] as int? ?? 0,
       totalVisualizaciones: json['total_visualizaciones'] as int? ?? 0,
       totalCompartidos: json['total_compartidos'] as int? ?? 0,
       totalFavoritos: json['total_favoritos'] as int? ?? 0,
       fechaCreacion: DateTime.parse(json['fecha_creacion'] as String),
-      fechaActualizacion: json['fecha_actualizacion'] != null
-          ? DateTime.parse(json['fecha_actualizacion'] as String)
-          : null,
-      fechaPublicacion: json['fecha_publicacion'] != null
-          ? DateTime.parse(json['fecha_publicacion'] as String)
-          : null,
-      fechaEliminacion: json['fecha_eliminacion'] != null
-          ? DateTime.parse(json['fecha_eliminacion'] as String)
-          : null,
+      fechaActualizacion:
+          json['fecha_actualizacion'] != null
+              ? DateTime.parse(json['fecha_actualizacion'] as String)
+              : null,
+      fechaPublicacion:
+          json['fecha_publicacion'] != null
+              ? DateTime.parse(json['fecha_publicacion'] as String)
+              : null,
+      fechaEliminacion:
+          json['fecha_eliminacion'] != null
+              ? DateTime.parse(json['fecha_eliminacion'] as String)
+              : null,
       destacado: json['destacado'] as bool? ?? false,
       enOferta: json['en_oferta'] as bool? ?? false,
-      precioOferta: json['precio_oferta'] != null
-          ? (json['precio_oferta'] as num).toDouble()
-          : null,
-      fechaInicioOferta: json['fecha_inicio_oferta'] != null
-          ? DateTime.parse(json['fecha_inicio_oferta'] as String)
-          : null,
-      fechaFinOferta: json['fecha_fin_oferta'] != null
-          ? DateTime.parse(json['fecha_fin_oferta'] as String)
-          : null,
+      precioOferta:
+          json['precio_oferta'] != null
+              ? (json['precio_oferta'] as num).toDouble()
+              : null,
+      fechaInicioOferta:
+          json['fecha_inicio_oferta'] != null
+              ? DateTime.parse(json['fecha_inicio_oferta'] as String)
+              : null,
+      fechaFinOferta:
+          json['fecha_fin_oferta'] != null
+              ? DateTime.parse(json['fecha_fin_oferta'] as String)
+              : null,
       sku: json['sku'] as String?,
       codigoBarras: json['codigo_barras'] as String?,
       peso: json['peso'] != null ? (json['peso'] as num).toDouble() : null,
       unidadPeso: json['unidad_peso'] as String?,
-      dimensionAlto: json['dimension_alto'] != null
-          ? (json['dimension_alto'] as num).toDouble()
-          : null,
-      dimensionAncho: json['dimension_ancho'] != null
-          ? (json['dimension_ancho'] as num).toDouble()
-          : null,
-      dimensionProfundidad: json['dimension_profundidad'] != null
-          ? (json['dimension_profundidad'] as num).toDouble()
-          : null,
+      dimensionAlto:
+          json['dimension_alto'] != null
+              ? (json['dimension_alto'] as num).toDouble()
+              : null,
+      dimensionAncho:
+          json['dimension_ancho'] != null
+              ? (json['dimension_ancho'] as num).toDouble()
+              : null,
+      dimensionProfundidad:
+          json['dimension_profundidad'] != null
+              ? (json['dimension_profundidad'] as num).toDouble()
+              : null,
       unidadDimension: json['unidad_dimension'] as String?,
       material: json['material'] as String?,
       color: json['color'] as String?,
@@ -407,7 +421,8 @@ class Producto extends Equatable {
   bool get stockBajo => stockMinimo != null && stockDisponible <= stockMinimo!;
 
   /// Obtener precio actual (oferta o normal)
-  double get precioActual => enOferta && precioOferta != null ? precioOferta! : precio;
+  double get precioActual =>
+      enOferta && precioOferta != null ? precioOferta! : precio;
 
   /// Calcular porcentaje de descuento
   double? get porcentajeDescuento {
@@ -419,18 +434,22 @@ class Producto extends Equatable {
   bool get ofertaVigente {
     if (!enOferta) return false;
     final now = DateTime.now();
-    if (fechaInicioOferta != null && now.isBefore(fechaInicioOferta!)) return false;
+    if (fechaInicioOferta != null && now.isBefore(fechaInicioOferta!))
+      return false;
     if (fechaFinOferta != null && now.isAfter(fechaFinOferta!)) return false;
     return true;
   }
 
   /// Verificar si el producto es ecológico
-  bool get esEcologico => esEcoFriendly == true || esReciclable == true || esBiodegradable == true;
+  bool get esEcologico =>
+      esEcoFriendly == true || esReciclable == true || esBiodegradable == true;
 
   /// Obtener lista de características como texto
   String? get caracteristicasTexto {
     if (caracteristicas == null || caracteristicas!.isEmpty) return null;
-    return caracteristicas!.entries.map((e) => '${e.key}: ${e.value}').join(', ');
+    return caracteristicas!.entries
+        .map((e) => '${e.key}: ${e.value}')
+        .join(', ');
   }
 
   /// Obtener lista de etiquetas
@@ -440,7 +459,8 @@ class Producto extends Equatable {
   }
 
   /// Verificar si tiene certificaciones
-  bool get tieneCertificaciones => certificaciones != null && certificaciones!.isNotEmpty;
+  bool get tieneCertificaciones =>
+      certificaciones != null && certificaciones!.isNotEmpty;
 
   /// Obtener resumen del producto
   String get resumen {
@@ -491,7 +511,9 @@ class Producto extends Equatable {
 
   /// Obtener dimensiones como texto
   String? get dimensionesTexto {
-    if (dimensionAlto == null || dimensionAncho == null || dimensionProfundidad == null) {
+    if (dimensionAlto == null ||
+        dimensionAncho == null ||
+        dimensionProfundidad == null) {
       return null;
     }
     return '${dimensionAlto} × ${dimensionAncho} × ${dimensionProfundidad} $unidadDimension';
@@ -503,3 +525,4 @@ class Producto extends Equatable {
         (caracteristicas != null && caracteristicas!.isNotEmpty) &&
         (instruccionesUso != null || cuidados != null);
   }
+}

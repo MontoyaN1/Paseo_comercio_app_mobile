@@ -1,12 +1,11 @@
 // lib/core/utils/auth_service.dart
 
 import 'dart:async';
-import 'dart:io' as io;
-
-import 'package:clerk_flutter/clerk_flutter.dart' as clerk;
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
-    hide AuthException; // Hide supabase's AuthException to avoid conflict
+    hide
+        AuthException,
+        AuthState; // Hide supabase's AuthException and AuthState to avoid conflict
 
 import '../constants/app_constants.dart';
 import '../errors/app_exceptions.dart';
@@ -29,7 +28,7 @@ class AuthService {
 
   // Usuario actual
   User? _currentUser;
-  clerk.ClerkUser? _currentClerkUser;
+  dynamic _currentClerkUser;
 
   // Configuración
   bool _isClerkConfigured = false;
@@ -93,37 +92,25 @@ class AuthService {
   User? get currentUser => _currentUser;
 
   /// Obtener usuario Clerk actual
-  clerk.ClerkUser? get currentClerkUser => _currentClerkUser;
+  dynamic get currentClerkUser => _currentClerkUser;
 
   /// Obtener ID del usuario actual
   String? get currentUserId {
-    if (_currentClerkUser != null) {
-      return _currentClerkUser!.id;
-    }
     return _currentUser?.id;
   }
 
   /// Obtener email del usuario actual
   String? get currentUserEmail {
-    if (_currentClerkUser != null) {
-      return _currentClerkUser!.primaryEmailAddress?.emailAddress;
-    }
     return _currentUser?.email;
   }
 
   /// Obtener nombre del usuario actual
   String? get currentUserName {
-    if (_currentClerkUser != null) {
-      return _currentClerkUser!.fullName;
-    }
     return _currentUser?.userMetadata?['name'] as String?;
   }
 
   /// Obtener URL de imagen del usuario actual
   String? get currentUserImageUrl {
-    if (_currentClerkUser != null) {
-      return _currentClerkUser!.imageUrl;
-    }
     return _currentUser?.userMetadata?['avatar_url'] as String?;
   }
 
@@ -433,10 +420,14 @@ class AuthService {
     // Guardar en caché o almacenamiento local
     try {
       final cache = CacheService();
-      await cache.setString(
-        'auth_state',
-        _currentState.name,
-        ttlSeconds: 86400, // 24 horas
+      final result = await cache.save(
+        key: 'auth_state',
+        data: _currentState.name,
+        ttl: Duration(seconds: 86400), // 24 horas
+      );
+      result.fold(
+        (_) {}, // éxito
+        (error) => print('Error saving auth state: $error'),
       );
     } catch (_) {
       // Ignorar errores de caché
@@ -447,12 +438,14 @@ class AuthService {
   Future<void> _loadAuthState() async {
     try {
       final cache = CacheService();
-      final savedState = await cache.getString('auth_state');
-      if (savedState != null) {
-        final state = AuthState.fromName(savedState);
-        _currentState = state;
-        _stateController.add(state);
-      }
+      final result = await cache.get<String>('auth_state');
+      result.fold((savedState) {
+        if (savedState != null) {
+          final state = AuthState.fromName(savedState);
+          _currentState = state;
+          _stateController.add(state);
+        }
+      }, (error) => print('Error loading auth state: $error'));
     } catch (_) {
       // Ignorar errores de carga
     }
@@ -462,7 +455,11 @@ class AuthService {
   Future<void> _clearAuthState() async {
     try {
       final cache = CacheService();
-      await cache.remove('auth_state');
+      final result = await cache.remove('auth_state');
+      result.fold(
+        (_) {}, // éxito
+        (error) => print('Error removing auth state: $error'),
+      );
     } catch (_) {
       // Ignorar errores
     }

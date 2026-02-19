@@ -15,10 +15,13 @@ import '../data/datasources/remote/s3_client.dart';
 import '../data/datasources/local/local_database.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/tienda_repository.dart';
+import '../data/repositories/plazoleta_repository.dart';
+import '../data/repositories/producto_repository.dart';
 import '../domain/repositories/auth_repository_interface.dart';
 import '../domain/repositories/tienda_repository_interface.dart';
+import '../domain/repositories/plazoleta_repository_interface.dart';
+import '../domain/repositories/producto_repository_interface.dart';
 // Los siguientes repositorios no existen aún, se comentan temporalmente
-// import '../data/repositories/producto_repository.dart';
 // import '../data/repositories/categoria_repository.dart';
 // import '../data/repositories/imagen_repository.dart';
 // import '../data/repositories/cache_repository.dart';
@@ -26,13 +29,12 @@ import '../domain/usecases/get_tiendas_usecase.dart';
 import '../domain/usecases/get_tienda_by_id_usecase.dart';
 import '../domain/usecases/search_tiendas_usecase.dart';
 import '../domain/usecases/authenticate_user_usecase.dart';
-// Los siguientes use cases no existen aún, se comentan temporalmente
-// import '../domain/usecases/get_productos_usecase.dart';
-// import '../domain/usecases/get_producto_by_id_usecase.dart';
+import '../domain/usecases/get_productos_usecase.dart';
+import '../domain/usecases/get_producto_by_id_usecase.dart';
 import '../presentation/blocs/auth/auth_bloc.dart';
 import '../presentation/blocs/tienda/tienda_bloc.dart';
-// ProductoBloc está comentado temporalmente porque depende de repositorios no implementados
-// import '../presentation/blocs/producto/producto_bloc.dart';
+import '../presentation/blocs/plazoleta/plazoleta_bloc.dart';
+import '../presentation/blocs/producto/producto_bloc.dart';
 import '../presentation/blocs/image/image_bloc.dart';
 
 final GetIt getIt = GetIt.instance;
@@ -121,16 +123,26 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
     ),
   );
 
-  // Los siguientes repositorios están comentados porque no existen aún
-  /*
-  getIt.registerLazySingleton<ProductoRepository>(
-    () => ProductoRepository(
+  getIt.registerLazySingleton<PlazoletaRepositoryInterface>(
+    () => PlazoletaRepository(
       supabaseClient: getIt<SupabaseClientService>(),
-      cacheService: getIt<CacheService>(),
+      localCache: getIt<LocalCacheService>(),
       connectivityService: getIt<ConnectivityService>(),
+      cacheService: getIt<CacheService>(),
     ),
   );
 
+  getIt.registerLazySingleton<ProductoRepositoryInterface>(
+    () => ProductoRepository(
+      supabaseClient: getIt<SupabaseClientService>(),
+      localCache: getIt<LocalCacheService>(),
+      connectivityService: getIt<ConnectivityService>(),
+      cacheService: getIt<CacheService>(),
+    ),
+  );
+
+  // Los siguientes repositorios están comentados porque no existen aún
+  /*
   getIt.registerLazySingleton<CategoriaRepository>(
     () => CategoriaRepository(
       supabaseClient: getIt<SupabaseClientService>(),
@@ -171,16 +183,13 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
     () => AuthenticateUserUseCase(getIt<AuthRepositoryInterface>()),
   );
 
-  // Los siguientes casos de uso están comentados porque dependen de repositorios no implementados
-  /*
   getIt.registerLazySingleton<GetProductosUseCase>(
-    () => GetProductosUseCase(getIt<ProductoRepository>()),
+    () => GetProductosUseCase(getIt<ProductoRepositoryInterface>()),
   );
 
   getIt.registerLazySingleton<GetProductoByIdUseCase>(
-    () => GetProductoByIdUseCase(getIt<ProductoRepository>()),
+    () => GetProductoByIdUseCase(getIt<ProductoRepositoryInterface>()),
   );
-  */
 
   // Registrar BLoCs
   getIt.registerLazySingleton<AuthBloc>(
@@ -195,15 +204,18 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
     ),
   );
 
-  // ProductoBloc está comentado porque depende de casos de uso no implementados
-  /*
+  getIt.registerLazySingleton<PlazoletaBloc>(
+    () => PlazoletaBloc(
+      plazoletaRepository: getIt<PlazoletaRepositoryInterface>(),
+    ),
+  );
+
   getIt.registerLazySingleton<ProductoBloc>(
     () => ProductoBloc(
       getProductosUseCase: getIt<GetProductosUseCase>(),
       getProductoByIdUseCase: getIt<GetProductoByIdUseCase>(),
     ),
   );
-  */
 
   getIt.registerLazySingleton<ImageBloc>(
     () => ImageBloc(

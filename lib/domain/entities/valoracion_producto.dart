@@ -76,7 +76,8 @@ class ValoracionProducto extends Equatable {
   bool get estaEliminada => estadoValoracion == EstadoValoracion.eliminado;
 
   /// Verificar si tiene respuesta de la tienda
-  bool get tieneRespuestaTienda => respuestaTienda != null && respuestaTienda!.isNotEmpty;
+  bool get tieneRespuestaTienda =>
+      respuestaTienda != null && respuestaTienda!.isNotEmpty;
 
   /// Verificar si es una valoración verificada (compra confirmada)
   bool get esVerificada => esVerificadoCompra;
@@ -147,8 +148,8 @@ class ValoracionProducto extends Equatable {
       final meses = (diferencia.inDays / 30).floor();
       return 'Hace $meses ${meses == 1 ? 'mes' : 'meses'}';
     } else {
-      final años = (diferencia.inDays / 365).floor();
-      return 'Hace $años ${años == 1 ? 'año' : 'años'}';
+      final anos = (diferencia.inDays / 365).floor();
+      return 'Hace $anos ${anos == 1 ? 'ano' : 'anos'}';
     }
   }
 
@@ -205,7 +206,8 @@ class ValoracionProducto extends Equatable {
       dislikes: dislikes ?? this.dislikes,
       esAnonima: esAnonima ?? this.esAnonima,
       ubicacionUsuario: ubicacionUsuario ?? this.ubicacionUsuario,
-      caracteristicasProducto: caracteristicasProducto ?? this.caracteristicasProducto,
+      caracteristicasProducto:
+          caracteristicasProducto ?? this.caracteristicasProducto,
       tiempoUsoMeses: tiempoUsoMeses ?? this.tiempoUsoMeses,
       usoFrecuencia: usoFrecuencia ?? this.usoFrecuencia,
       recomiendaProducto: recomiendaProducto ?? this.recomiendaProducto,
@@ -274,7 +276,9 @@ class ValoracionProducto extends Equatable {
   }
 
   String get recomendacionDescripcion {
-    return recomiendaProducto ? 'Recomienda este producto' : 'No recomienda este producto';
+    return recomiendaProducto
+        ? 'Recomienda este producto'
+        : 'No recomienda este producto';
   }
 
   List<String> get caracteristicasLista {
@@ -286,7 +290,8 @@ class ValoracionProducto extends Equatable {
     if (esUtil) caracteristicas.add('Útil');
     if (tieneRespuestaTienda) caracteristicas.add('Con respuesta');
     if (esAnonima) caracteristicas.add('Anónima');
-    if (ubicacionUsuario != null) caracteristicas.add('Desde: $ubicacionUsuario');
+    if (ubicacionUsuario != null)
+      caracteristicas.add('Desde: $ubicacionUsuario');
 
     return caracteristicas;
   }
@@ -313,13 +318,18 @@ class ValoracionProducto extends Equatable {
     if (!estaPublicada) return false;
 
     // No se puede editar después de 24 horas
-    final veinticuatroHoras = DateTime.now().subtract(const Duration(hours: 24));
+    final veinticuatroHoras = DateTime.now().subtract(
+      const Duration(hours: 24),
+    );
     if (fechaCreacion.isBefore(veinticuatroHoras)) return false;
 
     return true;
   }
 
-  bool puedeSerRespondidaPorTienda(int tiendaIdRespondente, int productoIdActual) {
+  bool puedeSerRespondidaPorTienda(
+    int tiendaIdRespondente,
+    int productoIdActual,
+  ) {
     // Verificar que la valoración pertenezca a un producto de la tienda
     // (esto se verificaría en la capa de aplicación)
 
@@ -343,36 +353,39 @@ class ValoracionProducto extends Equatable {
 
   bool esMasDetalladaQue(ValoracionProducto otra) {
     // Contar elementos de información detallada
-    final detallesEsta = [
-      titulo != null,
-      comentario != null,
-      caracteristicasProducto != null,
-      tiempoUsoMeses != null,
-      usoFrecuencia != null,
-      precioPagado != null,
-    ].where((element) => element).length;
+    final detallesEsta =
+        [
+          titulo != null,
+          comentario != null,
+          caracteristicasProducto != null,
+          tiempoUsoMeses != null,
+          usoFrecuencia != null,
+          precioPagado != null,
+        ].where((element) => element).length;
 
-    final detallesOtra = [
-      otra.titulo != null,
-      otra.comentario != null,
-      otra.caracteristicasProducto != null,
-      otra.tiempoUsoMeses != null,
-      otra.usoFrecuencia != null,
-      otra.precioPagado != null,
-    ].where((element) => element).length;
+    final detallesOtra =
+        [
+          otra.titulo != null,
+          otra.comentario != null,
+          otra.caracteristicasProducto != null,
+          otra.tiempoUsoMeses != null,
+          otra.usoFrecuencia != null,
+          otra.precioPagado != null,
+        ].where((element) => element).length;
 
     return detallesEsta > detallesOtra;
   }
 
   String get nivelDetalle {
-    final detalles = [
-      titulo != null,
-      comentario != null,
-      caracteristicasProducto != null,
-      tiempoUsoMeses != null,
-      usoFrecuencia != null,
-      precioPagado != null,
-    ].where((element) => element).length;
+    final detalles =
+        [
+          titulo != null,
+          comentario != null,
+          caracteristicasProducto != null,
+          tiempoUsoMeses != null,
+          usoFrecuencia != null,
+          precioPagado != null,
+        ].where((element) => element).length;
 
     if (detalles >= 5) return 'Muy detallada';
     if (detalles >= 3) return 'Detallada';
@@ -391,7 +404,9 @@ class ValoracionProducto extends Equatable {
     if (comentario != null) {
       final palabrasOfensivas = ['odio', 'estafa', 'mentira', 'fraude'];
       final comentarioLower = comentario!.toLowerCase();
-      if (palabrasOfensivas.any((palabra) => comentarioLower.contains(palabra))) {
+      if (palabrasOfensivas.any(
+        (palabra) => comentarioLower.contains(palabra),
+      )) {
         return true;
       }
     }

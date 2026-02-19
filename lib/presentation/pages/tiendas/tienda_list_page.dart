@@ -12,6 +12,21 @@ import '../../widgets/common/error_state.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/tienda/tienda_card.dart';
 
+/// Wrapper para proporcionar el BLoC de tiendas
+class TiendaBlocProvider extends StatelessWidget {
+  final Widget child;
+
+  const TiendaBlocProvider({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider<TiendaBloc>(
+      create: (context) => getIt<TiendaBloc>(),
+      child: child,
+    );
+  }
+}
+
 /// Pantalla de lista de tiendas
 class TiendaListPage extends StatefulWidget {
   const TiendaListPage({super.key});

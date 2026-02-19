@@ -406,6 +406,31 @@ class MiembroOrganizacion extends Equatable {
     this.contribucionesTotales,
   });
 
+  @override
+  List<Object?> get props => [
+        id,
+        organizacionId,
+        usuarioId,
+        estado,
+        rol,
+        fechaIngreso,
+        fechaSalida,
+        motivoSalida,
+        permisos,
+        metadata,
+        esAdministrador,
+        puedeGestionarMiembros,
+        puedeGestionarTiendas,
+        puedeGestionarProductos,
+        puedeVerEstadisticas,
+        departamento,
+        cargo,
+        telefonoContacto,
+        emailContacto,
+        fechaUltimaActividad,
+        contribucionesTotales,
+      ];
+
   /// Verificar si el miembro está activo
   bool get estaActivo => estado == EstadoMiembro.activo;
 
@@ -490,4 +515,12 @@ class MiembroOrganizacion extends Equatable {
       puedeGestionarTiendas: puedeGestionarTiendas ?? this.puedeGestionarTiendas,
       puedeGestionarProductos: puedeGestionarProductos ?? this.puedeGestionarProductos,
       puedeVerEstadisticas: puedeVerEstadisticas ?? this.puedeVerEstadisticas,
-      depart
+      departamento: departamento ?? this.departamento,
+      cargo: cargo ?? this.cargo,
+      telefonoContacto: telefonoContacto ?? this.telefonoContacto,
+      emailContacto: emailContacto ?? this.emailContacto,
+      fechaUltimaActividad: fechaUltimaActividad ?? this.fechaUltimaActividad,
+      contribucionesTotales: contribucionesTotales ?? this.contribucionesTotales,
+  );
+  }
+}

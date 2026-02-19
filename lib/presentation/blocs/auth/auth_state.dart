@@ -1,5 +1,7 @@
 // lib/presentation/blocs/auth/auth_state.dart
 
+import 'package:equatable/equatable.dart';
+
 part of 'auth_bloc.dart';
 
 /// Estados base para AuthBloc
