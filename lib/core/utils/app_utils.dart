@@ -313,10 +313,10 @@ class AppUtils {
   Color blendColors(Color color1, Color color2, double ratio) {
     final inverseRatio = 1.0 - ratio;
     return Color.fromARGB(
-      (color1.alpha * inverseRatio + color2.alpha * ratio).round(),
-      (color1.red * inverseRatio + color2.red * ratio).round(),
-      (color1.green * inverseRatio + color2.green * ratio).round(),
-      (color1.blue * inverseRatio + color2.blue * ratio).round(),
+      (color1.a * inverseRatio + color2.a * ratio).round(),
+      (color1.r * inverseRatio + color2.r * ratio).round(),
+      (color1.g * inverseRatio + color2.g * ratio).round(),
+      (color1.b * inverseRatio + color2.b * ratio).round(),
     );
   }
 
