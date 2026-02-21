@@ -2,7 +2,6 @@
 // Versión simplificada temporal para resolver problemas de compilación
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

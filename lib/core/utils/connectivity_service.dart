@@ -3,8 +3,6 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
-
-import '../constants/app_constants.dart';
 import '../errors/app_exceptions.dart';
 
 /// Estados de conectividad
@@ -32,6 +30,7 @@ class ConnectivityService {
 
   /// Verificar si hay conexión
   bool get isConnected => _currentStatus == ConnectionStatus.connected;
+
   /// Check if there is connection (async version)
   Future<bool> hasConnection() async => isConnected;
 

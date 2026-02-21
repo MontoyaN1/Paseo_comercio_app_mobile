@@ -252,4 +252,78 @@ class Plazoleta extends Equatable {
     if (porcentaje >= 40) return 'Moderado';
     return 'Bajo';
   }
+
+  /// Convertir a Map para serialización JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nombre': nombre,
+      'descripcion': descripcion,
+      'ubicacion': ubicacion,
+      'capacidadMaxima': capacidadMaxima,
+      'ordenVisual': ordenVisual,
+      'activa': activa,
+      'fechaCreacion': fechaCreacion.toIso8601String(),
+      'fechaActualizacion': fechaActualizacion?.toIso8601String(),
+      'metadata': metadata,
+      'totalTiendas': totalTiendas,
+      'totalVisitas': totalVisitas,
+      'latitud': latitud,
+      'longitud': longitud,
+      'piso': piso,
+      'sector': sector,
+      'icono': icono,
+      'color': color,
+      'tipoUbicacion': tipoUbicacion.value,
+      'tieneAccesoDiscapacitados': tieneAccesoDiscapacitados,
+      'tieneEstacionamiento': tieneEstacionamiento,
+      'tieneZonaDescanso': tieneZonaDescanso,
+      'tieneZonaComida': tieneZonaComida,
+      'serviciosDisponibles': serviciosDisponibles,
+      'horarioAcceso': horarioAcceso,
+      'normasUso': normasUso,
+    };
+  }
+
+  /// Crear instancia desde Map (deserialización JSON)
+  factory Plazoleta.fromJson(Map<String, dynamic> json) {
+    return Plazoleta(
+      id: json['id'] as int,
+      nombre: json['nombre'] as String,
+      descripcion: json['descripcion'] as String?,
+      ubicacion: json['ubicacion'] as String?,
+      capacidadMaxima: json['capacidadMaxima'] as int?,
+      ordenVisual: json['ordenVisual'] as int?,
+      activa: json['activa'] as bool,
+      fechaCreacion: DateTime.parse(json['fechaCreacion'] as String),
+      fechaActualizacion:
+          json['fechaActualizacion'] != null
+              ? DateTime.parse(json['fechaActualizacion'] as String)
+              : null,
+      metadata:
+          json['metadata'] != null
+              ? Map<String, dynamic>.from(json['metadata'] as Map)
+              : null,
+      totalTiendas: json['totalTiendas'] as int? ?? 0,
+      totalVisitas: json['totalVisitas'] as int? ?? 0,
+      latitud: json['latitud'] as double?,
+      longitud: json['longitud'] as double?,
+      piso: json['piso'] as String?,
+      sector: json['sector'] as String?,
+      icono: json['icono'] as String?,
+      color: json['color'] as String?,
+      tipoUbicacion: TipoUbicacion.fromString(json['tipoUbicacion'] as String),
+      tieneAccesoDiscapacitados:
+          json['tieneAccesoDiscapacitados'] as bool? ?? false,
+      tieneEstacionamiento: json['tieneEstacionamiento'] as bool? ?? false,
+      tieneZonaDescanso: json['tieneZonaDescanso'] as bool? ?? false,
+      tieneZonaComida: json['tieneZonaComida'] as bool? ?? false,
+      serviciosDisponibles:
+          json['serviciosDisponibles'] != null
+              ? List<String>.from(json['serviciosDisponibles'] as List)
+              : null,
+      horarioAcceso: json['horarioAcceso'] as String?,
+      normasUso: json['normasUso'] as String?,
+    );
+  }
 }

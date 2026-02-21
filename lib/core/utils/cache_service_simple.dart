@@ -5,8 +5,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
-
-import '../errors/app_exceptions.dart';
 import 'result.dart';
 
 /// Servicio de caché local simplificado usando Hive

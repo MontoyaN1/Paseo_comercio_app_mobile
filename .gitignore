@@ -8,6 +8,15 @@
 .history
 .env
 
+# Firebase Configuration Files (NO subir al repositorio)
+# Cada desarrollador debe configurar Firebase localmente
+firebase.json
+lib/firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+ios/firebase_app_id_file.json
+
 # Flutter/Dart
 *.dart.js
 *.dart_tool/

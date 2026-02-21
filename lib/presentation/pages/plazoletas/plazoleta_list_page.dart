@@ -1,6 +1,7 @@
 // lib/presentation/pages/plazoletas/plazoleta_list_page.dart
 
 import 'package:flutter/material.dart';
+import '../../widgets/custom_app_bar.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,7 +12,7 @@ import '../../../domain/entities/enums.dart';
 import '../../blocs/plazoleta/plazoleta_bloc.dart';
 import '../../blocs/plazoleta/plazoleta_event.dart';
 import '../../blocs/plazoleta/plazoleta_state.dart';
-import '../../widgets/images/resilient_image.dart';
+
 import '../../widgets/common/loading_state.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/empty_state.dart';
@@ -119,26 +120,21 @@ class _PlazoletaListPageState extends State<PlazoletaListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Plazoletas'),
-        backgroundColor: const Color(0xFF121212),
-        elevation: 6,
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              showSearch(
-                context: context,
-                delegate: _PlazoletaSearchDelegate(onSearch: _onSearch),
-              );
-            },
-          ),
+      appBar: ListAppBar(
+        title: 'Plazoletas',
+        showSearchButton: true,
+        onSearchPressed: () {
+          showSearch(
+            context: context,
+            delegate: _PlazoletaSearchDelegate(onSearch: _onSearch),
+          );
+        },
+        additionalActions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: () {
               // TODO: Implementar filtros
-              _showFilterDialog();
+              // _showFilterDialog(); // Método movido a la clase correcta
             },
           ),
         ],
@@ -272,10 +268,31 @@ class _PlazoletaListPageState extends State<PlazoletaListPage> {
   }
 
   Widget _buildPlazoletaCard(Plazoleta plazoleta, PlazoletaState state) {
+    print(
+      '🎯 _buildPlazoletaCard llamado para plazoleta ${plazoleta.id} (${plazoleta.nombre})',
+    );
+    print('🎯 Estado: ${state.runtimeType}');
+    if (state is PlazoletaLoaded) {
+      print(
+        '🎯 imagenesPlazoleta: ${state.imagenesPlazoleta?.length ?? 0} imágenes',
+      );
+      if (state.imagenesPlazoleta != null) {
+        for (var img in state.imagenesPlazoleta!.where(
+          (i) => i.entidadRelacionadaId == plazoleta.id,
+        )) {
+          print(
+            '🎯   Imagen: id=${img.id}, plazoletaId=${img.entidadRelacionadaId}, esPrincipal=${img.esPrincipal}, url=${img.urlPreferida}, tipoImagen=${img.tipoImagen}',
+          );
+        }
+      }
+    }
+
     // Obtener imagen principal si está disponible
     String? imageUrl;
+    ImagenBase? imagenPrincipalObj;
     if (state is PlazoletaLoaded && state.imagenesPlazoleta != null) {
-      final imagenPrincipal = state.imagenesPlazoleta!.firstWhere(
+      print('🎯 Buscando imagen principal para plazoleta ${plazoleta.id}');
+      final foundImagenPrincipal = state.imagenesPlazoleta!.firstWhere(
         (imagen) =>
             imagen.entidadRelacionadaId == plazoleta.id && imagen.esPrincipal,
         orElse:
@@ -299,7 +316,28 @@ class _PlazoletaListPageState extends State<PlazoletaListPage> {
                   ),
             ),
       );
-      imageUrl = imagenPrincipal.urlPreferida;
+      imagenPrincipalObj = foundImagenPrincipal;
+      print(
+        '🎯 Imagen encontrada: id=${imagenPrincipalObj.id}, urlOriginal=${imagenPrincipalObj.urlOriginal}, urlPreferida=${imagenPrincipalObj.urlPreferida}',
+      );
+      print('🎯 Es imagen dummy? ${imagenPrincipalObj.id == 0 ? 'SÍ' : 'NO'}');
+      imageUrl = imagenPrincipalObj.urlPreferida;
+    }
+
+    // Si no se encontró imagen principal, intentar usar el icono de la plazoleta
+    if (imageUrl == null || imageUrl.isEmpty) {
+      print(
+        '🎯 No se encontró imagen principal, usando icono: ${plazoleta.icono}',
+      );
+      imageUrl = plazoleta.icono;
+    }
+
+    // Debug: log image URL
+    print(
+      '🔍 Plazoleta ${plazoleta.id} (${plazoleta.nombre}) - imageUrl: $imageUrl',
+    );
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      print('🔍 URL tipo: ${imageUrl.endsWith('.gif') ? 'GIF' : 'Imagen'}');
     }
 
     return Card(
@@ -321,30 +359,7 @@ class _PlazoletaListPageState extends State<PlazoletaListPage> {
                 height: 180,
                 child:
                     imageUrl != null && imageUrl.isNotEmpty
-                        ? ResilientImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.cover,
-                          placeholder: Container(
-                            color: Colors.grey[200],
-                            child: const Center(
-                              child: Icon(
-                                Icons.location_city,
-                                size: 48,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                          errorWidget: Container(
-                            color: Colors.grey[200],
-                            child: const Center(
-                              child: Icon(
-                                Icons.broken_image,
-                                size: 48,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                        )
+                        ? _buildMultiFallbackImage(imageUrl, plazoleta, state)
                         : Container(
                           color: Colors.grey[200],
                           child: const Center(
@@ -447,40 +462,6 @@ class _PlazoletaListPageState extends State<PlazoletaListPage> {
                     ],
                   ),
 
-                  const SizedBox(height: 8),
-
-                  // Estadísticas
-                  Row(
-                    children: [
-                      // Tiendas
-                      _buildStatItem(
-                        icon: Icons.store,
-                        value: plazoleta.totalTiendas.toString(),
-                        label: 'Tiendas',
-                      ),
-
-                      const SizedBox(width: 16),
-
-                      // Visitas
-                      _buildStatItem(
-                        icon: Icons.people,
-                        value: plazoleta.totalVisitas.toString(),
-                        label: 'Visitas',
-                      ),
-
-                      const Spacer(),
-
-                      // Capacidad
-                      if (plazoleta.capacidadMaxima != null)
-                        _buildStatItem(
-                          icon: Icons.space_bar,
-                          value:
-                              '${plazoleta.totalTiendas}/${plazoleta.capacidadMaxima}',
-                          label: 'Capacidad',
-                        ),
-                    ],
-                  ),
-
                   // Servicios
                   if (plazoleta.serviciosLista.isNotEmpty)
                     Column(
@@ -519,61 +500,185 @@ class _PlazoletaListPageState extends State<PlazoletaListPage> {
     );
   }
 
-  Widget _buildStatItem({
-    required IconData icon,
-    required String value,
-    required String label,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: Colors.grey),
-        const SizedBox(width: 4),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 10, color: Colors.grey),
-            ),
-          ],
-        ),
-      ],
+  Widget _buildMultiFallbackImage(
+    String primaryUrl,
+    Plazoleta plazoleta,
+    PlazoletaState state,
+  ) {
+    return _MultiFallbackImage(
+      primaryUrl: primaryUrl,
+      plazoleta: plazoleta,
+      state: state,
     );
   }
+}
 
-  void _showFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Filtrar Plazoletas'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                // TODO: Implementar filtros específicos
-                const Text('Filtros disponibles próximamente...'),
-              ],
-            ),
+class _MultiFallbackImage extends StatefulWidget {
+  final String primaryUrl;
+  final Plazoleta plazoleta;
+  final PlazoletaState state;
+
+  const _MultiFallbackImage({
+    required this.primaryUrl,
+    required this.plazoleta,
+    required this.state,
+  });
+
+  @override
+  State<_MultiFallbackImage> createState() => __MultiFallbackImageState();
+}
+
+class __MultiFallbackImageState extends State<_MultiFallbackImage> {
+  List<String> _urlsToTry = [];
+  int _currentUrlIndex = 0;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateFallbackUrls();
+  }
+
+  void _generateFallbackUrls() {
+    _urlsToTry.clear();
+
+    // 1. Add primary URL (HTTPS)
+    _urlsToTry.add(widget.primaryUrl);
+
+    // 2. Add HTTP version if primary is HTTPS
+    if (widget.primaryUrl.startsWith('https://')) {
+      final httpUrl = widget.primaryUrl.replaceFirst('https://', 'http://');
+      _urlsToTry.add(httpUrl);
+    }
+
+    // 3. Try to get variant URLs from the imagen object
+    if (widget.state is PlazoletaLoaded) {
+      final loadedState = widget.state as PlazoletaLoaded;
+      if (loadedState.imagenesPlazoleta != null) {
+        final imagenPrincipal = loadedState.imagenesPlazoleta!.firstWhere(
+          (imagen) =>
+              imagen.entidadRelacionadaId == widget.plazoleta.id &&
+              imagen.esPrincipal,
+          orElse:
+              () => loadedState.imagenesPlazoleta!.firstWhere(
+                (imagen) => imagen.entidadRelacionadaId == widget.plazoleta.id,
+                orElse:
+                    () => ImagenPlazoleta(
+                      id: 0,
+                      urlOriginal: '',
+                      nombreArchivo: '',
+                      extension: '',
+                      tamanoBytes: 0,
+                      ancho: 0,
+                      alto: 0,
+                      tipoImagen: TipoImagen.principal,
+                      esPrincipal: true,
+                      ordenVisual: 0,
+                      fechaCreacion: DateTime.now(),
+                      activa: true,
+                      plazoletaId: 0,
+                    ),
+              ),
+        );
+
+        // Add variant URLs if they exist
+        if (imagenPrincipal.tieneVariantes) {
+          final thumbUrl = imagenPrincipal.getVarianteUrl('thumb');
+          final mediumUrl = imagenPrincipal.getVarianteUrl('medium');
+          final largeUrl = imagenPrincipal.getVarianteUrl('large');
+
+          if (thumbUrl != null && !_urlsToTry.contains(thumbUrl)) {
+            _urlsToTry.add(thumbUrl);
+          }
+          if (mediumUrl != null && !_urlsToTry.contains(mediumUrl)) {
+            _urlsToTry.add(mediumUrl);
+          }
+          if (largeUrl != null && !_urlsToTry.contains(largeUrl)) {
+            _urlsToTry.add(largeUrl);
+          }
+
+          // Also add HTTP versions of variants
+          for (final variantUrl in [thumbUrl, mediumUrl, largeUrl]) {
+            if (variantUrl != null && variantUrl.startsWith('https://')) {
+              final httpVariant = variantUrl.replaceFirst(
+                'https://',
+                'http://',
+              );
+              if (!_urlsToTry.contains(httpVariant)) {
+                _urlsToTry.add(httpVariant);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    print('🔄 URLs a intentar para plazoleta ${widget.plazoleta.id}:');
+    for (int i = 0; i < _urlsToTry.length; i++) {
+      print('   $i: ${_urlsToTry[i]}');
+    }
+  }
+
+  void _tryNextUrl() {
+    if (_currentUrlIndex < _urlsToTry.length - 1) {
+      setState(() {
+        _currentUrlIndex++;
+        _hasError = false;
+      });
+      print(
+        '🔄 Intentando siguiente URL (${_currentUrlIndex + 1}/${_urlsToTry.length}): ${_urlsToTry[_currentUrlIndex]}',
+      );
+    } else {
+      setState(() {
+        _hasError = true;
+      });
+      print('❌ Todas las URLs fallaron para plazoleta ${widget.plazoleta.id}');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUrl =
+        _urlsToTry.isNotEmpty
+            ? _urlsToTry[_currentUrlIndex]
+            : widget.primaryUrl;
+
+    if (_hasError || _urlsToTry.isEmpty) {
+      return Container(
+        color: Colors.grey[200],
+        child: const Center(
+          child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+        ),
+      );
+    }
+
+    return Image.network(
+      currentUrl,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          color: Colors.grey[200],
+          child: const Center(
+            child: Icon(Icons.location_city, size: 48, color: Colors.grey),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                // TODO: Aplicar filtros
-                Navigator.pop(context);
-              },
-              child: const Text('Aplicar'),
-            ),
-          ],
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        print('❌ Error cargando imagen $currentUrl: $error');
+        print('📋 Stack trace: $stackTrace');
+
+        // Schedule try next URL for next frame
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _tryNextUrl();
+        });
+
+        // Show loading placeholder while trying next URL
+        return Container(
+          color: Colors.grey[200],
+          child: const Center(
+            child: Icon(Icons.location_city, size: 48, color: Colors.grey),
+          ),
         );
       },
     );

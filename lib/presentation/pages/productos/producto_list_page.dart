@@ -1,5 +1,7 @@
 // lib/presentation/pages/productos/producto_list_page.dart
 
+import '../../widgets/custom_app_bar.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -311,15 +313,9 @@ class _ProductoListPageState extends State<ProductoListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title:
-            _isSearching
-                ? null
-                : const Text(
-                  'Productos',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-        actions: [
+      appBar: CustomAppBar(
+        title: _isSearching ? null : 'Productos',
+        additionalActions: [
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {

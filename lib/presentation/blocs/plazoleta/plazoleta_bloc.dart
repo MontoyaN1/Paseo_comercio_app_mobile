@@ -6,6 +6,7 @@ import 'package:logger/logger.dart';
 
 import '../../../domain/repositories/plazoleta_repository_interface.dart';
 import '../../../domain/entities/plazoleta.dart';
+import '../../../domain/entities/imagen_base.dart';
 
 import 'plazoleta_event.dart';
 import 'plazoleta_state.dart';
@@ -110,13 +111,38 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
         _hasMore = plazoletas.length >= (event.limit ?? _pageSize);
         _logger.i('_hasMore calculado como: $_hasMore');
 
+        // Obtener imágenes principales para las plazoletas cargadas
+        List<ImagenBase> nuevasImagenes = [];
+        if (plazoletas.isNotEmpty) {
+          try {
+            final plazoletaIds = plazoletas.map((p) => p.id).toList();
+            final imagenesMap = await _plazoletaRepository
+                .getImagenesPrincipalesPlazoletas(plazoletaIds);
+
+            // Convertir mapa a lista de imágenes
+            nuevasImagenes =
+                imagenesMap.entries
+                    .where((entry) => entry.value != null)
+                    .map((entry) => entry.value!)
+                    .toList();
+
+            _logger.i(
+              'Se cargaron ${nuevasImagenes.length} imágenes principales',
+            );
+          } catch (e) {
+            _logger.e('Error al cargar imágenes principales: $e');
+            // Continuar sin imágenes si hay error
+          }
+        }
+
         if (event.forceRefresh || _currentPage == 1) {
           _logger.i(
-            'Emitting PlazoletaLoaded con ${plazoletas.length} plazoletas',
+            'Emitting PlazoletaLoaded con ${plazoletas.length} plazoletas y ${nuevasImagenes.length} imágenes',
           );
           emit(
             PlazoletaLoaded(
               plazoletas: plazoletas,
+              imagenesPlazoleta: nuevasImagenes,
               hasMore: _hasMore,
               currentPage: event.page ?? _currentPage,
               searchQuery: event.search,
@@ -128,12 +154,21 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
           if (state is PlazoletaLoaded) {
             final currentState = state as PlazoletaLoaded;
             final todasPlazoletas = [...currentState.plazoletas, ...plazoletas];
+
+            // Combinar imágenes existentes con nuevas
+            final List<ImagenBase> todasImagenes = [
+              if (currentState.imagenesPlazoleta != null)
+                ...currentState.imagenesPlazoleta!,
+              ...nuevasImagenes,
+            ];
+
             _logger.i(
-              'Emitting PlazoletaLoaded (paginación) con ${todasPlazoletas.length} plazoletas totales',
+              'Emitting PlazoletaLoaded (paginación) con ${todasPlazoletas.length} plazoletas totales y ${todasImagenes.length} imágenes',
             );
             emit(
               currentState.copyWith(
                 plazoletas: todasPlazoletas,
+                imagenesPlazoleta: todasImagenes,
                 hasMore: _hasMore,
                 currentPage: event.page ?? _currentPage,
               ),

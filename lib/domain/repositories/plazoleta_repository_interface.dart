@@ -54,6 +54,11 @@ abstract class PlazoletaRepositoryInterface {
     TipoImagen tipoImagen,
   );
 
+  /// Obtener imágenes principales para múltiples plazoletas
+  Future<Map<int, ImagenBase?>> getImagenesPrincipalesPlazoletas(
+    List<int> plazoletaIds,
+  );
+
   // ========== PRODUCTOS RELACIONADOS CON PLAZOLETAS ==========
 
   /// Obtener productos por categoría de plazoleta

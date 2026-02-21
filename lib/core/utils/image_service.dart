@@ -5,11 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
-
 import '../constants/app_constants.dart';
 import '../errors/app_exceptions.dart';
 import 'cache_service.dart';
-import 'connectivity_service.dart';
 import 'image_info.dart';
 import 'result.dart';
 

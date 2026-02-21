@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:clerk_flutter/clerk_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -7,32 +8,26 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Perfil'),
-        backgroundColor: const Color(0xFF121212),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // TODO: Navegar a configuración
-            },
-          ),
-        ],
-      ),
-      body: ClerkAuthBuilder(
-        signedInBuilder: (context, state) {
-          final user = ClerkAuth.of(context).user;
-          return _buildProfileContent(context, user);
-        },
-        signedOutBuilder: (context, state) {
-          return _buildSignedOutContent(context);
+      appBar: const DetailAppBar(title: 'Perfil', showProfileButton: false),
+      body: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final user = snapshot.data;
+          if (user != null) {
+            return _buildProfileContent(context, user);
+          } else {
+            return _buildSignedOutContent(context);
+          }
         },
       ),
     );
   }
 
-  Widget _buildProfileContent(BuildContext context, dynamic user) {
+  Widget _buildProfileContent(BuildContext context, User user) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -42,22 +37,22 @@ class ProfilePage extends StatelessWidget {
           CircleAvatar(
             radius: 60,
             backgroundImage:
-                user?.imageUrl != null && user!.imageUrl!.isNotEmpty
-                    ? NetworkImage(user.imageUrl!)
+                user.photoURL != null && user!.photoURL!.isNotEmpty
+                    ? NetworkImage(user.photoURL!)
                     : null,
             child:
-                user?.imageUrl == null || user!.imageUrl!.isEmpty
+                user.photoURL == null || user!.photoURL!.isEmpty
                     ? const Icon(Icons.person, size: 50, color: Colors.white)
                     : null,
           ),
           const SizedBox(height: 20),
           Text(
-            user?.fullName ?? 'Usuario',
+            user.displayName ?? 'Usuario',
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 5),
           Text(
-            user?.email ?? user?.primaryEmail ?? 'usuario@ejemplo.com',
+            user.email ?? 'usuario@ejemplo.com',
             style: const TextStyle(fontSize: 16, color: Colors.grey),
           ),
           const SizedBox(height: 30),
@@ -72,7 +67,7 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 40),
           ElevatedButton.icon(
             onPressed: () {
-              ClerkAuth.of(context).signOut();
+              FirebaseAuth.instance.signOut();
             },
             icon: const Icon(Icons.logout, size: 20),
             label: const Text('Cerrar sesión'),
@@ -107,27 +102,27 @@ class ProfilePage extends StatelessWidget {
             _buildInfoItem(
               icon: Icons.person_outline,
               label: 'Nombre completo',
-              value: user?.fullName ?? user?.name ?? 'No disponible',
+              value: user?.displayName ?? 'No disponible',
             ),
             const Divider(height: 20),
             _buildInfoItem(
               icon: Icons.email_outlined,
               label: 'Email',
-              value: user?.email ?? user?.primaryEmail ?? 'No disponible',
+              value: user?.email ?? 'No disponible',
             ),
             const Divider(height: 20),
             _buildInfoItem(
               icon: Icons.phone_outlined,
               label: 'Teléfono',
-              value: user?.phoneNumber ?? user?.phone ?? 'No disponible',
+              value: user?.phoneNumber ?? 'No disponible',
             ),
             const Divider(height: 20),
             _buildInfoItem(
               icon: Icons.calendar_today_outlined,
               label: 'Miembro desde',
               value:
-                  user?.createdAt != null
-                      ? '${user!.createdAt!.day}/${user.createdAt!.month}/${user.createdAt!.year}'
+                  user?.metadata?.creationTime != null
+                      ? '${user!.metadata!.creationTime!.day}/${user!.metadata!.creationTime!.month}/${user!.metadata!.creationTime!.year}'
                       : 'No disponible',
             ),
           ],

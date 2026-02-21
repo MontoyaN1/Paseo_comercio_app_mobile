@@ -1,14 +1,13 @@
 // lib/di/service_locator.dart
 
 import 'package:get_it/get_it.dart';
-import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app/app_config.dart';
 import '../core/utils/cache_service.dart';
 import '../core/utils/connectivity_service.dart';
 import '../core/utils/image_service.dart';
-import '../core/utils/auth_service_simple.dart';
+import '../core/utils/firebase_auth_service.dart';
 import '../core/utils/app_utils_simple.dart';
 import '../data/datasources/remote/supabase_client.dart';
 import '../data/datasources/remote/s3_client.dart';
@@ -57,14 +56,10 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
   await cacheService.initialize();
   getIt.registerSingleton<CacheService>(cacheService);
 
-  // Inicializar y registrar servicio de autenticación (versión simplificada)
-  final authService = AuthServiceSimple();
-  await authService.initialize(
-    clerkPublishableKey: appConfig.clerkPublishableKey,
-    supabaseUrl: appConfig.supabaseUrl,
-    supabaseAnonKey: appConfig.supabaseAnonKey,
-  );
-  getIt.registerSingleton<AuthServiceSimple>(authService);
+  // Inicializar y registrar servicio de autenticación con Firebase
+  final authService = FirebaseAuthService();
+  await authService.initialize();
+  getIt.registerSingleton<FirebaseAuthService>(authService);
 
   // Configurar y registrar servicio de imágenes
   final imageService = ImageService();
@@ -126,7 +121,6 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
   getIt.registerLazySingleton<PlazoletaRepositoryInterface>(
     () => PlazoletaRepository(
       supabaseClient: getIt<SupabaseClientService>(),
-      localCache: getIt<LocalCacheService>(),
       connectivityService: getIt<ConnectivityService>(),
       cacheService: getIt<CacheService>(),
     ),

@@ -17,9 +17,8 @@ class AppConfig {
   String supabaseAnonKey = '';
   String supabaseServiceRoleKey = '';
 
-  // Configuración de Clerk (solo publishableKey necesaria)
-  String clerkPublishableKey = '';
-  String clerkSecretKey = ''; // Para sincronización con Supabase
+  // Configuración de Firebase (se usa firebase_options.dart)
+  // No se necesitan variables de entorno para Firebase
 
   // Configuración de Cloudflare R2
   String cloudflareAccountId = '';
@@ -69,9 +68,8 @@ class AppConfig {
     supabaseAnonKey = env['SUPABASE_ANON_KEY'] ?? '';
     supabaseServiceRoleKey = env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
 
-    // Clerk
-    clerkPublishableKey = env['CLERK_PUBLISHABLE_KEY'] ?? '';
-    clerkSecretKey = env['CLERK_SECRET_KEY'] ?? '';
+    // Firebase - se configura automáticamente con firebase_options.dart
+    // No se necesitan variables de entorno
 
     // Cloudflare R2
     cloudflareAccountId = env['CLOUDFLARE_ACCOUNT_ID'] ?? '';
@@ -118,9 +116,8 @@ class AppConfig {
     if (supabaseServiceRoleKey.isEmpty) {
       errors.add('SUPABASE_SERVICE_ROLE_KEY es requerido');
     }
-    if (clerkPublishableKey.isEmpty) {
-      errors.add('CLERK_PUBLISHABLE_KEY es requerido');
-    }
+    // Firebase se valida automáticamente con firebase_options.dart
+    // No se necesitan validaciones de variables de entorno
 
     if (errors.isNotEmpty) {
       throw Exception('Configuración incompleta: ${errors.join(', ')}');
@@ -146,8 +143,9 @@ class AppConfig {
   bool get isSupabaseConfigured =>
       supabaseUrl.isNotEmpty && supabaseServiceRoleKey.isNotEmpty;
 
-  /// Verificar si la configuración de Clerk está completa
-  bool get isClerkConfigured => clerkPublishableKey.isNotEmpty;
+  /// Verificar si la configuración de Firebase está completa
+  /// Siempre es true porque se usa firebase_options.dart
+  bool get isFirebaseConfigured => true;
 
   /// Obtener URL base para imágenes (prioriza R2, luego S3)
   String getImageBaseUrl(String entityType, String entityId) {
@@ -192,11 +190,8 @@ class AppConfig {
       'SUPABASE_ANON_KEY': 'Clave anónima de Supabase',
       'SUPABASE_SERVICE_ROLE_KEY': 'Clave de rol de servicio de Supabase',
 
-      // Clerk (obligatorias)
-      'CLERK_PUBLISHABLE_KEY':
-          'Clave pública de Clerk (obtenida del dashboard)',
-      'CLERK_SECRET_KEY':
-          'Clave secreta de Clerk (para sincronización con Supabase)',
+      // Firebase - configurado automáticamente con firebase_options.dart
+      // No se necesitan variables de entorno
 
       // Cloudflare R2 (opcionales, para migración)
       'CLOUDFLARE_ACCOUNT_ID': 'ID de cuenta de Cloudflare',
@@ -230,7 +225,7 @@ class AppConfig {
 AppConfig:
   App: $appName v$appVersion
   Supabase: ${isSupabaseConfigured ? 'Configurado' : 'No configurado'}
-  Clerk: ${isClerkConfigured ? 'Configurado' : 'No configurado'}
+  Firebase: Configurado (firebase_options.dart)
   Cloudflare R2: ${isR2Configured ? 'Configurado' : 'No configurado'}
   Contabo S3: ${isS3Configured ? 'Configurado' : 'No configurado'}
   Cache: ${cacheTtlHours}h, ${maxCacheSizeMB}MB

@@ -12,7 +12,6 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../constants/app_constants.dart';
-import '../errors/app_exceptions.dart';
 
 /// Utilidades generales de la aplicación
 class AppUtils {

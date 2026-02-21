@@ -11,7 +11,6 @@ import '../constants/app_constants.dart';
 import '../errors/app_exceptions.dart';
 import 'auth_state.dart';
 import 'cache_service.dart';
-import 'connectivity_service.dart';
 import 'result.dart';
 
 /// Servicio de autenticación con Clerk y fallback a Supabase Auth

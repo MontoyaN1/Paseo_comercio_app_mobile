@@ -1,7 +1,10 @@
 // lib/core/routing/app_router.dart
 
+import '../../presentation/widgets/custom_app_bar.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../presentation/pages/auth/login_page.dart';
 import '../../presentation/pages/profile/profile_page.dart';
@@ -23,9 +26,16 @@ class AppRouter {
       GoRoute(
         path: '/',
         redirect: (context, state) {
-          // TODO: Implementar lógica de redirección basada en autenticación
-          // Por ahora, redirigir a plazoletas
-          return '/plazoletas';
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario está autenticado, ir a plazoletas
+          if (user != null) {
+            return '/plazoletas';
+          }
+
+          // Si no está autenticado, ir a login
+          return '/login';
         },
       ),
 
@@ -33,6 +43,18 @@ class AppRouter {
       GoRoute(
         path: '/login',
         name: 'login',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario ya está autenticado, redirigir a plazoletas
+          if (user != null) {
+            return '/plazoletas';
+          }
+
+          // Permitir acceso a login
+          return null;
+        },
         pageBuilder:
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
@@ -40,10 +62,22 @@ class AppRouter {
             ),
       ),
 
-      // Perfil de usuario
+      // Perfil de usuario (protegida)
       GoRoute(
         path: '/profile',
         name: 'profile',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario no está autenticado, redirigir a login
+          if (user == null) {
+            return '/login';
+          }
+
+          // Permitir acceso al perfil
+          return null;
+        },
         pageBuilder:
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
@@ -51,10 +85,22 @@ class AppRouter {
             ),
       ),
 
-      // Plazoletas
+      // Plazoletas (protegida)
       GoRoute(
         path: '/plazoletas',
         name: 'plazoletas',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario no está autenticado, redirigir a login
+          if (user == null) {
+            return '/login';
+          }
+
+          // Permitir acceso a plazoletas
+          return null;
+        },
         pageBuilder:
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
@@ -62,10 +108,22 @@ class AppRouter {
             ),
       ),
 
-      // Detalle de plazoleta
+      // Detalle de plazoleta (protegida)
       GoRoute(
         path: '/plazoletas/:id',
         name: 'plazoleta_detail',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario no está autenticado, redirigir a login
+          if (user == null) {
+            return '/login';
+          }
+
+          // Permitir acceso al detalle de plazoleta
+          return null;
+        },
         pageBuilder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
           final plazoletaId = int.tryParse(id) ?? 0;
@@ -76,10 +134,22 @@ class AppRouter {
         },
       ),
 
-      // Tiendas
+      // Tiendas (protegida)
       GoRoute(
         path: '/tiendas',
         name: 'tiendas',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario no está autenticado, redirigir a login
+          if (user == null) {
+            return '/login';
+          }
+
+          // Permitir acceso a tiendas
+          return null;
+        },
         pageBuilder:
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
@@ -115,10 +185,22 @@ class AppRouter {
         },
       ),
 
-      // Productos
+      // Productos (protegida)
       GoRoute(
         path: '/productos',
         name: 'productos',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario no está autenticado, redirigir a login
+          if (user == null) {
+            return '/login';
+          }
+
+          // Permitir acceso a productos
+          return null;
+        },
         pageBuilder:
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
@@ -162,7 +244,10 @@ class AppRouter {
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
               child: Scaffold(
-                appBar: AppBar(title: const Text('Error')),
+                appBar: const CustomAppBar(
+                  title: 'Error',
+                  showProfileButton: false,
+                ),
                 body: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -204,7 +289,10 @@ class AppRouter {
         (context, state) => MaterialPage<void>(
           key: state.pageKey,
           child: Scaffold(
-            appBar: AppBar(title: const Text('Error')),
+            appBar: const CustomAppBar(
+              title: 'Error',
+              showProfileButton: false,
+            ),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

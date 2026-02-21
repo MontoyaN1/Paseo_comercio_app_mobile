@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../widgets/custom_app_bar.dart';
 
 import '../../../di/service_locator.dart';
 import '../../blocs/tienda/tienda_bloc.dart';
@@ -193,15 +194,9 @@ class _TiendaListPageState extends State<TiendaListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title:
-            _isSearching
-                ? null
-                : const Text(
-                  'Tiendas',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-        actions: [
+      appBar: CustomAppBar(
+        title: _isSearching ? null : 'Tiendas',
+        additionalActions: [
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {

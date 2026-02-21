@@ -4,9 +4,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
-
-import '../constants/app_constants.dart';
-import '../errors/app_exceptions.dart';
 import 'result.dart';
 
 /// Servicio de caché local usando Hive
@@ -506,7 +503,7 @@ class CacheService {
     return result;
   }
 
-  /// Convertir List<dynamic> donde cada elemento es Map<dynamic, dynamic> a List<Map<String, dynamic>>
+  /// Convertir list a map
   List<Map<String, dynamic>>? _convertDynamicListToMapList(dynamic data) {
     if (data == null) return null;
     if (data is! List) return null;
@@ -527,14 +524,58 @@ class CacheService {
   bool _isType<T>(Type type) {
     return type == T;
   }
-  /// Check if key exists in cache (stub)
+
+  /// Check if key exists in cache (expired items are removed automatically)
   Future<bool> has(String key) async {
-    throw UnimplementedError("has not implemented");
+    try {
+      await _ensureInitialized();
+
+      // Check if exists in metadata
+      if (!_metadata.containsKey(key)) {
+        return false;
+      }
+
+      // Check if expired
+      final metadata = _metadata[key]!;
+      if (metadata.isExpired) {
+        // Remove expired item
+        await _remove(key);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
-  /// Set value in cache (stub)
+  /// Set value in cache with proper error handling
   Future<void> set(String key, dynamic value) async {
-    throw UnimplementedError("set not implemented");
+    try {
+      final result = await save(
+        key: key,
+        data: value,
+        category: 'general',
+        tags: {},
+        ttl: const Duration(hours: 1),
+      );
+
+      // Handle result without throwing
+      result.fold<void>(
+        (_) {}, // Success, do nothing
+        (error) {
+          // Log the error but don't throw to allow app to continue
+          // The error is already captured in save() and returned as Result
+          // We just log it here for debugging
+          print(
+            'CacheService.set: Error saving to cache for key: $key - $error',
+          );
+        },
+      );
+    } catch (e) {
+      // Catch any unexpected errors and log them
+      print('CacheService.set: Unexpected error for key: $key - $e');
+    }
   }
 }
 

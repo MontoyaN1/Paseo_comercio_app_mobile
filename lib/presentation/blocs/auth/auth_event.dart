@@ -1,7 +1,5 @@
 // lib/presentation/blocs/auth/auth_event.dart
 
-import 'package:equatable/equatable.dart';
-
 part of 'auth_bloc.dart';
 
 /// Eventos base para AuthBloc

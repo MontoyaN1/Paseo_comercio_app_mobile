@@ -1,7 +1,5 @@
 // lib/presentation/blocs/producto/producto_state.dart
 
-import 'package:equatable/equatable.dart';
-
 part of 'producto_bloc.dart';
 
 /// Estados base para ProductoBloc
