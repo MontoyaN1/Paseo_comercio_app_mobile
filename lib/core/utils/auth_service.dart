@@ -433,37 +433,6 @@ class AuthService {
     }
   }
 
-  /// Cargar estado de autenticación guardado
-  Future<void> _loadAuthState() async {
-    try {
-      final cache = CacheService();
-      final result = await cache.get<String>('auth_state');
-      result.fold((savedState) {
-        if (savedState != null) {
-          final state = AuthState.fromName(savedState);
-          _currentState = state;
-          _stateController.add(state);
-        }
-      }, (error) => print('Error loading auth state: $error'));
-    } catch (_) {
-      // Ignorar errores de carga
-    }
-  }
-
-  /// Limpiar estado de autenticación
-  Future<void> _clearAuthState() async {
-    try {
-      final cache = CacheService();
-      final result = await cache.remove('auth_state');
-      result.fold(
-        (_) {}, // éxito
-        (error) => print('Error removing auth state: $error'),
-      );
-    } catch (_) {
-      // Ignorar errores
-    }
-  }
-
   /// Manejar inicio de sesión con Clerk (simulado)
   Future<void> _handleClerkSignIn() async {
     // Simulación de inicio de sesión con Clerk

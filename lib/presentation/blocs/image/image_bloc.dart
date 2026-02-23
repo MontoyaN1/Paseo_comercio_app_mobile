@@ -210,7 +210,8 @@ class ImageBloc extends Bloc<ImageEvent, ImageState> {
     // Si la URL ya es de un proveedor conocido, mantenerla
     if (originalUrl.contains('r2.cloudflarestorage.com') ||
         originalUrl.contains('contabostorage.com') ||
-        originalUrl.contains('supabase.co')) {
+        originalUrl.contains('supabase.co') ||
+        originalUrl.contains('.r2.dev')) {
       return [originalUrl];
     }
 

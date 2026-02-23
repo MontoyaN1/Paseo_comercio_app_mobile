@@ -3,9 +3,6 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../domain/entities/plazoleta.dart';
-import '../../../domain/entities/imagen_base.dart';
-import '../../../domain/entities/producto.dart';
-import '../../../domain/entities/tienda.dart';
 
 /// Eventos para el BLoC de Plazoletas
 abstract class PlazoletaEvent extends Equatable {

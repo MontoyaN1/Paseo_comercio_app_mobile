@@ -139,18 +139,12 @@ class SupabaseClientService {
           .eq('clerk_user_id', clerkUserId)
           .limit(1);
 
-      if (response == null || response.isEmpty) {
-        _logger.e('Error getting user by Clerk ID: response is null or empty');
+      if (response.isEmpty) {
+        _logger.e('Error getting user by Clerk ID: response is empty');
         return null;
       }
 
-      final firstItem = response.first;
-      if (firstItem is Map<String, dynamic>) {
-        return firstItem;
-      } else {
-        _logger.w('User response is not Map<String, dynamic>: $firstItem');
-        return null;
-      }
+      return response.first;
     } catch (e) {
       _logger.e('Exception getting user by Clerk ID: $e');
       return null;
@@ -183,26 +177,7 @@ class SupabaseClientService {
 
       final response = await query;
 
-      if (response == null) {
-        _logger.e('Error getting tiendas: response is null');
-        return [];
-      }
-
-      if (response is! List) {
-        _logger.e('Error getting tiendas: response is not a List');
-        return [];
-      }
-      final data = response as List<dynamic>;
-      return data.map((item) {
-        if (item is Map<String, dynamic>) {
-          return item;
-        } else {
-          _logger.w(
-            'Item in tiendas response is not Map<String, dynamic>: $item',
-          );
-          return <String, dynamic>{};
-        }
-      }).toList();
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       _logger.e('Exception getting tiendas: $e');
       return [];
@@ -228,26 +203,7 @@ class SupabaseClientService {
           .order('fecha_creacion', ascending: false)
           .range((page - 1) * limit, (page - 1) * limit + limit - 1);
 
-      if (response == null) {
-        _logger.e('Error getting productos by tienda: response is null');
-        return [];
-      }
-
-      if (response is! List) {
-        _logger.e('Error getting productos by tienda: response is not a List');
-        return [];
-      }
-      final data = response as List<dynamic>;
-      return data.map((item) {
-        if (item is Map<String, dynamic>) {
-          return item;
-        } else {
-          _logger.w(
-            'Item in productos response is not Map<String, dynamic>: $item',
-          );
-          return <String, dynamic>{};
-        }
-      }).toList();
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       _logger.e('Exception getting productos by tienda: $e');
       return [];
@@ -284,26 +240,7 @@ class SupabaseClientService {
       query = query.eq('activa', true);
       final response = await query.order('orden');
 
-      if (response == null) {
-        _logger.e('Error getting imágenes: response is null');
-        return [];
-      }
-
-      if (response is! List) {
-        _logger.e('Error getting imágenes: response is not a List');
-        return [];
-      }
-      final data = response as List<dynamic>;
-      return data.map((item) {
-        if (item is Map<String, dynamic>) {
-          return item;
-        } else {
-          _logger.w(
-            'Item in imágenes response is not Map<String, dynamic>: $item',
-          );
-          return <String, dynamic>{};
-        }
-      }).toList();
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       _logger.e('Exception getting imágenes: $e');
       return [];
@@ -381,7 +318,7 @@ class SupabaseClientService {
     String? ipCliente,
   }) async {
     try {
-      final response = await interacciones.insert({
+      await interacciones.insert({
         'tipo_interaccion': tipoInteraccion,
         'producto_id': productoId,
         'tienda_id': tiendaId,
@@ -391,11 +328,6 @@ class SupabaseClientService {
         'fecha_creacion': DateTime.now().toIso8601String(),
         'fecha_actualizacion': DateTime.now().toIso8601String(),
       });
-
-      if (response == null) {
-        _logger.e('Error registering interaction: response is null');
-        return false;
-      }
 
       return true;
     } catch (e) {
@@ -434,8 +366,8 @@ class SupabaseClientService {
   Future<bool> checkConnection() async {
     try {
       // Intentar una consulta simple
-      final response = await usuarios.select().count();
-      return response != null;
+      await usuarios.select().count();
+      return true;
     } catch (e) {
       _logger.e('Connection check failed: $e');
       return false;

@@ -469,7 +469,7 @@ class CacheService {
     if (data is! Map) return null;
 
     final result = <String, dynamic>{};
-    for (final entry in (data as Map).entries) {
+    for (final entry in data.entries) {
       final key = entry.key.toString();
       final value = entry.value;
 
@@ -485,7 +485,7 @@ class CacheService {
     return result;
   }
 
-  /// Convertir List<dynamic> a List<dynamic> con tipos adecuados
+  /// Convertir List a dinamyc
   List<dynamic> _convertDynamicList(dynamic data) {
     if (data == null) return [];
     if (data is! List) return [];
@@ -518,11 +518,6 @@ class CacheService {
       }
     }
     return result;
-  }
-
-  /// Método helper para verificar tipos en tiempo de ejecución
-  bool _isType<T>(Type type) {
-    return type == T;
   }
 
   /// Check if key exists in cache (expired items are removed automatically)

@@ -174,7 +174,6 @@ class Horario extends Equatable {
     // Buscar próximo horario disponible basado en intervalo de citas
     if (intervaloCitaMinutos != null) {
       final minutosAhora = ahora.hour * 60 + ahora.minute;
-      final minutosApertura = horaApertura.hour * 60 + horaApertura.minute;
 
       // Calcular próximo intervalo disponible
       var proximoMinuto = minutosAhora + intervaloCitaMinutos!;

@@ -567,7 +567,7 @@ class LocalCacheService {
         Map<String, dynamic> metadata = <String, dynamic>{};
 
         // Manejar el resultado de forma segura
-        if (metadataResult != null && metadataResult is Map) {
+        if (metadataResult != null) {
           final map = metadataResult;
           for (final key in map.keys) {
             final value = map[key];
@@ -724,7 +724,7 @@ class LocalCacheService {
     for (final box in boxes) {
       for (final key in box.keys) {
         final entry = box.get(key);
-        if (entry != null && entry is Map<String, dynamic>) {
+        if (entry != null) {
           // Estimación aproximada del tamaño
           totalSize += entry.toString().length;
         }
@@ -740,7 +740,7 @@ class LocalCacheService {
     Map<String, dynamic> metadata = <String, dynamic>{};
 
     // Manejar el resultado de forma segura
-    if (metadataResult != null && metadataResult is Map) {
+    if (metadataResult != null) {
       final map = metadataResult;
       for (final key in map.keys) {
         final value = map[key];
@@ -803,6 +803,7 @@ class LocalCacheService {
 
     await metadataBox.put('stats', serializableMetadata);
   }
+
   /// Generic get method for cache
   Future<dynamic> get(String key) async {
     _checkInitialized();

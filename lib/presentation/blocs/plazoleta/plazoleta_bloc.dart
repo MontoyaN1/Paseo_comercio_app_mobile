@@ -10,7 +10,6 @@ import '../../../domain/entities/imagen_base.dart';
 
 import 'plazoleta_event.dart';
 import 'plazoleta_state.dart';
-import '../../../domain/failures/failure.dart';
 
 /// BLoC para manejar la lógica de negocio de las plazoletas
 class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
@@ -21,7 +20,6 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
   int _currentPage = 1;
   final int _pageSize = 20;
   bool _hasMore = true;
-  String? _currentSearchQuery;
   Map<String, dynamic>? _currentFilters;
 
   PlazoletaBloc({required PlazoletaRepositoryInterface plazoletaRepository})
@@ -86,16 +84,6 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
       }
 
       emit(PlazoletasActivasLoading(isRefreshing: event.forceRefresh));
-
-      final result = await _plazoletaRepository.getPlazoletasActivas(
-        page: event.page ?? _currentPage,
-        limit: event.limit ?? _pageSize,
-        search: event.search,
-        piso: event.piso,
-        sector: event.sector,
-        tieneZonaComida: event.tieneZonaComida,
-        tieneEstacionamiento: event.tieneEstacionamiento,
-      );
 
       try {
         final plazoletas = await _plazoletaRepository.getPlazoletasActivas(
@@ -351,7 +339,6 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
     Emitter<PlazoletaState> emit,
   ) async {
     try {
-      _currentSearchQuery = event.query;
       emit(PlazoletaSearching(query: event.query));
 
       try {
@@ -642,7 +629,7 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
       // Incrementar contador de visitas (esto sería una llamada a la API en producción)
       // Por ahora, solo actualizamos localmente
       final updatedPlazoleta = plazoleta.copyWith(
-        totalVisitas: (plazoleta.totalVisitas ?? 0) + 1,
+        totalVisitas: plazoleta.totalVisitas + 1,
       );
 
       // Actualizar el estado si estamos en un estado cargado
@@ -980,7 +967,6 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
   ) {
     _currentPage = 1;
     _hasMore = true;
-    _currentSearchQuery = null;
     _currentFilters = null;
     emit(const PlazoletaInitial());
   }
@@ -990,18 +976,5 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
     emit(
       PlazoletaErrorState(message: event.message, stackTrace: event.stackTrace),
     );
-  }
-
-  /// Obtener mensaje de error desde Failure
-  String _getErrorMessage(Failure failure) {
-    if (failure is NetworkFailure) {
-      return 'Error de red: ${failure.message}';
-    } else if (failure is ServerFailure) {
-      return 'Error del servidor: ${failure.message}';
-    } else if (failure is CacheFailure) {
-      return 'Error de caché: ${failure.message}';
-    } else {
-      return failure.message;
-    }
   }
 }

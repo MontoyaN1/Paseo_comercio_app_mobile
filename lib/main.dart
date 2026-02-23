@@ -327,7 +327,7 @@ class HomePage extends StatelessWidget {
 
         print('👤 HomePage - Usuario autenticado: $isAuthenticated');
         if (isAuthenticated) {
-          print('   - User ID: ${user!.uid}');
+          print('   - User ID: ${user.uid}');
           print('   - Email: ${user.email}');
           print('   - Display name: ${user.displayName}');
         }
@@ -480,7 +480,7 @@ class HomePage extends StatelessWidget {
                           ),
                         ],
                       ),
-                    if (isAuthenticated && user!.displayName != null) ...[
+                    if (isAuthenticated && user.displayName != null) ...[
                       const SizedBox(height: 30),
                       Text(
                         'Hola, ${user.displayName}!',

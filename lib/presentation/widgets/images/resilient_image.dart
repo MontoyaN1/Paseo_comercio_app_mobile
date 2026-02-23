@@ -2,8 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../../core/utils/image_service.dart';
 import '../../../core/utils/connectivity_service.dart';
@@ -152,7 +150,8 @@ class _ResilientImageState extends State<ResilientImage> {
     // Si la URL ya es de un proveedor conocido, mantenerla
     if (originalUrl.contains('r2.cloudflarestorage.com') ||
         originalUrl.contains('contabostorage.com') ||
-        originalUrl.contains('supabase.co')) {
+        originalUrl.contains('supabase.co') ||
+        originalUrl.contains('.r2.dev')) {
       _fallbackUrls = [originalUrl];
       return;
     }
@@ -276,33 +275,6 @@ class _ResilientImageState extends State<ResilientImage> {
     );
   }
 
-  void _saveToCache(String url) async {
-    if (!widget.useCache) return;
-
-    final cacheKey = 'image_${widget.imageUrl}';
-    final cacheData = {
-      'url': url,
-      'timestamp': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'originalUrl': widget.imageUrl,
-    };
-
-    final result = await _cacheService.save(
-      key: cacheKey,
-      data: cacheData,
-      ttl: Duration(seconds: widget.cacheTTL),
-    );
-
-    result.fold(
-      (_) {
-        // Success, do nothing
-      },
-      (error) {
-        // Log error but don't crash
-        print('Error saving image to cache: $error');
-      },
-    );
-  }
-
   void _onImageError(String url, dynamic error) {
     if (_currentUrlIndex < _fallbackUrls.length - 1) {
       // Intentar siguiente URL de fallback
@@ -325,20 +297,6 @@ class _ResilientImageState extends State<ResilientImage> {
       if (widget.onError != null) {
         widget.onError!(_error!);
       }
-    }
-  }
-
-  void _onImageLoaded(String url) {
-    setState(() {
-      _isLoading = false;
-      _error = null;
-      _currentDisplayUrl = url;
-    });
-
-    _saveToCache(url);
-
-    if (widget.onImageLoaded != null) {
-      widget.onImageLoaded!();
     }
   }
 
@@ -393,11 +351,6 @@ class _ResilientImageState extends State<ResilientImage> {
     );
   }
 
-  Widget _buildImageWithBloc() {
-    // BLoC implementation disabled due to compilation errors
-    return _buildPlaceholder();
-  }
-
   Widget _buildCachedNetworkImage(String url) {
     return ClipRRect(
       borderRadius: widget.borderRadius ?? BorderRadius.zero,
@@ -446,11 +399,6 @@ class _ResilientImageState extends State<ResilientImage> {
 
   @override
   Widget build(BuildContext context) {
-    final widgetSize = Size(
-      widget.width ?? MediaQuery.of(context).size.width,
-      widget.height ?? 200,
-    );
-
     return SizedBox(
       width: widget.width,
       height: widget.height,

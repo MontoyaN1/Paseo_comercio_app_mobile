@@ -5,7 +5,6 @@ import '../../domain/repositories/auth_repository_interface.dart';
 import 'dart:async';
 import 'package:logger/logger.dart';
 
-import '../../core/app/app_config.dart';
 import '../datasources/remote/supabase_client.dart';
 import '../datasources/local/local_database.dart';
 
@@ -209,7 +208,7 @@ class AuthRepository implements AuthRepositoryInterface {
 
       // Aquí puedes implementar lógica para verificar roles
       // Por ejemplo, verificar en la tabla de roles de Supabase
-      final userRole = user['roles_id'];
+      // final userRole = user['roles_id'];
       // Implementar lógica específica según tu esquema de roles
 
       return false; // Placeholder

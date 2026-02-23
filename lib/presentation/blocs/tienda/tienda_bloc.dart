@@ -169,52 +169,23 @@ class TiendaBloc extends Bloc<TiendaEvent, TiendaState> {
     if (state is TiendaLoadingMore) return;
 
     final currentState = state;
-    final bool isSearch = currentState is TiendaSearchLoaded;
-    final bool hasMore =
-        isSearch
-            ? (currentState as TiendaSearchLoaded).hasMore
-            : (currentState as TiendaLoaded).hasMore;
 
-    if (!hasMore) return;
+    if (currentState is TiendaSearchLoaded) {
+      final searchState = currentState;
+      if (!searchState.hasMore) return;
 
-    emit(
-      isSearch
-          ? (currentState as TiendaSearchLoaded).copyWith(isLoadingMore: true)
-          : (currentState as TiendaLoaded).copyWith(isLoadingMore: true),
-    );
+      emit(searchState.copyWith(isLoadingMore: true));
 
-    try {
-      final nextPage =
-          isSearch
-              ? (currentState as TiendaSearchLoaded).currentPage + 1
-              : (currentState as TiendaLoaded).currentPage + 1;
-
-      List<Map<String, dynamic>> newTiendas;
-
-      if (isSearch) {
-        final searchState = currentState as TiendaSearchLoaded;
-        newTiendas = await _searchTiendasUseCase.execute(
+      try {
+        final nextPage = searchState.currentPage + 1;
+        final newTiendas = await _searchTiendasUseCase.execute(
           SearchTiendasParams(
             query: searchState.query,
             page: nextPage,
             limit: event.limit,
           ),
         );
-      } else {
-        final loadedState = currentState as TiendaLoaded;
-        newTiendas = await _getTiendasUseCase.execute(
-          GetTiendasParams(
-            page: nextPage,
-            limit: event.limit,
-            categoriaId: loadedState.categoriaId,
-            soloActivas: loadedState.soloActivas,
-            forceRefresh: false,
-          ),
-        );
-      }
 
-      if (isSearch) {
-        final searchState = currentState as TiendaSearchLoaded;
         final allTiendas = [...searchState.tiendas, ...newTiendas];
         emit(
           TiendaSearchLoaded(
@@ -224,8 +195,29 @@ class TiendaBloc extends Bloc<TiendaEvent, TiendaState> {
             hasMore: newTiendas.length >= event.limit,
           ),
         );
-      } else {
-        final loadedState = currentState as TiendaLoaded;
+      } catch (e) {
+        // Revertir al estado anterior en caso de error
+        emit(currentState);
+        emit(TiendaError(message: 'Error al cargar más tiendas: $e', error: e));
+      }
+    } else if (currentState is TiendaLoaded) {
+      final loadedState = currentState;
+      if (!loadedState.hasMore) return;
+
+      emit(loadedState.copyWith(isLoadingMore: true));
+
+      try {
+        final nextPage = loadedState.currentPage + 1;
+        final newTiendas = await _getTiendasUseCase.execute(
+          GetTiendasParams(
+            page: nextPage,
+            limit: event.limit,
+            categoriaId: loadedState.categoriaId,
+            soloActivas: loadedState.soloActivas,
+            forceRefresh: false,
+          ),
+        );
+
         final allTiendas = [...loadedState.tiendas, ...newTiendas];
         emit(
           TiendaLoaded(
@@ -237,11 +229,11 @@ class TiendaBloc extends Bloc<TiendaEvent, TiendaState> {
             soloActivas: loadedState.soloActivas,
           ),
         );
+      } catch (e) {
+        // Revertir al estado anterior en caso de error
+        emit(currentState);
+        emit(TiendaError(message: 'Error al cargar más tiendas: $e', error: e));
       }
-    } catch (e) {
-      // Revertir al estado anterior en caso de error
-      emit(currentState);
-      emit(TiendaError(message: 'Error al cargar más tiendas: $e', error: e));
     }
   }
 

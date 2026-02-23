@@ -327,13 +327,15 @@ class FirebaseAuthService {
       }
 
       // Verificar que el usuario de Google tenga email (requerido)
-      if (googleUser.email == null || googleUser.email!.isEmpty) {
+      final email = googleUser.email;
+      if (email.isEmpty) {
         if (kDebugMode) {
           print('FirebaseAuthService: Error - usuario de Google sin email');
         }
         return Result.error(
           AuthException(
-            message: 'No se pudo obtener el email de la cuenta de Google',
+            message: 'El usuario de Google no tiene un email válido',
+            cause: Exception('Email no disponible'),
           ),
         );
       }
@@ -1029,37 +1031,6 @@ class FirebaseAuthService {
           cause: error,
         ),
       );
-    }
-  }
-
-  /// Cargar estado de autenticación guardado
-  Future<void> _loadAuthState() async {
-    try {
-      final cache = CacheService();
-      final result = await cache.get<String>('auth_state');
-      result.fold((savedState) {
-        if (savedState != null) {
-          final state = AuthState.fromName(savedState);
-          _currentState = state;
-          _stateController.add(state);
-        }
-      }, (error) => print('Error loading auth state: $error'));
-    } catch (_) {
-      // Ignorar errores de carga
-    }
-  }
-
-  /// Limpiar estado de autenticación
-  Future<void> _clearAuthState() async {
-    try {
-      final cache = CacheService();
-      final result = await cache.remove('auth_state');
-      result.fold(
-        (_) {}, // éxito
-        (error) => print('Error removing auth state: $error'),
-      );
-    } catch (_) {
-      // Ignorar errores
     }
   }
 

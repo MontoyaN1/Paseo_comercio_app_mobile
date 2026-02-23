@@ -114,7 +114,6 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
     () => TiendaRepository(
       supabaseClient: getIt<SupabaseClientService>(),
       localCache: getIt<LocalCacheService>(),
-      connectivityService: getIt<ConnectivityService>(),
     ),
   );
 

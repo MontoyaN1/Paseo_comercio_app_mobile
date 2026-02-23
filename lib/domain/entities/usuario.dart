@@ -1,6 +1,5 @@
 // lib/data/models/domain/usuario.dart
 
-import 'package:hive/hive.dart';
 import 'package:equatable/equatable.dart';
 
 import 'enums.dart';
@@ -9,40 +8,40 @@ import 'enums.dart';
 
 // @HiveType(typeId: 1)
 class Usuario extends Equatable {
-//   // @HiveField(0)
+  //   // @HiveField(0)
   final int id;
 
-//   // @HiveField(1)
+  //   // @HiveField(1)
   final String clerkUserId;
 
-//   @HiveField(2)
+  //   @HiveField(2)
   final String nombreCompleto;
 
-//   @HiveField(3)
+  //   @HiveField(3)
   final String email;
 
-//   @HiveField(4)
+  //   @HiveField(4)
   final String telefono;
 
-//   @HiveField(5)
+  //   @HiveField(5)
   final DateTime fechaRegistro;
 
-//   @HiveField(6)
+  //   @HiveField(6)
   final DateTime? ultimoLogin;
 
-//   @HiveField(7)
+  //   @HiveField(7)
   final bool perfilPublico;
 
-//   @HiveField(8)
+  //   @HiveField(8)
   final EstadoUsuario estadoUsuario;
 
-//   @HiveField(9)
+  //   @HiveField(9)
   final int? rolesId;
 
-//   @HiveField(10)
+  //   @HiveField(10)
   final DateTime? createdAt;
 
-//   @HiveField(11)
+  //   @HiveField(11)
   final DateTime? updatedAt;
 
   const Usuario({

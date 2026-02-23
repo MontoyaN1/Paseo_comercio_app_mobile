@@ -10,10 +10,6 @@ import '../../core/utils/cache_service.dart';
 
 /// Implementación dummy del repositorio de Productos para pruebas
 class ProductoRepository implements ProductoRepositoryInterface {
-  final SupabaseClientService _supabaseClient;
-  final LocalCacheService _localCache;
-  final ConnectivityService _connectivityService;
-  final CacheService _cacheService;
   final StreamController<List<Map<String, dynamic>>>
   _productosStreamController =
       StreamController<List<Map<String, dynamic>>>.broadcast();
@@ -23,10 +19,7 @@ class ProductoRepository implements ProductoRepositoryInterface {
     required LocalCacheService localCache,
     required ConnectivityService connectivityService,
     required CacheService cacheService,
-  }) : _supabaseClient = supabaseClient,
-       _localCache = localCache,
-       _connectivityService = connectivityService,
-       _cacheService = cacheService;
+  });
 
   @override
   Future<List<Map<String, dynamic>>> getProductos({

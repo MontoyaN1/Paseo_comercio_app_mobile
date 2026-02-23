@@ -470,7 +470,6 @@ class AppUtils {
     Function func, {
     Duration interval = const Duration(milliseconds: 300),
   }) {
-    Timer? timer;
     bool isThrottled = false;
 
     return () {
@@ -479,7 +478,7 @@ class AppUtils {
       func();
       isThrottled = true;
 
-      timer = Timer(interval, () {
+      Timer(interval, () {
         isThrottled = false;
       });
     };

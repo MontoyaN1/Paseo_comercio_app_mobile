@@ -6,13 +6,11 @@ import 'package:logger/logger.dart';
 import '../datasources/remote/supabase_client.dart';
 import '../datasources/local/local_database.dart';
 import '../../domain/repositories/tienda_repository_interface.dart';
-import '../../core/utils/connectivity_service.dart';
 
 /// Repositorio para manejar operaciones de tiendas
 class TiendaRepository implements TiendaRepositoryInterface {
   final SupabaseClientService _supabaseClient;
   final LocalCacheService _localCache;
-  final ConnectivityService _connectivityService;
   final Logger _logger;
 
   // Stream para notificar cambios en las tiendas
@@ -22,10 +20,8 @@ class TiendaRepository implements TiendaRepositoryInterface {
   TiendaRepository({
     required SupabaseClientService supabaseClient,
     required LocalCacheService localCache,
-    required ConnectivityService connectivityService,
   }) : _supabaseClient = supabaseClient,
        _localCache = localCache,
-       _connectivityService = connectivityService,
        _logger = Logger(
          printer: PrettyPrinter(
            methodCount: 0,
@@ -78,21 +74,16 @@ class TiendaRepository implements TiendaRepositoryInterface {
           .order('fecha_creacion', ascending: false)
           .range((page - 1) * limit, page * limit - 1);
 
-      if (response == null) {
-        _logger.e('Error obteniendo tiendas: response is null');
-        return [];
-      }
+      // response ya es una List según el tipo de retorno de Supabase
 
-      if (response is! List) {
-        _logger.e('Error obteniendo tiendas: response is not a List');
-        return [];
-      }
-
-      final tiendas = response as List<dynamic>;
-      final result = tiendas.whereType<Map<String, dynamic>>().toList();
+      final result = response.whereType<Map<String, dynamic>>().toList();
 
       // Guardar en caché
-      await _localCache.cacheTiendas(result, key: cacheKey);
+      await _localCache.cacheTiendas(
+        result,
+        key:
+            'tiendas_page_${page}_limit_${limit}${categoriaId != null ? '_cat_$categoriaId' : ''}${soloActivas == true ? '_activas' : ''}',
+      );
 
       _logger.i('Tiendas obtenidas: ${result.length}');
       return result;
@@ -109,8 +100,6 @@ class TiendaRepository implements TiendaRepositoryInterface {
     bool forceRefresh = false,
   }) async {
     try {
-      final cacheKey = 'tienda_$tiendaId';
-
       // Si no es forzado, intentar obtener de caché primero
       if (!forceRefresh) {
         final cachedTienda = await _localCache.getCachedTienda(tiendaId);
@@ -127,7 +116,7 @@ class TiendaRepository implements TiendaRepositoryInterface {
           .eq('id', tiendaId)
           .limit(1);
 
-      if (response == null || response.isEmpty) {
+      if (response.isEmpty) {
         _logger.w('Tienda no encontrada: $tiendaId');
         return null;
       }
@@ -156,12 +145,11 @@ class TiendaRepository implements TiendaRepositoryInterface {
     bool forceRefresh = false,
   }) async {
     try {
-      final cacheKey =
-          'tiendas_prop_${propietarioId}_page_${page}_limit_${limit}';
-
       // Si no es forzado, intentar obtener de caché primero
       if (!forceRefresh) {
-        final cachedTiendas = await _localCache.getCachedTiendas(key: cacheKey);
+        final cachedTiendas = await _localCache.getCachedTiendas(
+          key: 'tiendas_prop_${propietarioId}_page_${page}_limit_${limit}',
+        );
         if (cachedTiendas != null && cachedTiendas.isNotEmpty) {
           _logger.d(
             'Tiendas de propietario obtenidas de caché: ${cachedTiendas.length}',
@@ -180,23 +168,15 @@ class TiendaRepository implements TiendaRepositoryInterface {
           .order('fecha_creacion', ascending: false)
           .range((page - 1) * limit, page * limit - 1);
 
-      if (response == null) {
-        _logger.e('Error obteniendo tiendas del propietario');
-        return [];
-      }
+      // response ya es una List según el tipo de retorno de Supabase
 
-      if (response is! List) {
-        _logger.e(
-          'Error obteniendo tiendas del propietario: response is not a List',
-        );
-        return [];
-      }
-
-      final tiendas = response as List<dynamic>;
-      final result = tiendas.whereType<Map<String, dynamic>>().toList();
+      final result = response.whereType<Map<String, dynamic>>().toList();
 
       // Guardar en caché
-      await _localCache.cacheTiendas(result, key: cacheKey);
+      await _localCache.cacheTiendas(
+        result,
+        key: 'tiendas_prop_${propietarioId}_page_${page}_limit_${limit}',
+      );
 
       _logger.i('Tiendas del propietario obtenidas: ${result.length}');
       return result;
@@ -222,18 +202,9 @@ class TiendaRepository implements TiendaRepositoryInterface {
           .order('fecha_creacion', ascending: false)
           .limit(limit);
 
-      if (response == null) {
-        _logger.e('Error buscando tiendas');
-        return [];
-      }
+      // response ya es una List según el tipo de retorno de Supabase
 
-      if (response is! List) {
-        _logger.e('Error buscando tiendas: response is not a List');
-        return [];
-      }
-
-      final tiendas = response as List<dynamic>;
-      final result = tiendas.whereType<Map<String, dynamic>>().toList();
+      final result = response.whereType<Map<String, dynamic>>().toList();
 
       _logger.i('Tiendas encontradas: ${result.length}');
       return result;
@@ -274,11 +245,6 @@ class TiendaRepository implements TiendaRepositoryInterface {
       };
 
       final response = await _supabaseClient.tiendas.insert(nuevaTienda);
-
-      if (response == null) {
-        _logger.e('Error creando tienda: response is null');
-        return null;
-      }
 
       final tiendaCreada = response as Map<String, dynamic>?;
 
@@ -446,20 +412,9 @@ class TiendaRepository implements TiendaRepositoryInterface {
           .order('total_visitas', ascending: false)
           .limit(limit);
 
-      if (response == null) {
-        _logger.e('Error obteniendo tiendas destacadas');
-        return [];
-      }
+      // response ya es una List según el tipo de retorno de Supabase
 
-      if (response is! List) {
-        _logger.e(
-          'Error obteniendo tiendas destacadas: response is not a List',
-        );
-        return [];
-      }
-
-      final tiendas = response as List<dynamic>;
-      final result = tiendas.whereType<Map<String, dynamic>>().toList();
+      final result = response.whereType<Map<String, dynamic>>().toList();
 
       // Guardar en caché con prioridad alta
       await _localCache.cacheTiendas(
