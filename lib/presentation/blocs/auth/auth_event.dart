@@ -55,16 +55,24 @@ class AuthSyncUserRequested extends AuthEvent {
   final String nombreCompleto;
   final String email;
   final String? telefono;
+  final String? avatarUrl;
 
   const AuthSyncUserRequested({
     required this.clerkUserId,
     required this.nombreCompleto,
     required this.email,
     this.telefono,
+    this.avatarUrl,
   });
 
   @override
-  List<Object?> get props => [clerkUserId, nombreCompleto, email, telefono];
+  List<Object?> get props => [
+    clerkUserId,
+    nombreCompleto,
+    email,
+    telefono,
+    avatarUrl,
+  ];
 }
 
 /// Evento para actualizar perfil de usuario

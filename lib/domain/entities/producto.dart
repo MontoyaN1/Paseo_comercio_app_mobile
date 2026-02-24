@@ -107,17 +107,17 @@ class Producto extends Equatable {
   /// Factory constructor para crear Producto desde JSON
   factory Producto.fromJson(Map<String, dynamic> json) {
     return Producto(
-      id: json['id'] as int,
-      tiendaId: json['tienda_id'] as int,
-      nombreProducto: json['nombre_producto'] as String,
-      descripcion: json['descripcion'] as String,
-      precio: (json['precio'] as num).toDouble(),
+      id: (json['id'] as int?) ?? 0,
+      tiendaId: (json['tienda_id'] as int?) ?? 0,
+      nombreProducto: (json['nombre_producto'] as String?) ?? '',
+      descripcion: (json['descripcion'] as String?) ?? '',
+      precio: (json['precio'] as num?)?.toDouble() ?? 0.0,
       moneda: json['moneda'] as String?,
       categoriaId: json['categoria_id'] as int?,
       estadoProducto: EstadoProducto.fromString(
-        json['estado_producto'] as String,
+        (json['estado_producto'] as String?) ?? 'publicado',
       ),
-      stockDisponible: json['stock_disponible'] as int,
+      stockDisponible: (json['stock_disponible'] as int?) ?? 0,
       stockMinimo: json['stock_minimo'] as int?,
       stockMaximo: json['stock_maximo'] as int?,
       caracteristicas:
@@ -136,7 +136,10 @@ class Producto extends Equatable {
       totalVisualizaciones: json['total_visualizaciones'] as int? ?? 0,
       totalCompartidos: json['total_compartidos'] as int? ?? 0,
       totalFavoritos: json['total_favoritos'] as int? ?? 0,
-      fechaCreacion: DateTime.parse(json['fecha_creacion'] as String),
+      fechaCreacion:
+          json['fecha_creacion'] != null
+              ? DateTime.parse(json['fecha_creacion'] as String)
+              : DateTime.now(),
       fechaActualizacion:
           json['fecha_actualizacion'] != null
               ? DateTime.parse(json['fecha_actualizacion'] as String)

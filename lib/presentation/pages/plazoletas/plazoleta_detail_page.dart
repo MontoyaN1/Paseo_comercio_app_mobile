@@ -1,6 +1,7 @@
 // lib/presentation/pages/plazoletas/plazoleta_detail_page.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -32,6 +33,7 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _currentTabIndex = 0;
+  bool _imagesLoaded = false;
 
   @override
   void initState() {
@@ -39,20 +41,9 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_onTabChanged);
 
-    // Cargar datos de la plazoleta al iniciar
+    // Cargar solo la plazoleta al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PlazoletaBloc>().add(
-        LoadPlazoletaById(id: widget.plazoletaId, forceRefresh: true),
-      );
-      context.read<PlazoletaBloc>().add(
-        LoadImagenesPlazoleta(plazoletaId: widget.plazoletaId),
-      );
-      context.read<PlazoletaBloc>().add(
-        LoadProductosPlazoleta(plazoletaId: widget.plazoletaId),
-      );
-      context.read<PlazoletaBloc>().add(
-        LoadTiendasPlazoleta(plazoletaId: widget.plazoletaId),
-      );
+      _loadPlazoleta();
     });
   }
 
@@ -67,6 +58,68 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
       setState(() {
         _currentTabIndex = _tabController.index;
       });
+      // Cargar datos según la pestaña activa
+      _loadTabData(_tabController.index);
+    }
+  }
+
+  /// Cargar la plazoleta por ID
+  void _loadPlazoleta() {
+    if (kDebugMode) {
+      print('=== _loadPlazoleta called ===');
+      print('Plazoleta ID: ${widget.plazoletaId}');
+      print('Mounted: $mounted');
+    }
+
+    if (!mounted) return;
+
+    try {
+      final bloc = context.read<PlazoletaBloc>();
+      if (!bloc.isClosed) {
+        if (kDebugMode) {
+          print('Adding LoadPlazoletaById event for ID: ${widget.plazoletaId}');
+        }
+        bloc.add(LoadPlazoletaById(id: widget.plazoletaId, forceRefresh: true));
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading plazoleta: $e');
+      }
+    }
+  }
+
+  /// Cargar datos según la pestaña activa
+  void _loadTabData(int tabIndex) {
+    if (!mounted) return;
+
+    try {
+      final bloc = context.read<PlazoletaBloc>();
+      if (bloc.isClosed) return;
+
+      if (kDebugMode) {
+        print('=== _loadTabData called ===');
+        print('Tab index: $tabIndex');
+        print('Plazoleta ID: ${widget.plazoletaId}');
+      }
+
+      switch (tabIndex) {
+        case 0: // Información
+          // Cargar imágenes de la plazoleta
+          bloc.add(LoadImagenesPlazoleta(plazoletaId: widget.plazoletaId));
+          break;
+        case 1: // Productos
+          // Cargar productos
+          bloc.add(LoadProductosPlazoleta(plazoletaId: widget.plazoletaId));
+          break;
+        case 2: // Tiendas
+          // Cargar tiendas
+          bloc.add(LoadTiendasPlazoleta(plazoletaId: widget.plazoletaId));
+          break;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading tab data: $e');
+      }
     }
   }
 
@@ -220,8 +273,40 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
               ),
             );
           }
+
+          // Cargar imágenes cuando la plazoleta se carga exitosamente
+          if (state is PlazoletaLoaded && state.plazoletaSeleccionada != null) {
+            if (!_imagesLoaded && mounted) {
+              if (kDebugMode) {
+                print('=== Cargando imágenes de la plazoleta ===');
+                print('Plazoleta ID: ${widget.plazoletaId}');
+              }
+              _imagesLoaded = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  try {
+                    final bloc = context.read<PlazoletaBloc>();
+                    if (!bloc.isClosed) {
+                      bloc.add(
+                        LoadImagenesPlazoleta(plazoletaId: widget.plazoletaId),
+                      );
+                    }
+                  } catch (e) {
+                    if (kDebugMode) {
+                      print('Error loading images: $e');
+                    }
+                  }
+                }
+              });
+            }
+          }
         },
         builder: (context, state) {
+          if (kDebugMode) {
+            print('=== PlazoletaDetailPage State Change ===');
+            print('State type: ${state.runtimeType}');
+            print('State toString: $state');
+          }
           return _buildContent(state);
         },
       ),
@@ -229,11 +314,44 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
   }
 
   Widget _buildContent(PlazoletaState state) {
+    if (kDebugMode) {
+      print('=== _buildContent called ===');
+      print('State type: ${state.runtimeType}');
+      print('State: $state');
+      print('Plazoleta ID: ${widget.plazoletaId}');
+    }
+
+    if (state is PlazoletaInitial) {
+      if (kDebugMode) {
+        print('Rendering PlazoletaInitial state');
+      }
+      return const LoadingState(message: 'Preparando carga de la plazoleta...');
+    }
+
+    if (state is PlazoletaLoading) {
+      if (kDebugMode) {
+        print('Rendering PlazoletaLoading state');
+      }
+      return const LoadingState(message: 'Cargando lista de plazoletas...');
+    }
+
     if (state is PlazoletaDetailLoading) {
-      return const LoadingState(message: 'Cargando plazoleta...');
+      if (kDebugMode) {
+        print('Rendering PlazoletaDetailLoading state');
+        print('Plazoleta ID: ${state.plazoletaId}');
+        print('Is refreshing: ${state.isRefreshing}');
+      }
+      return const LoadingState(
+        message: 'Cargando detalles de la plazoleta...',
+      );
     }
 
     if (state is PlazoletaDetailError) {
+      if (kDebugMode) {
+        print('Rendering PlazoletaDetailError state');
+        print('Error message: ${state.message}');
+        print('Plazoleta ID: ${state.plazoletaId}');
+      }
       return ErrorState(
         message: state.message,
         actionText: 'Reintentar',
@@ -245,12 +363,60 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
       );
     }
 
+    if (state is PlazoletaImagenesLoading) {
+      if (kDebugMode) {
+        print('Rendering PlazoletaImagenesLoading state');
+        print('Plazoleta ID: ${state.plazoletaId}');
+        print('Is refreshing: ${state.isRefreshing}');
+      }
+      // Si ya tenemos datos de la plazoleta, mostrarlos con indicador de carga de imágenes
+      // De lo contrario, mostrar loading state general
+      return const LoadingState(
+        message: 'Cargando imágenes de la plazoleta...',
+      );
+    }
+
+    if (state is PlazoletaProductosLoading) {
+      if (kDebugMode) {
+        print('Rendering PlazoletaProductosLoading state');
+        print('Plazoleta ID: ${state.plazoletaId}');
+        print('Is refreshing: ${state.isRefreshing}');
+      }
+      // Si ya tenemos datos de la plazoleta, mostrarlos con indicador de carga de productos
+      // De lo contrario, mostrar loading state general
+      return const LoadingState(
+        message: 'Cargando productos de la plazoleta...',
+      );
+    }
+
+    if (state is PlazoletaTiendasLoading) {
+      if (kDebugMode) {
+        print('Rendering PlazoletaTiendasLoading state');
+        print('Plazoleta ID: ${state.plazoletaId}');
+        print('Is refreshing: ${state.isRefreshing}');
+      }
+      // Si ya tenemos datos de la plazoleta, mostrarlos con indicador de carga de tiendas
+      // De lo contrario, mostrar loading state general
+      return const LoadingState(message: 'Cargando tiendas de la plazoleta...');
+    }
+
     if (state is PlazoletaLoaded && state.plazoletaSeleccionada != null) {
+      if (kDebugMode) {
+        print('Rendering PlazoletaLoaded state');
+        print('Plazoleta seleccionada: ${state.plazoletaSeleccionada!.nombre}');
+        print('Total imagenes: ${state.imagenesPlazoleta?.length ?? 0}');
+        print('Total productos: ${state.productosPlazoleta?.length ?? 0}');
+        print('Total tiendas: ${state.tiendasPlazoleta?.length ?? 0}');
+      }
       final plazoleta = state.plazoletaSeleccionada!;
       return _buildPlazoletaDetail(plazoleta, state);
     }
 
-    return const LoadingState(message: 'Cargando...');
+    if (kDebugMode) {
+      print('Rendering fallback LoadingState - unrecognized state');
+    }
+    // Estado no reconocido o sin datos
+    return const LoadingState(message: 'Cargando datos...');
   }
 
   Widget _buildPlazoletaDetail(Plazoleta plazoleta, PlazoletaState state) {
@@ -264,6 +430,16 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
         return [
           SliverAppBar(
             expandedHeight: 250,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/plazoletas');
+                }
+              },
+            ),
             floating: false,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
@@ -326,11 +502,22 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
     String? imageUrl;
 
     if (imagenes != null && imagenes.isNotEmpty) {
-      final imagenPrincipal = imagenes.firstWhere(
-        (imagen) => imagen.esPrincipal,
-        orElse: () => imagenes.first,
-      );
-      imageUrl = imagenPrincipal.urlPreferida;
+      // Prefer image with tipoImagen 'detalle' for background
+      ImagenBase? selectedImagen;
+      for (final imagen in imagenes) {
+        if (imagen.tipoImagen == 'detalle') {
+          selectedImagen = imagen;
+          break;
+        }
+      }
+      if (selectedImagen == null) {
+        // Fallback to principal image
+        selectedImagen = imagenes.firstWhere(
+          (imagen) => imagen.esPrincipal,
+          orElse: () => imagenes.first,
+        );
+      }
+      imageUrl = selectedImagen.urlPreferida;
     }
 
     return Stack(
@@ -406,31 +593,6 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
                 ],
               ),
 
-            // Ubicación
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Ubicación',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, color: Colors.grey),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        plazoleta.resumenUbicacion,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-              ],
-            ),
-
             // Estadísticas
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,121 +627,6 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
                 const SizedBox(height: 24),
               ],
             ),
-
-            // Servicios
-            if (plazoleta.serviciosLista.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Servicios Disponibles',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children:
-                        plazoleta.serviciosLista.map((servicio) {
-                          return Chip(
-                            label: Text(servicio),
-                            backgroundColor: Colors.blue[50],
-                            side: BorderSide(color: Colors.blue[100]!),
-                          );
-                        }).toList(),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-
-            // Características
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Características',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                _buildFeatureItem(
-                  icon: Icons.accessibility_new,
-                  label: 'Acceso para discapacitados',
-                  enabled: plazoleta.tieneAccesoDiscapacitados,
-                ),
-                _buildFeatureItem(
-                  icon: Icons.local_parking,
-                  label: 'Estacionamiento',
-                  enabled: plazoleta.tieneEstacionamiento,
-                ),
-                _buildFeatureItem(
-                  icon: Icons.chair,
-                  label: 'Zona de descanso',
-                  enabled: plazoleta.tieneZonaDescanso,
-                ),
-                _buildFeatureItem(
-                  icon: Icons.restaurant,
-                  label: 'Zona de comida',
-                  enabled: plazoleta.tieneZonaComida,
-                ),
-                const SizedBox(height: 24),
-              ],
-            ),
-
-            // Más imágenes
-            if (imagenes != null && imagenes.length > 1)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Galería',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 120,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: imagenes.length,
-                      itemBuilder: (context, index) {
-                        final imagen = imagenes[index];
-                        return Padding(
-                          padding: EdgeInsets.only(
-                            right: index < imagenes.length - 1 ? 8 : 0,
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: ResilientImage(
-                              imageUrl: imagen.urlPreferida,
-                              width: 160,
-                              height: 120,
-                              fit: BoxFit.cover,
-                              placeholder: Container(
-                                width: 160,
-                                height: 120,
-                                color: Colors.grey[200],
-                                child: const Icon(
-                                  Icons.image,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              errorWidget: Container(
-                                width: 160,
-                                height: 120,
-                                color: Colors.grey[200],
-                                child: const Icon(
-                                  Icons.broken_image,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
 
             // Información adicional
             if (plazoleta.horarioAcceso != null || plazoleta.normasUso != null)
@@ -623,8 +670,17 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
   }
 
   Widget _buildProductosTab(List<Producto>? productos) {
-    if (productos == null) {
+    // Si no hay productos cargados, intentar cargarlos
+    if (productos == null && _currentTabIndex == 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadTabData(1);
+      });
       return const LoadingState(message: 'Cargando productos...');
+    }
+
+    // Si productos es null pero no estamos en la pestaña 1
+    if (productos == null) {
+      return const LoadingState(message: 'Productos no cargados...');
     }
 
     if (productos.isEmpty) {
@@ -672,8 +728,17 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
   }
 
   Widget _buildTiendasTab(List<Tienda>? tiendas) {
-    if (tiendas == null) {
+    // Si no hay tiendas cargadas, intentar cargarlas
+    if (tiendas == null && _currentTabIndex == 2) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadTabData(2);
+      });
       return const LoadingState(message: 'Cargando tiendas...');
+    }
+
+    // Si tiendas es null pero no estamos en la pestaña 2
+    if (tiendas == null) {
+      return const LoadingState(message: 'Tiendas no cargadas...');
     }
 
     if (tiendas.isEmpty) {
@@ -732,33 +797,6 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
         ),
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
-    );
-  }
-
-  Widget _buildFeatureItem({
-    required IconData icon,
-    required String label,
-    required bool enabled,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, color: enabled ? Colors.green : Colors.grey),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(color: enabled ? Colors.black : Colors.grey),
-            ),
-          ),
-          Icon(
-            enabled ? Icons.check_circle : Icons.remove_circle,
-            color: enabled ? Colors.green : Colors.grey,
-            size: 20,
-          ),
-        ],
-      ),
     );
   }
 }

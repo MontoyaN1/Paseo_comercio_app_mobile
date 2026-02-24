@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../widgets/custom_app_bar.dart';
+import 'package:go_router/go_router.dart';
+import 'package:paseo_del_comercio/presentation/widgets/custom_app_bar.dart';
+import 'package:paseo_del_comercio/di/service_locator.dart';
+import 'package:paseo_del_comercio/core/utils/firebase_auth_service.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -66,9 +69,7 @@ class ProfilePage extends StatelessWidget {
           // Botón de cerrar sesión
           const SizedBox(height: 40),
           ElevatedButton.icon(
-            onPressed: () {
-              FirebaseAuth.instance.signOut();
-            },
+            onPressed: () => _performLogout(context),
             icon: const Icon(Icons.logout, size: 20),
             label: const Text('Cerrar sesión'),
             style: ElevatedButton.styleFrom(
@@ -232,6 +233,97 @@ class ProfilePage extends StatelessWidget {
       trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: onTap,
     );
+  }
+
+  /// Realizar cierre de sesión con manejo adecuado
+  Future<void> _performLogout(BuildContext context) async {
+    // Mostrar diálogo de confirmación
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: const Color(0xFF1E1E1E),
+            title: const Text(
+              'Cerrar sesión',
+              style: TextStyle(color: Colors.white),
+            ),
+            content: const Text(
+              '¿Estás seguro de que quieres cerrar sesión?',
+              style: TextStyle(color: Colors.grey),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text(
+                  'Cancelar',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text(
+                  'Cerrar sesión',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+    );
+
+    // Si el usuario cancela, no hacer nada
+    if (confirm != true) {
+      return;
+    }
+
+    try {
+      // Mostrar indicador de carga
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:
+            (context) => const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+      );
+
+      final authService = getIt<FirebaseAuthService>();
+      final result = await authService.signOut();
+
+      // Cerrar diálogo de carga
+      Navigator.of(context).pop();
+
+      result.fold(
+        (success) {
+          // Redirigir a login
+          context.go('/login');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sesión cerrada correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+        (error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al cerrar sesión: ${error.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        },
+      );
+    } catch (error) {
+      // Cerrar diálogo de carga si existe
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error inesperado: ${error.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildSignedOutContent(BuildContext context) {

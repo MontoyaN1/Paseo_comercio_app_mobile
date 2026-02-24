@@ -56,11 +56,6 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
   await cacheService.initialize();
   getIt.registerSingleton<CacheService>(cacheService);
 
-  // Inicializar y registrar servicio de autenticación con Firebase
-  final authService = FirebaseAuthService();
-  await authService.initialize();
-  getIt.registerSingleton<FirebaseAuthService>(authService);
-
   // Configurar y registrar servicio de imágenes
   final imageService = ImageService();
   imageService.configure(
@@ -84,6 +79,13 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
   final supabaseClientService = SupabaseClientService();
   await supabaseClientService.initialize();
   getIt.registerSingleton<SupabaseClientService>(supabaseClientService);
+
+  // Inicializar y registrar servicio de autenticación con Firebase
+  final authService = FirebaseAuthService(
+    supabaseClient: supabaseClientService,
+  );
+  await authService.initialize();
+  getIt.registerSingleton<FirebaseAuthService>(authService);
 
   // Registrar servicio S3 si está configurado
   if (appConfig.isS3Configured && appConfig.awsAccessKeyId.isNotEmpty) {

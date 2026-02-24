@@ -13,18 +13,15 @@ import 'auth_state.dart';
 import 'cache_service.dart';
 import 'result.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../../data/datasources/remote/supabase_client.dart';
 
 /// Servicio de autenticación con Firebase (reemplazo de Clerk)
 class FirebaseAuthService {
-  // Singleton pattern
-  static final FirebaseAuthService _instance = FirebaseAuthService._internal();
-  factory FirebaseAuthService() => _instance;
-  FirebaseAuthService._internal();
-
   // Instancias de Firebase
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late GoogleSignIn _googleSignIn;
+  final SupabaseClientService _supabaseClient;
 
   // Estados de autenticación
   AuthState _currentState = AuthState.unknown;
@@ -34,6 +31,10 @@ class FirebaseAuthService {
   // Usuario actual
   User? _currentUser;
   Map<String, dynamic>? _userProfile;
+
+  /// Constructor que requiere SupabaseClientService
+  FirebaseAuthService({required SupabaseClientService supabaseClient})
+    : _supabaseClient = supabaseClient;
 
   /// Inicializar servicio de autenticación
   Future<void> initialize() async {
@@ -57,11 +58,27 @@ class FirebaseAuthService {
 
       // Escuchar cambios en el estado de autenticación
       _auth.authStateChanges().listen((User? user) async {
+        if (kDebugMode) {
+          print(
+            'FirebaseAuthService: authStateChanges recibido - usuario: ${user?.email ?? "null"}',
+          );
+        }
+
         if (user != null) {
+          if (kDebugMode) {
+            print(
+              'FirebaseAuthService: Usuario autenticado: ${user.email} (${user.uid})',
+            );
+          }
           _currentUser = user;
           await _loadUserProfile(user.uid);
           await _updateAuthState(AuthState.authenticated);
         } else {
+          if (kDebugMode) {
+            print(
+              'FirebaseAuthService: Usuario no autenticado, limpiando estado',
+            );
+          }
           _currentUser = null;
           _userProfile = null;
           await _updateAuthState(AuthState.unauthenticated);
@@ -137,6 +154,10 @@ class FirebaseAuthService {
 
       if (userCredential.user != null) {
         await _loadUserProfile(userCredential.user!.uid);
+
+        // Sincronizar con Supabase
+        await _syncUserWithSupabase(userCredential.user!);
+
         return Result.success(null);
       } else {
         return Result.error(AuthException(message: 'Error al iniciar sesión'));
@@ -255,6 +276,10 @@ class FirebaseAuthService {
         }
 
         await _loadUserProfile(userCredential.user!.uid);
+
+        // Sincronizar con Supabase
+        await _syncUserWithSupabase(userCredential.user!);
+
         return Result.success(null);
       } else {
         return Result.error(
@@ -417,6 +442,9 @@ class FirebaseAuthService {
           print(
             'FirebaseAuthService: Nombre: ${userCredential.user!.displayName}',
           );
+          print(
+            'FirebaseAuthService: Foto URL: ${userCredential.user!.photoURL}',
+          );
         }
 
         // Crear o actualizar perfil del usuario
@@ -428,6 +456,13 @@ class FirebaseAuthService {
         );
 
         await _loadUserProfile(userCredential.user!.uid);
+
+        // Sincronizar con Supabase
+        await _syncUserWithSupabase(userCredential.user!);
+
+        // Actualizar estado de autenticación explícitamente
+        _currentUser = userCredential.user;
+        await _updateAuthState(AuthState.authenticated);
 
         if (kDebugMode) {
           print('FirebaseAuthService: Perfil creado/actualizado exitosamente');
@@ -706,6 +741,48 @@ class FirebaseAuthService {
     }
   }
 
+  /// Sincronizar usuario con Supabase
+  Future<void> _syncUserWithSupabase(User firebaseUser) async {
+    try {
+      // Obtener información del usuario de Firebase
+      final firebaseUserId = firebaseUser.uid;
+      final email = firebaseUser.email;
+      final nombreCompleto =
+          firebaseUser.displayName ??
+          (email != null ? email.split('@')[0] : 'Usuario');
+      final telefono = firebaseUser.phoneNumber;
+
+      if (email == null || email.isEmpty) {
+        if (kDebugMode) {
+          print(
+            'Usuario de Firebase sin email, no se puede sincronizar con Supabase',
+          );
+        }
+        return;
+      }
+
+      // Llamar al método de sincronización unificado en SupabaseClientService
+      final supabaseUser = await _supabaseClient.syncUsuario(
+        firebaseUserId: firebaseUserId,
+        email: email,
+        nombreCompleto: nombreCompleto,
+        telefono: telefono,
+        avatarUrl: firebaseUser.photoURL,
+      );
+
+      if (supabaseUser != null && kDebugMode) {
+        print('Usuario sincronizado con Supabase: ${supabaseUser['id']}');
+      } else if (kDebugMode) {
+        print('Error al sincronizar usuario con Supabase');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error en _syncUserWithSupabase: $e');
+      }
+      // No lanzar excepción para no romper el flujo de autenticación
+    }
+  }
+
   /// Crear perfil básico de usuario
   Future<void> _createBasicUserProfile(String userId) async {
     try {
@@ -803,9 +880,23 @@ class FirebaseAuthService {
   Future<void> _updateAuthState(AuthState newState) async {
     if (_currentState == newState) return;
 
+    if (kDebugMode) {
+      print(
+        'FirebaseAuthService: Cambiando estado de $_currentState a $newState',
+      );
+    }
+
     _currentState = newState;
     _stateController.add(newState);
     await _saveAuthState();
+
+    if (kDebugMode) {
+      print('FirebaseAuthService: Estado actualizado a $newState');
+      print(
+        'FirebaseAuthService: Usuario actual: ${_currentUser?.email ?? "null"}',
+      );
+      print('FirebaseAuthService: ID usuario: ${_currentUser?.uid ?? "null"}');
+    }
   }
 
   /// Guardar estado de autenticación

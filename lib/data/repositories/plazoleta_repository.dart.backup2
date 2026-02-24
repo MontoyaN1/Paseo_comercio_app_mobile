@@ -1012,41 +1012,24 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         });
       }
 
-      // Nueva lógica: obtener productos por nombre de categoría que coincide con nombre de plazoleta
+      // Implementación: obtener productos de tiendas que pertenecen a la plazoleta
       try {
-        // 1. Obtener nombre de la plazoleta
-        final plazoletaResponse =
-            await _supabaseClient.plazoletas
-                .select('nombre')
-                .eq('id', plazoletaId)
-                .single();
-
-        final plazoletaNombre = plazoletaResponse['nombre'] as String;
-        _logger.i('Plazoleta ID $plazoletaId -> Nombre: "$plazoletaNombre"');
-
-        // 2. Buscar categorías con nombre que coincida parcialmente (case-insensitive)
-        final categoriasResponse = await _supabaseClient.categorias
+        // Primero obtener IDs de tiendas de esta plazoleta
+        final tiendasResponse = await _supabaseClient.tiendas
             .select('id')
-            .ilike('nombre', '%' + plazoletaNombre + '%')
-            .eq('activa', true);
-
-        _logger.i(
-          'Categorías encontradas con nombre similar a "$plazoletaNombre": ${categoriasResponse.length}',
-        );
+            .eq('organizacion_id', plazoletaId);
 
         var query;
-        if (categoriasResponse.isEmpty) {
+        if (tiendasResponse.isEmpty) {
           _logger.i(
-            'No hay categorías con nombre similar a "$plazoletaNombre", obteniendo productos generales',
+            'No hay tiendas en la plazoleta $plazoletaId, obteniendo productos generales',
           );
           query = _supabaseClient.productos.select();
         } else {
-          final categoriaIds =
-              categoriasResponse.map((c) => c['id'] as int).toList();
-          _logger.i('Filtrando productos por categoria_ids: $categoriaIds');
+          final tiendaIds = tiendasResponse.map((t) => t['id'] as int).toList();
           query = _supabaseClient.productos.select().inFilter(
-            'categoria_id',
-            categoriaIds,
+            'tienda_id',
+            tiendaIds,
           );
         }
 
@@ -1072,37 +1055,15 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
               (pageNum - 1) * limitNum + limitNum - 1,
             );
 
-        _logger.i('Productos response count: ${response.length}');
-        if (response.isNotEmpty) {
-          _logger.i(
-            'Sample producto ID: ${response.first['id']}, categoria_id: ${response.first['categoria_id']}',
-          );
-        }
         final productos =
-            response
-                .map((json) {
-                  try {
-                    return Producto.fromJson(json);
-                  } catch (e, stackTrace) {
-                    _logger.e(
-                      'Error parsing producto JSON: $e',
-                      error: e,
-                      stackTrace: stackTrace,
-                    );
-                    _logger.e('Problematic JSON: $json');
-                    return null;
-                  }
-                })
-                .where((producto) => producto != null)
-                .cast<Producto>()
-                .toList();
+            response.map((json) => Producto.fromJson(json)).toList();
 
         // Guardar en caché
         await _cacheService.set('productos_plazoleta_\$plazoletaId', productos);
         return productos;
       } catch (e, stackTrace) {
         _logger.e(
-          'Error en consulta de productos por categoría: ' + e.toString(),
+          'Error en consulta simplificada de productos: ' + e.toString(),
           error: e,
           stackTrace: stackTrace,
         );
@@ -1216,102 +1177,46 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         });
       }
 
-      // Nueva lógica: obtener tiendas que tienen productos con categoría que coincide con nombre de plazoleta
+      // Implementación: obtener tiendas a través de productos de la plazoleta
       try {
-        // 1. Obtener nombre de la plazoleta
-        final plazoletaResponse =
-            await _supabaseClient.plazoletas
-                .select('nombre')
-                .eq('id', plazoletaId)
-                .single();
-
-        final plazoletaNombre = plazoletaResponse['nombre'] as String;
-        _logger.i('Plazoleta ID $plazoletaId -> Nombre: "$plazoletaNombre"');
-
-        // 2. Buscar categorías con nombre que coincida parcialmente (case-insensitive)
-        final categoriasResponse = await _supabaseClient.categorias
-            .select('id')
-            .ilike('nombre', '%' + plazoletaNombre + '%')
-            .eq('activa', true);
-
-        _logger.i(
-          'Categorías encontradas con nombre similar a "$plazoletaNombre": ${categoriasResponse.length}',
+        // Consulta directa de tiendas por organizacion_id (plazoleta)
+        var query = _supabaseClient.tiendas.select().eq(
+          'organizacion_id',
+          plazoletaId,
         );
-
-        List<int> tiendaIds = [];
-
-        if (categoriasResponse.isNotEmpty) {
-          final categoriaIds =
-              categoriasResponse.map((c) => c['id'] as int).toList();
-          _logger.i('Categoria IDs: $categoriaIds');
-
-          // 3. Obtener productos con categoria_id en esas categorías
-          final productosResponse = await _supabaseClient.productos
-              .select('tienda_id')
-              .inFilter('categoria_id', categoriaIds)
-              .eq('estado_producto', 'disponible');
-
-          if (productosResponse.isNotEmpty) {
-            // 4. Extraer tienda_id únicos
-            tiendaIds =
-                productosResponse
-                    .map((p) => p['tienda_id'] as int)
-                    .toSet()
-                    .toList();
-            _logger.i('Tienda IDs encontrados: ${tiendaIds.length}');
-          }
-        }
-
-        var query;
-        if (tiendaIds.isEmpty) {
-          _logger.i(
-            'No hay productos con categorías similares a "$plazoletaNombre", obteniendo tiendas generales',
-          );
-          query = _supabaseClient.tiendas.select();
-        } else {
-          _logger.i('Filtrando tiendas por IDs: $tiendaIds');
-          query = _supabaseClient.tiendas.select().inFilter('id', tiendaIds);
-        }
-
         if (search != null && search.isNotEmpty) {
           query = query.ilike('nombre_tienda', '%' + search + '%');
         }
-
         final pageNum = page ?? 1;
         final limitNum = limit ?? 20;
-        final response = await query
+        var response = await query
             .order('fecha_creacion', ascending: false)
             .range(
               (pageNum - 1) * limitNum,
               (pageNum - 1) * limitNum + limitNum - 1,
             );
 
-        _logger.i('Tiendas response count: ${response.length}');
-        if (response.isNotEmpty) {
+        // Si no hay tiendas con organizacion_id, obtener tiendas generales
+        if (response.isEmpty) {
           _logger.i(
-            'Sample tienda ID: ${response.first['id']}, nombre: ${response.first['nombre_tienda']}',
+            'No hay tiendas con organizacion_id $plazoletaId, obteniendo tiendas generales',
           );
+          var generalQuery = _supabaseClient.tiendas.select();
+          if (search != null && search.isNotEmpty) {
+            generalQuery = generalQuery.ilike(
+              'nombre_tienda',
+              '%' + search + '%',
+            );
+          }
+          response = await generalQuery
+              .order('fecha_creacion', ascending: false)
+              .range(
+                (pageNum - 1) * limitNum,
+                (pageNum - 1) * limitNum + limitNum - 1,
+              );
         }
 
-        final tiendas =
-            response
-                .map((json) {
-                  try {
-                    return Tienda.fromJson(json);
-                  } catch (e, stackTrace) {
-                    _logger.e(
-                      'Error parsing tienda JSON: $e',
-                      error: e,
-                      stackTrace: stackTrace,
-                    );
-                    _logger.e('Problematic JSON: $json');
-                    return null;
-                  }
-                })
-                .where((tienda) => tienda != null)
-                .cast<Tienda>()
-                .toList();
-
+        final tiendas = response.map((json) => Tienda.fromJson(json)).toList();
         // Guardar en caché
         await _cacheService.set(
           'tiendas_plazoleta_' + plazoletaId.toString(),
@@ -1320,8 +1225,7 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         return tiendas;
       } catch (e, stackTrace) {
         _logger.e(
-          'Error en consulta de tiendas por categoría de plazoleta: ' +
-              e.toString(),
+          'Error en consulta de tiendas por plazoleta: ' + e.toString(),
           error: e,
           stackTrace: stackTrace,
         );

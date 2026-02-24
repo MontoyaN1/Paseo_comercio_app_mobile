@@ -50,10 +50,13 @@ class Tienda extends Equatable {
 
   factory Tienda.fromJson(Map<String, dynamic> json) {
     return Tienda(
-      id: json['id'] as int,
-      fechaCreacion: DateTime.parse(json['fecha_creacion'] as String),
-      idPropietario: json['id_propietario'] as int,
-      nombreTienda: json['nombre_tienda'] as String,
+      id: (json['id'] as int?) ?? 0,
+      fechaCreacion:
+          json['fecha_creacion'] != null
+              ? DateTime.parse(json['fecha_creacion'] as String)
+              : DateTime.now(),
+      idPropietario: (json['id_propietario'] as int?) ?? 0,
+      nombreTienda: (json['nombre_tienda'] as String?) ?? '',
       descripcion: json['descripcion'] as String?,
       redesSociales:
           json['redes_sociales'] != null

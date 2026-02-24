@@ -1,8 +1,15 @@
 // lib/main.dart
+
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'presentation/blocs/image/image_bloc.dart';
+import 'presentation/blocs/auth/auth_bloc.dart';
+import 'presentation/blocs/plazoleta/plazoleta_bloc.dart';
+import 'presentation/blocs/tienda/tienda_bloc.dart';
+import 'presentation/blocs/producto/producto_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import 'presentation/widgets/custom_app_bar.dart';
@@ -153,55 +160,64 @@ class PaseoDelComercioApp extends StatelessWidget {
       );
     }
 
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: AppConfig().debugMode,
-      title: AppConfig().appName,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<AuthBloc>.value(value: getIt<AuthBloc>()),
+        BlocProvider<PlazoletaBloc>.value(value: getIt<PlazoletaBloc>()),
+        BlocProvider<TiendaBloc>.value(value: getIt<TiendaBloc>()),
+        BlocProvider<ProductoBloc>.value(value: getIt<ProductoBloc>()),
+        BlocProvider<ImageBloc>.value(value: getIt<ImageBloc>()),
+      ],
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner: AppConfig().debugMode,
+        title: AppConfig().appName,
 
-      // Localización
-      locale: const Locale('es', 'ES'),
+        // Localización
+        locale: const Locale('es', 'ES'),
 
-      // Tema
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        fontFamily: 'Inter',
-        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF121212),
-          elevation: 4,
-          centerTitle: true,
-          titleTextStyle: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'Inter',
+        // Tema
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          fontFamily: 'Inter',
+          scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFF121212),
+            elevation: 4,
+            centerTitle: true,
+            titleTextStyle: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+            ),
+          ),
+          textTheme: const TextTheme(
+            displayLarge: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Inter',
+            ),
+            displayMedium: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+            ),
+            bodyLarge: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+            ),
+            bodyMedium: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+            ),
           ),
         ),
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w700,
-            fontFamily: 'Inter',
-          ),
-          displayMedium: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'Inter',
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-            fontFamily: 'Inter',
-          ),
-          bodyMedium: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            fontFamily: 'Inter',
-          ),
-        ),
+
+        // Router configuration
+        routerConfig: AppRouter.router,
       ),
-
-      // Router configuration
-      routerConfig: AppRouter.router,
     );
   }
 }

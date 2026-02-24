@@ -151,6 +151,45 @@ class SupabaseClientService {
     }
   }
 
+  /// Obtener usuario por Firebase ID
+  Future<Map<String, dynamic>?> getUsuarioByFirebaseId(
+    String firebaseUserId,
+  ) async {
+    try {
+      final response = await usuarios
+          .select()
+          .eq('firebase_user_id', firebaseUserId)
+          .limit(1);
+
+      if (response.isEmpty) {
+        _logger.d('User not found by Firebase ID: $firebaseUserId');
+        return null;
+      }
+
+      return response.first;
+    } catch (e) {
+      _logger.e('Exception getting user by Firebase ID: $e');
+      return null;
+    }
+  }
+
+  /// Obtener usuario por email
+  Future<Map<String, dynamic>?> getUsuarioByEmail(String email) async {
+    try {
+      final response = await usuarios.select().eq('email', email).limit(1);
+
+      if (response.isEmpty) {
+        _logger.d('User not found by email: $email');
+        return null;
+      }
+
+      return response.first;
+    } catch (e) {
+      _logger.e('Exception getting user by email: $e');
+      return null;
+    }
+  }
+
   /// Obtener tiendas con paginación
   Future<List<Map<String, dynamic>>> getTiendas({
     int page = 1,
@@ -247,65 +286,272 @@ class SupabaseClientService {
     }
   }
 
+  /// Crear o actualizar usuario desde cualquier proveedor (Clerk o Firebase)
+  Future<Map<String, dynamic>?> syncUsuario({
+    String? clerkUserId,
+    String? firebaseUserId,
+    required String email,
+    required String nombreCompleto,
+    String? telefono,
+    String? avatarUrl,
+  }) async {
+    try {
+      _logger.d(
+        'syncUsuario iniciado - email: $email, nombre: $nombreCompleto, '
+        'clerkUserId: $clerkUserId, firebaseUserId: $firebaseUserId',
+      );
+      // 1. Buscar por ID externo (prioridad)
+      if (clerkUserId != null) {
+        _logger.d('Buscando usuario por clerkUserId: $clerkUserId');
+        final userByClerkId = await getUsuarioByClerkId(clerkUserId);
+        if (userByClerkId != null) {
+          _logger.d(
+            'Usuario encontrado por clerkUserId: ${userByClerkId['id']}',
+          );
+          await _actualizarUltimoLogin(clerkUserId, null);
+          return userByClerkId;
+        } else {
+          _logger.d('No se encontró usuario con clerkUserId: $clerkUserId');
+        }
+      }
+
+      if (firebaseUserId != null) {
+        _logger.d('Buscando usuario por firebaseUserId: $firebaseUserId');
+        final userByFirebaseId = await getUsuarioByFirebaseId(firebaseUserId);
+        if (userByFirebaseId != null) {
+          _logger.d(
+            'Usuario encontrado por firebaseUserId: ${userByFirebaseId['id']}',
+          );
+          await _actualizarUltimoLogin(null, firebaseUserId);
+          return userByFirebaseId;
+        } else {
+          _logger.d(
+            'No se encontró usuario con firebaseUserId: $firebaseUserId',
+          );
+        }
+      }
+
+      // 2. Buscar por email (fusión de cuentas)
+      _logger.d('Buscando usuario por email: $email');
+      final userByEmail = await getUsuarioByEmail(email);
+      if (userByEmail != null) {
+        _logger.d(
+          'Usuario encontrado por email: ${userByEmail['id']} - '
+          'Actualizando ID externo faltante',
+        );
+        // Actualizar el ID externo faltante y posiblemente el avatar
+        await _actualizarIdExterno(
+          userByEmail['id'] as int,
+          clerkUserId,
+          firebaseUserId,
+        );
+        // Actualizar avatar si se proporciona
+        if (avatarUrl != null && avatarUrl.isNotEmpty) {
+          _logger.d('Actualizando avatar para usuario ${userByEmail['id']}');
+          await _actualizarAvatar(userByEmail['id'] as int, avatarUrl);
+        }
+        await _actualizarUltimoLogin(clerkUserId, firebaseUserId);
+        _logger.d('Usuario fusionado exitosamente: ${userByEmail['id']}');
+        return userByEmail;
+      } else {
+        _logger.d(
+          'No se encontró usuario con email: $email - Creando nuevo usuario',
+        );
+      }
+
+      // 3. Crear nuevo usuario
+      _logger.d('Creando nuevo usuario para email: $email');
+      final nuevoUsuario = await _crearUsuario(
+        clerkUserId: clerkUserId,
+        firebaseUserId: firebaseUserId,
+        email: email,
+        nombreCompleto: nombreCompleto,
+        telefono: telefono,
+        avatarUrl: avatarUrl,
+      );
+      if (nuevoUsuario != null) {
+        _logger.d('Nuevo usuario creado exitosamente: ${nuevoUsuario['id']}');
+      } else {
+        _logger.e('Error al crear nuevo usuario para email: $email');
+      }
+      return nuevoUsuario;
+    } catch (e) {
+      _logger.e('Exception syncing user: $e');
+      return null;
+    }
+  }
+
+  /// Método privado para actualizar último login
+  Future<void> _actualizarUltimoLogin(
+    String? clerkUserId,
+    String? firebaseUserId,
+  ) async {
+    try {
+      final updates = {'ultimo_login': DateTime.now().toIso8601String()};
+
+      if (clerkUserId != null) {
+        await usuarios.update(updates).eq('clerk_user_id', clerkUserId);
+      } else if (firebaseUserId != null) {
+        await usuarios.update(updates).eq('firebase_user_id', firebaseUserId);
+      }
+    } catch (e) {
+      _logger.e('Error actualizando último login: $e');
+    }
+  }
+
+  /// Método privado para actualizar ID externo faltante
+  Future<void> _actualizarIdExterno(
+    int usuarioId,
+    String? clerkUserId,
+    String? firebaseUserId,
+  ) async {
+    try {
+      final updates = <String, dynamic>{};
+      if (clerkUserId != null) {
+        updates['clerk_user_id'] = clerkUserId;
+      }
+      if (firebaseUserId != null) {
+        updates['firebase_user_id'] = firebaseUserId;
+      }
+
+      if (updates.isNotEmpty) {
+        await usuarios.update(updates).eq('id', usuarioId);
+      }
+    } catch (e) {
+      _logger.e('Error actualizando ID externo: $e');
+    }
+  }
+
+  /// Método privado para actualizar avatar
+  Future<void> _actualizarAvatar(int usuarioId, String avatarUrl) async {
+    try {
+      if (avatarUrl.isEmpty) {
+        _logger.d('URL de avatar vacía, omitiendo actualización');
+        return;
+      }
+
+      await usuarios.update({'avatar_url': avatarUrl}).eq('id', usuarioId);
+      _logger.d('Avatar actualizado exitosamente para usuario $usuarioId');
+    } catch (e) {
+      // Si es un error de columna no encontrada en el esquema, solo registramos warning
+      if (e.toString().contains('avatar_url') &&
+          e.toString().contains('schema cache')) {
+        _logger.w(
+          'Columna avatar_url no encontrada en esquema, omitiendo actualización de avatar',
+        );
+      } else {
+        _logger.e('Error actualizando avatar: $e');
+      }
+    }
+  }
+
+  /// Método privado para crear nuevo usuario
+  Future<Map<String, dynamic>?> _crearUsuario({
+    String? clerkUserId,
+    String? firebaseUserId,
+    required String email,
+    required String nombreCompleto,
+    String? telefono,
+    String? avatarUrl,
+  }) async {
+    try {
+      _logger.d('Creando nuevo usuario para email: $email');
+
+      // Construir datos base del usuario
+      // Generar clerk_user_id si es nulo
+      final String clerkUserIdValue;
+      if (clerkUserId != null) {
+        clerkUserIdValue = clerkUserId;
+      } else if (firebaseUserId != null) {
+        // Para usuarios de Firebase, generar un clerk_user_id basado en firebase_user_id
+        clerkUserIdValue = 'firebase_$firebaseUserId';
+      } else {
+        // Caso extremo: ambos nulos, generar un ID único
+        clerkUserIdValue = 'unknown_${DateTime.now().microsecondsSinceEpoch}';
+      }
+
+      // Generar firebase_user_id si es nulo
+      final String firebaseUserIdValue;
+      if (firebaseUserId != null) {
+        firebaseUserIdValue = firebaseUserId;
+      } else if (clerkUserId != null) {
+        // Para usuarios de Clerk, generar un firebase_user_id basado en clerk_user_id
+        firebaseUserIdValue = 'clerk_$clerkUserId';
+      } else {
+        // Caso extremo: ambos nulos, generar un ID único
+        firebaseUserIdValue =
+            'unknown_${DateTime.now().microsecondsSinceEpoch + 1}';
+      }
+
+      final userData = {
+        'clerk_user_id': clerkUserIdValue,
+        'firebase_user_id': firebaseUserIdValue,
+        'nombre_completo': nombreCompleto,
+        'email': email,
+        'telefono': telefono ?? '',
+        'fecha_registro': DateTime.now().toIso8601String(),
+        'ultimo_login': DateTime.now().toIso8601String(),
+        'perfil_publico': true,
+        'estado_usuario': 'activo',
+      };
+
+      // Primero intentar con avatar_url si está presente y no está vacío
+      if (avatarUrl != null && avatarUrl.isNotEmpty) {
+        _logger.d('Intentando crear usuario con avatar_url: $avatarUrl');
+        try {
+          final userDataWithAvatar = Map<String, dynamic>.from(userData)
+            ..['avatar_url'] = avatarUrl;
+          final insertResponse = await usuarios.insert(userDataWithAvatar);
+          _logger.d('Usuario creado exitosamente con avatar_url');
+          return insertResponse as Map<String, dynamic>?;
+        } catch (e) {
+          // Si es error de columna no encontrada en el esquema, intentar sin avatar_url
+          if (e.toString().contains('avatar_url') &&
+              e.toString().contains('schema cache')) {
+            _logger.w(
+              'Columna avatar_url no encontrada en esquema, creando usuario sin avatar',
+            );
+            // Continuar para intentar sin avatar_url
+          } else {
+            // Otro tipo de error, relanzar
+            _logger.e('Error creando usuario con avatar_url: $e');
+            return null;
+          }
+        }
+      }
+
+      // Intentar sin avatar_url (ya sea porque no hay avatar o porque falló)
+      _logger.d('Intentando crear usuario sin avatar_url');
+      try {
+        final insertResponse = await usuarios.insert(userData);
+        _logger.d('Usuario creado exitosamente');
+        return insertResponse as Map<String, dynamic>?;
+      } catch (e) {
+        _logger.e('Error creando usuario: $e');
+        return null;
+      }
+    } catch (e) {
+      _logger.e('Error inesperado en _crearUsuario: $e');
+      return null;
+    }
+  }
+
   /// Crear o actualizar usuario desde Clerk
   Future<Map<String, dynamic>?> syncUsuarioFromClerk({
     required String clerkUserId,
     required String nombreCompleto,
     required String email,
     String? telefono,
+    String? avatarUrl,
   }) async {
-    try {
-      // Verificar si el usuario ya existe
-      final existingUser = await getUsuarioByClerkId(clerkUserId);
-
-      if (existingUser != null) {
-        // Actualizar último login
-        final updateResponse = await usuarios
-            .update({
-              'ultimo_login': DateTime.now().toIso8601String(),
-              'updated_at': DateTime.now().toIso8601String(),
-            })
-            .eq('clerk_user_id', clerkUserId);
-
-        if (updateResponse == null) {
-          _logger.e('Error updating user: response is null');
-          return null;
-        }
-
-        return existingUser;
-      } else {
-        // Crear nuevo usuario
-        final insertResponse = await usuarios.insert({
-          'clerk_user_id': clerkUserId,
-          'nombre_completo': nombreCompleto,
-          'email': email,
-          'telefono': telefono ?? '',
-          'fecha_registro': DateTime.now().toIso8601String(),
-          'ultimo_login': DateTime.now().toIso8601String(),
-          'perfil_publico': true,
-          'estado_usuario': 'activo',
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        });
-
-        if (insertResponse == null) {
-          _logger.e('Error creating user: response is null');
-          return null;
-        }
-
-        if (insertResponse is Map<String, dynamic>) {
-          return insertResponse;
-        } else {
-          _logger.w(
-            'Insert response is not Map<String, dynamic>: $insertResponse',
-          );
-          return null;
-        }
-      }
-    } catch (e) {
-      _logger.e('Exception syncing user from Clerk: $e');
-      return null;
-    }
+    return await syncUsuario(
+      clerkUserId: clerkUserId,
+      firebaseUserId: null,
+      email: email,
+      nombreCompleto: nombreCompleto,
+      telefono: telefono,
+      avatarUrl: avatarUrl,
+    );
   }
 
   /// Registrar interacción

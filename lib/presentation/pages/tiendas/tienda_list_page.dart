@@ -21,8 +21,8 @@ class TiendaBlocProvider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<TiendaBloc>(
-      create: (context) => getIt<TiendaBloc>(),
+    return BlocProvider<TiendaBloc>.value(
+      value: getIt<TiendaBloc>(),
       child: child,
     );
   }

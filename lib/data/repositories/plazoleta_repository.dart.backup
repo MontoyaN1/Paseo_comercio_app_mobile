@@ -544,8 +544,8 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
             final esPrincipal = tipoImagenStr == 'principal';
             String urlOriginal = data['url_imagen'] as String? ?? '';
 
-            // Transformar URL de Contabo a Cloudflare R2 para todas las imágenes
-            if (urlOriginal.contains('contabostorage.com')) {
+            // Transformar URL de Contabo a Cloudflare R2 para imágenes principales
+            if (esPrincipal && urlOriginal.contains('contabostorage.com')) {
               urlOriginal = _transformContaboUrlToR2(urlOriginal);
             }
 
@@ -578,21 +578,10 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
             String? urlMedium = data['url_medium'] as String?;
             String? urlLarge = data['url_large'] as String?;
 
-            // Reemplazar HTTPS con HTTP en URLs de variantes y transformar Contabo a R2
+            // Reemplazar HTTPS con HTTP en URLs de variantes
             urlThumb = _convertHttpsToHttp(urlThumb);
             urlMedium = _convertHttpsToHttp(urlMedium);
             urlLarge = _convertHttpsToHttp(urlLarge);
-
-            // Transformar URLs de Contabo a R2
-            if (urlThumb != null && urlThumb.contains('contabostorage.com')) {
-              urlThumb = _transformContaboUrlToR2(urlThumb);
-            }
-            if (urlMedium != null && urlMedium.contains('contabostorage.com')) {
-              urlMedium = _transformContaboUrlToR2(urlMedium);
-            }
-            if (urlLarge != null && urlLarge.contains('contabostorage.com')) {
-              urlLarge = _transformContaboUrlToR2(urlLarge);
-            }
 
             if (urlThumb != null || urlMedium != null || urlLarge != null) {
               urlsVariantes = {};
@@ -626,17 +615,8 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
                     datosVariante is Map<String, dynamic>) {
                   final urlVariante = datosVariante['url'] as String?;
                   if (urlVariante != null && urlVariante.isNotEmpty) {
-                    // Transformar URL de Contabo a R2 si es necesario
-                    String urlTransformada = urlVariante;
-                    if (urlTransformada.contains('contabostorage.com')) {
-                      urlTransformada = _transformContaboUrlToR2(
-                        urlTransformada,
-                      );
-                    }
                     // Reemplazar HTTPS con HTTP en URLs del JSON
-                    final urlVarianteHttp = _convertHttpsToHttp(
-                      urlTransformada,
-                    );
+                    final urlVarianteHttp = _convertHttpsToHttp(urlVariante);
                     urlsVariantes ??= {};
                     if (urlVarianteHttp != null) {
                       urlsVariantes[nombreVariante] = urlVarianteHttp;
@@ -773,8 +753,8 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         final esPrincipal = tipoImagenStr == 'principal';
         String urlOriginal = data['url_imagen'] as String? ?? '';
 
-        // Transformar URL de Contabo a Cloudflare R2 para todas las imágenes
-        if (urlOriginal.contains('contabostorage.com')) {
+        // Transformar URL de Contabo a Cloudflare R2 para imágenes principales
+        if (esPrincipal && urlOriginal.contains('contabostorage.com')) {
           urlOriginal = _transformContaboUrlToR2(urlOriginal);
         }
 
@@ -807,21 +787,10 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         String? urlMedium = data['url_medium'] as String?;
         String? urlLarge = data['url_large'] as String?;
 
-        // Reemplazar HTTPS con HTTP en URLs de variantes y transformar Contabo a R2
+        // Reemplazar HTTPS con HTTP en URLs de variantes
         urlThumb = _convertHttpsToHttp(urlThumb);
         urlMedium = _convertHttpsToHttp(urlMedium);
         urlLarge = _convertHttpsToHttp(urlLarge);
-
-        // Transformar URLs de Contabo a R2
-        if (urlThumb != null && urlThumb.contains('contabostorage.com')) {
-          urlThumb = _transformContaboUrlToR2(urlThumb);
-        }
-        if (urlMedium != null && urlMedium.contains('contabostorage.com')) {
-          urlMedium = _transformContaboUrlToR2(urlMedium);
-        }
-        if (urlLarge != null && urlLarge.contains('contabostorage.com')) {
-          urlLarge = _transformContaboUrlToR2(urlLarge);
-        }
 
         if (urlThumb != null || urlMedium != null || urlLarge != null) {
           urlsVariantes = {};
@@ -855,13 +824,8 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
                 datosVariante is Map<String, dynamic>) {
               final urlVariante = datosVariante['url'] as String?;
               if (urlVariante != null && urlVariante.isNotEmpty) {
-                // Transformar URL de Contabo a R2 si es necesario
-                String urlTransformada = urlVariante;
-                if (urlTransformada.contains('contabostorage.com')) {
-                  urlTransformada = _transformContaboUrlToR2(urlTransformada);
-                }
                 // Reemplazar HTTPS con HTTP en URLs del JSON
-                final urlVarianteHttp = _convertHttpsToHttp(urlTransformada);
+                final urlVarianteHttp = _convertHttpsToHttp(urlVariante);
                 urlsVariantes ??= {};
                 if (urlVarianteHttp != null) {
                   urlsVariantes[nombreVariante] = urlVarianteHttp;
@@ -985,7 +949,6 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
   // ========== PRODUCTOS RELACIONADOS CON PLAZOLETAS ==========
 
   @override
-  @override
   Future<List<Producto>> getProductosPorPlazoleta(
     int plazoletaId, {
     int? page,
@@ -997,120 +960,29 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
   }) async {
     try {
       _logger.i('=== INICIO getProductosPorPlazoleta ===');
-      _logger.i('Plazoleta ID: \$plazoletaId, page: \$page, limit: \$limit');
+      _logger.i('Plazoleta ID: $plazoletaId, page: $page, limit: $limit');
 
       // Verificar conectividad
       final hasConnection = await _connectivityService.hasConnection();
       if (!hasConnection) {
         _logger.w('Sin conexión a internet, usando caché local');
         final cachedResult = await _cacheService.get<List<Producto>>(
-          'productos_plazoleta_\$plazoletaId',
+          'productos_plazoleta_$plazoletaId',
         );
         return cachedResult.fold((data) => data ?? [], (error) {
-          _logger.e('Error de caché: \$error');
+          _logger.e('Error de caché: $error');
           return [];
         });
       }
 
-      // Nueva lógica: obtener productos por nombre de categoría que coincide con nombre de plazoleta
-      try {
-        // 1. Obtener nombre de la plazoleta
-        final plazoletaResponse =
-            await _supabaseClient.plazoletas
-                .select('nombre')
-                .eq('id', plazoletaId)
-                .single();
-
-        final plazoletaNombre = plazoletaResponse['nombre'] as String;
-        _logger.i('Plazoleta ID $plazoletaId -> Nombre: "$plazoletaNombre"');
-
-        // 2. Buscar categorías con nombre que coincida parcialmente (case-insensitive)
-        final categoriasResponse = await _supabaseClient.categorias
-            .select('id')
-            .ilike('nombre', '%' + plazoletaNombre + '%')
-            .eq('activa', true);
-
-        _logger.i(
-          'Categorías encontradas con nombre similar a "$plazoletaNombre": ${categoriasResponse.length}',
-        );
-
-        var query;
-        if (categoriasResponse.isEmpty) {
-          _logger.i(
-            'No hay categorías con nombre similar a "$plazoletaNombre", obteniendo productos generales',
-          );
-          query = _supabaseClient.productos.select();
-        } else {
-          final categoriaIds =
-              categoriasResponse.map((c) => c['id'] as int).toList();
-          _logger.i('Filtrando productos por categoria_ids: $categoriaIds');
-          query = _supabaseClient.productos.select().inFilter(
-            'categoria_id',
-            categoriaIds,
-          );
-        }
-
-        if (search != null && search.isNotEmpty) {
-          query = query.ilike('nombre_producto', '%' + search + '%');
-        }
-        if (soloDisponibles == true) {
-          query = query.eq('estado_producto', 'disponible');
-        }
-        if (precioMin != null) {
-          query = query.gte('precio', precioMin);
-        }
-        if (precioMax != null) {
-          query = query.lte('precio', precioMax);
-        }
-
-        final pageNum = page ?? 1;
-        final limitNum = limit ?? 20;
-        final response = await query
-            .order('fecha_creacion', ascending: false)
-            .range(
-              (pageNum - 1) * limitNum,
-              (pageNum - 1) * limitNum + limitNum - 1,
-            );
-
-        _logger.i('Productos response count: ${response.length}');
-        if (response.isNotEmpty) {
-          _logger.i(
-            'Sample producto ID: ${response.first['id']}, categoria_id: ${response.first['categoria_id']}',
-          );
-        }
-        final productos =
-            response
-                .map((json) {
-                  try {
-                    return Producto.fromJson(json);
-                  } catch (e, stackTrace) {
-                    _logger.e(
-                      'Error parsing producto JSON: $e',
-                      error: e,
-                      stackTrace: stackTrace,
-                    );
-                    _logger.e('Problematic JSON: $json');
-                    return null;
-                  }
-                })
-                .where((producto) => producto != null)
-                .cast<Producto>()
-                .toList();
-
-        // Guardar en caché
-        await _cacheService.set('productos_plazoleta_\$plazoletaId', productos);
-        return productos;
-      } catch (e, stackTrace) {
-        _logger.e(
-          'Error en consulta de productos por categoría: ' + e.toString(),
-          error: e,
-          stackTrace: stackTrace,
-        );
-        return [];
-      }
+      // TODO: Implementar consulta real a Supabase
+      _logger.w(
+        'Método getProductosPorPlazoleta no implementado completamente',
+      );
+      return [];
     } catch (e, stackTrace) {
       _logger.e('=== ERROR en getProductosPorPlazoleta ===');
-      _logger.e('Error: \$e', error: e, stackTrace: stackTrace);
+      _logger.e('Error: $e', error: e, stackTrace: stackTrace);
       return [];
     }
   }
@@ -1201,135 +1073,27 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
   }) async {
     try {
       _logger.i('=== INICIO getTiendasPlazoleta ===');
-      _logger.i('Plazoleta ID: \$plazoletaId, page: \$page, limit: \$limit');
+      _logger.i('Plazoleta ID: $plazoletaId, page: $page, limit: $limit');
 
       // Verificar conectividad
       final hasConnection = await _connectivityService.hasConnection();
       if (!hasConnection) {
         _logger.w('Sin conexión a internet, usando caché local');
         final cachedResult = await _cacheService.get<List<Tienda>>(
-          'tiendas_plazoleta_\$plazoletaId',
+          'tiendas_plazoleta_$plazoletaId',
         );
         return cachedResult.fold((data) => data ?? [], (error) {
-          _logger.e('Error de caché: \$error');
+          _logger.e('Error de caché: $error');
           return [];
         });
       }
 
-      // Nueva lógica: obtener tiendas que tienen productos con categoría que coincide con nombre de plazoleta
-      try {
-        // 1. Obtener nombre de la plazoleta
-        final plazoletaResponse =
-            await _supabaseClient.plazoletas
-                .select('nombre')
-                .eq('id', plazoletaId)
-                .single();
-
-        final plazoletaNombre = plazoletaResponse['nombre'] as String;
-        _logger.i('Plazoleta ID $plazoletaId -> Nombre: "$plazoletaNombre"');
-
-        // 2. Buscar categorías con nombre que coincida parcialmente (case-insensitive)
-        final categoriasResponse = await _supabaseClient.categorias
-            .select('id')
-            .ilike('nombre', '%' + plazoletaNombre + '%')
-            .eq('activa', true);
-
-        _logger.i(
-          'Categorías encontradas con nombre similar a "$plazoletaNombre": ${categoriasResponse.length}',
-        );
-
-        List<int> tiendaIds = [];
-
-        if (categoriasResponse.isNotEmpty) {
-          final categoriaIds =
-              categoriasResponse.map((c) => c['id'] as int).toList();
-          _logger.i('Categoria IDs: $categoriaIds');
-
-          // 3. Obtener productos con categoria_id en esas categorías
-          final productosResponse = await _supabaseClient.productos
-              .select('tienda_id')
-              .inFilter('categoria_id', categoriaIds)
-              .eq('estado_producto', 'disponible');
-
-          if (productosResponse.isNotEmpty) {
-            // 4. Extraer tienda_id únicos
-            tiendaIds =
-                productosResponse
-                    .map((p) => p['tienda_id'] as int)
-                    .toSet()
-                    .toList();
-            _logger.i('Tienda IDs encontrados: ${tiendaIds.length}');
-          }
-        }
-
-        var query;
-        if (tiendaIds.isEmpty) {
-          _logger.i(
-            'No hay productos con categorías similares a "$plazoletaNombre", obteniendo tiendas generales',
-          );
-          query = _supabaseClient.tiendas.select();
-        } else {
-          _logger.i('Filtrando tiendas por IDs: $tiendaIds');
-          query = _supabaseClient.tiendas.select().inFilter('id', tiendaIds);
-        }
-
-        if (search != null && search.isNotEmpty) {
-          query = query.ilike('nombre_tienda', '%' + search + '%');
-        }
-
-        final pageNum = page ?? 1;
-        final limitNum = limit ?? 20;
-        final response = await query
-            .order('fecha_creacion', ascending: false)
-            .range(
-              (pageNum - 1) * limitNum,
-              (pageNum - 1) * limitNum + limitNum - 1,
-            );
-
-        _logger.i('Tiendas response count: ${response.length}');
-        if (response.isNotEmpty) {
-          _logger.i(
-            'Sample tienda ID: ${response.first['id']}, nombre: ${response.first['nombre_tienda']}',
-          );
-        }
-
-        final tiendas =
-            response
-                .map((json) {
-                  try {
-                    return Tienda.fromJson(json);
-                  } catch (e, stackTrace) {
-                    _logger.e(
-                      'Error parsing tienda JSON: $e',
-                      error: e,
-                      stackTrace: stackTrace,
-                    );
-                    _logger.e('Problematic JSON: $json');
-                    return null;
-                  }
-                })
-                .where((tienda) => tienda != null)
-                .cast<Tienda>()
-                .toList();
-
-        // Guardar en caché
-        await _cacheService.set(
-          'tiendas_plazoleta_' + plazoletaId.toString(),
-          tiendas,
-        );
-        return tiendas;
-      } catch (e, stackTrace) {
-        _logger.e(
-          'Error en consulta de tiendas por categoría de plazoleta: ' +
-              e.toString(),
-          error: e,
-          stackTrace: stackTrace,
-        );
-        return [];
-      }
+      // TODO: Implementar consulta real a Supabase
+      _logger.w('Método getTiendasPlazoleta no implementado completamente');
+      return [];
     } catch (e, stackTrace) {
       _logger.e('=== ERROR en getTiendasPlazoleta ===');
-      _logger.e('Error: \$e', error: e, stackTrace: stackTrace);
+      _logger.e('Error: $e', error: e, stackTrace: stackTrace);
       return [];
     }
   }

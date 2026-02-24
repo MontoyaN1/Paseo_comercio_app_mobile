@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/utils/firebase_auth_service.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../../di/service_locator.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -56,7 +57,7 @@ class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = FirebaseAuthService();
+  final _authService = getIt<FirebaseAuthService>();
   bool _isLoading = false;
   String? _errorMessage;
 

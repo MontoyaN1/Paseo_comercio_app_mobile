@@ -1,5 +1,6 @@
 // lib/presentation/pages/plazoletas/plazoleta_list_page.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/custom_app_bar.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -25,8 +26,8 @@ class PlazoletaBlocProvider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<PlazoletaBloc>(
-      create: (context) => getIt<PlazoletaBloc>(),
+    return BlocProvider<PlazoletaBloc>.value(
+      value: getIt<PlazoletaBloc>(),
       child: child,
     );
   }
@@ -50,7 +51,18 @@ class _PlazoletaListPageState extends State<PlazoletaListPage> {
     _scrollController.addListener(_onScroll);
     // Cargar plazoletas al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PlazoletaBloc>().add(const LoadPlazoletasActivas());
+      if (mounted) {
+        try {
+          final bloc = context.read<PlazoletaBloc>();
+          if (!bloc.isClosed) {
+            bloc.add(const LoadPlazoletasActivas());
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error loading plazoletas: $e');
+          }
+        }
+      }
     });
   }
 

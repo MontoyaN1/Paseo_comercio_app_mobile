@@ -40,6 +40,7 @@ abstract class AuthRepositoryInterface {
     required String nombreCompleto,
     required String email,
     String? telefono,
+    String? avatarUrl,
   });
 
   /// Actualizar perfil de usuario
@@ -117,12 +118,14 @@ class SyncUserFromClerkParams extends Equatable {
   final String nombreCompleto;
   final String email;
   final String? telefono;
+  final String? avatarUrl;
 
   const SyncUserFromClerkParams({
     required this.clerkUserId,
     required this.nombreCompleto,
     required this.email,
     this.telefono,
+    this.avatarUrl,
   });
 
   @override
@@ -134,6 +137,7 @@ class SyncUserFromClerkParams extends Equatable {
       'nombre_completo': nombreCompleto,
       'email': email,
       'telefono': telefono,
+      'avatar_url': avatarUrl,
       'fecha_registro': DateTime.now().toIso8601String(),
       'ultimo_login': DateTime.now().toIso8601String(),
       'perfil_publico': true,

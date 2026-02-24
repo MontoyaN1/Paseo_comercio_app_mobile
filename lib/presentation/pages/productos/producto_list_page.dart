@@ -22,8 +22,8 @@ class ProductoBlocProvider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<ProductoBloc>(
-      create: (context) => getIt<ProductoBloc>(),
+    return BlocProvider<ProductoBloc>.value(
+      value: getIt<ProductoBloc>(),
       child: child,
     );
   }

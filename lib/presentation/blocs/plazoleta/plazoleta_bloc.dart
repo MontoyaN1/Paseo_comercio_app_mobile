@@ -376,24 +376,54 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
     LoadImagenesPlazoleta event,
     Emitter<PlazoletaState> emit,
   ) async {
+    // Guardar el estado actual si es PlazoletaLoaded
+    final currentState = state;
+    PlazoletaLoaded? savedState =
+        currentState is PlazoletaLoaded ? currentState : null;
+
     try {
-      emit(
-        PlazoletaImagenesLoading(
-          plazoletaId: event.plazoletaId,
-          isRefreshing: event.forceRefresh,
-        ),
-      );
+      // Emitir estado de carga manteniendo datos si ya existen
+      if (savedState != null) {
+        // Mantener los datos existentes y añadir indicador de carga
+        emit(
+          savedState.copyWith(
+            imagenesPlazoleta: savedState.imagenesPlazoleta,
+            isLoadingImagenes: true,
+          ),
+        );
+      } else {
+        // Si no hay estado guardado, emitir estado de carga básico
+        emit(
+          PlazoletaImagenesLoading(
+            plazoletaId: event.plazoletaId,
+            isRefreshing: event.forceRefresh,
+          ),
+        );
+      }
 
       try {
         final imagenes = await _plazoletaRepository.getImagenesPlazoleta(
           event.plazoletaId,
         );
 
-        if (state is PlazoletaLoaded) {
-          final currentState = state as PlazoletaLoaded;
-          emit(currentState.copyWith(imagenesPlazoleta: imagenes));
+        if (savedState != null) {
+          // Actualizar estado guardado con las nuevas imágenes
+          emit(
+            savedState.copyWith(
+              imagenesPlazoleta: imagenes,
+              isLoadingImagenes: false,
+            ),
+          );
+        } else if (state is PlazoletaLoaded) {
+          // Si después de cargar hay un estado PlazoletaLoaded (caso raro)
+          final currentLoadedState = state as PlazoletaLoaded;
+          emit(currentLoadedState.copyWith(imagenesPlazoleta: imagenes));
         }
       } catch (e) {
+        if (savedState != null) {
+          // Restaurar estado original en caso de error
+          emit(savedState.copyWith(isLoadingImagenes: false));
+        }
         emit(
           PlazoletaImagenesError(
             plazoletaId: event.plazoletaId,
@@ -408,6 +438,10 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
         error: e,
         stackTrace: stackTrace,
       );
+      if (savedState != null) {
+        // Restaurar estado original en caso de error
+        emit(savedState.copyWith(isLoadingImagenes: false));
+      }
       emit(
         PlazoletaImagenesError(
           plazoletaId: event.plazoletaId,
@@ -976,5 +1010,14 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
     emit(
       PlazoletaErrorState(message: event.message, stackTrace: event.stackTrace),
     );
+  }
+
+  @override
+  Future<void> close() {
+    _logger.i('=== PLAZOLETA BLOC CERRADO ===');
+    // No cerrar realmente para evitar errores de navegación
+    // El bloc se reutiliza en toda la aplicación
+    // return super.close();
+    return Future.value();
   }
 }

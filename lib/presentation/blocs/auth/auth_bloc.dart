@@ -126,6 +126,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           nombreCompleto: event.nombreCompleto,
           email: event.email,
           telefono: event.telefono,
+          avatarUrl: event.avatarUrl,
         ),
       );
 
@@ -208,7 +209,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   /// Disposición del BLoC
   @override
   Future<void> close() {
-    // Limpiar recursos si es necesario
-    return super.close();
+    // No cerrar realmente para evitar errores de navegación
+    // El bloc se reutiliza en toda la aplicación
+    // return super.close();
+    return Future.value();
   }
 }

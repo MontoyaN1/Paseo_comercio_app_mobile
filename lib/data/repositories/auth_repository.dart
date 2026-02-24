@@ -44,6 +44,7 @@ class AuthRepository implements AuthRepositoryInterface {
     required String nombreCompleto,
     required String email,
     required String telefono,
+    String? avatarUrl,
   }) async {
     try {
       _logger.i('Syncing user with Supabase: $clerkUserId');
@@ -54,6 +55,7 @@ class AuthRepository implements AuthRepositoryInterface {
         nombreCompleto: nombreCompleto,
         email: email,
         telefono: telefono,
+        avatarUrl: avatarUrl,
       );
 
       if (supabaseUser != null) {
@@ -396,6 +398,7 @@ class AuthRepository implements AuthRepositoryInterface {
     required String nombreCompleto,
     required String email,
     String? telefono,
+    String? avatarUrl,
   }) async {
     _logger.d('syncUserFromClerk: delegating to _syncUserWithSupabase');
     return await _syncUserWithSupabase(
@@ -403,6 +406,7 @@ class AuthRepository implements AuthRepositoryInterface {
       nombreCompleto: nombreCompleto,
       email: email,
       telefono: telefono ?? '',
+      avatarUrl: avatarUrl,
     );
   }
 

@@ -8,12 +8,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../presentation/pages/auth/login_page.dart';
 import '../../presentation/pages/profile/profile_page.dart';
-import '../../presentation/pages/tiendas/tienda_list_page.dart'
-    show TiendaBlocProvider, TiendaListPage;
-import '../../presentation/pages/productos/producto_list_page.dart'
-    show ProductoBlocProvider, ProductoListPage;
-import '../../presentation/pages/plazoletas/plazoleta_list_page.dart'
-    show PlazoletaBlocProvider, PlazoletaListPage;
+import '../../presentation/pages/tiendas/tienda_list_page.dart';
+import '../../presentation/pages/productos/producto_list_page.dart';
+import '../../presentation/pages/plazoletas/plazoleta_list_page.dart';
 import '../../presentation/pages/plazoletas/plazoleta_detail_page.dart';
 
 /// Configuración de rutas de la aplicación usando GoRouter
@@ -104,7 +101,7 @@ class AppRouter {
         pageBuilder:
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
-              child: PlazoletaBlocProvider(child: const PlazoletaListPage()),
+              child: const PlazoletaListPage(),
             ),
       ),
 
@@ -153,7 +150,7 @@ class AppRouter {
         pageBuilder:
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
-              child: TiendaBlocProvider(child: const TiendaListPage()),
+              child: const TiendaListPage(),
             ),
       ),
 
@@ -204,7 +201,7 @@ class AppRouter {
         pageBuilder:
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
-              child: ProductoBlocProvider(child: const ProductoListPage()),
+              child: const ProductoListPage(),
             ),
       ),
 

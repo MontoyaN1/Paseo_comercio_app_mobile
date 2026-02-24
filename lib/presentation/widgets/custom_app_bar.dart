@@ -1,5 +1,6 @@
 // lib/presentation/widgets/custom_app_bar.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -30,51 +31,84 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authService = getIt<FirebaseAuthService>();
-    final isAuthenticated = authService.isAuthenticated;
-    final currentUser = authService.currentUser;
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (kDebugMode) {
+          print(
+            'CustomAppBar: authStateChanges snapshot - connectionState: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, data: ${snapshot.data?.email ?? "null"}',
+          );
+        }
+        final authService = getIt<FirebaseAuthService>();
+        final isAuthenticated = snapshot.hasData && snapshot.data != null;
+        final currentUser = snapshot.data;
 
-    return AppBar(
-      backgroundColor: const Color(0xFF121212),
-      elevation: 6,
-      centerTitle: true,
-      leading:
-          showBackButton
-              ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: onBackPressed ?? () => context.pop(),
-              )
-              : null,
-      title:
-          title != null
-              ? Text(
-                title!,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                ),
-              )
-              : Text(
-                AppConfig().appName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                ),
-              ),
-      actions: [
-        // Acciones adicionales proporcionadas
-        ...?additionalActions,
+        return AppBar(
+          backgroundColor: const Color(0xFF121212),
+          elevation: 6,
+          centerTitle: true,
+          leading:
+              showBackButton
+                  ? IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed:
+                        onBackPressed ??
+                        () {
+                          if (kDebugMode) {
+                            print('CustomAppBar: Botón de volver presionado');
+                            print(
+                              'CustomAppBar: canPop(): ${context.canPop()}',
+                            );
+                          }
+                          if (context.canPop()) {
+                            if (kDebugMode) {
+                              print('CustomAppBar: Haciendo pop...');
+                            }
+                            context.pop();
+                          } else {
+                            if (kDebugMode) {
+                              print(
+                                'CustomAppBar: No hay nada que hacer pop, redirigiendo a /plazoletas',
+                              );
+                            }
+                            // Si no hay historial de navegación, ir a la página principal
+                            context.go('/plazoletas');
+                          }
+                        },
+                  )
+                  : null,
+          title:
+              title != null
+                  ? Text(
+                    title!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                    ),
+                  )
+                  : Text(
+                    AppConfig().appName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                    ),
+                  ),
+          actions: [
+            // Acciones adicionales proporcionadas
+            ...?additionalActions,
 
-        // Botón de perfil (solo si está habilitado)
-        if (showProfileButton) ...[
-          if (isAuthenticated)
-            _buildProfileMenu(context, authService, currentUser!)
-          else
-            _buildLoginButton(context),
-        ],
-      ],
+            // Botón de perfil (solo si está habilitado)
+            if (showProfileButton) ...[
+              if (isAuthenticated && currentUser != null)
+                _buildProfileMenu(context, authService, currentUser)
+              else
+                _buildLoginButton(context),
+            ],
+          ],
+        );
+      },
     );
   }
 
@@ -213,7 +247,10 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         );
         break;
       case 'logout':
-        await _showLogoutConfirmation(context, authService);
+        // Delay para permitir que el menú popup se cierre completamente
+        Future.microtask(() {
+          _showLogoutConfirmation(context, authService);
+        });
         break;
     }
   }
@@ -265,10 +302,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     BuildContext context,
     FirebaseAuthService authService,
   ) async {
+    // Capturar contexto local para usar en callbacks
+    final currentContext = context;
+
     try {
       // Mostrar indicador de carga
       showDialog(
-        context: context,
+        context: currentContext,
         barrierDismissible: false,
         builder:
             (context) => const Center(
@@ -280,16 +320,16 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       final result = await authService.signOut();
 
       // Cerrar diálogo de carga
-      if (context.mounted) {
-        Navigator.of(context).pop();
+      if (currentContext.mounted) {
+        Navigator.of(currentContext).pop();
       }
 
       result.fold(
         (success) {
           // Redirigir a login
-          if (context.mounted) {
-            context.go('/login');
-            ScaffoldMessenger.of(context).showSnackBar(
+          if (currentContext.mounted) {
+            currentContext.go('/login');
+            ScaffoldMessenger.of(currentContext).showSnackBar(
               const SnackBar(
                 content: Text('Sesión cerrada correctamente'),
                 backgroundColor: Colors.green,
@@ -298,8 +338,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           }
         },
         (error) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+          if (currentContext.mounted) {
+            ScaffoldMessenger.of(currentContext).showSnackBar(
               SnackBar(
                 content: Text('Error al cerrar sesión: ${error.toString()}'),
                 backgroundColor: Colors.red,
@@ -309,10 +349,10 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         },
       );
     } catch (error) {
-      if (context.mounted) {
+      if (currentContext.mounted) {
         // Cerrar diálogo de carga si existe
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
+        Navigator.of(currentContext).pop();
+        ScaffoldMessenger.of(currentContext).showSnackBar(
           SnackBar(
             content: Text('Error inesperado: ${error.toString()}'),
             backgroundColor: Colors.red,

@@ -45,6 +45,7 @@ class PlazoletaLoaded extends PlazoletaState {
   final int currentPage;
   final String? searchQuery;
   final Map<String, dynamic>? filters;
+  final bool isLoadingImagenes;
 
   const PlazoletaLoaded({
     required this.plazoletas,
@@ -57,6 +58,7 @@ class PlazoletaLoaded extends PlazoletaState {
     this.currentPage = 1,
     this.searchQuery,
     this.filters,
+    this.isLoadingImagenes = false,
   });
 
   /// Verificar si hay plazoletas
@@ -95,6 +97,7 @@ class PlazoletaLoaded extends PlazoletaState {
     int? currentPage,
     String? searchQuery,
     Map<String, dynamic>? filters,
+    bool? isLoadingImagenes,
   }) {
     return PlazoletaLoaded(
       plazoletas: plazoletas ?? this.plazoletas,
@@ -108,6 +111,7 @@ class PlazoletaLoaded extends PlazoletaState {
       currentPage: currentPage ?? this.currentPage,
       searchQuery: searchQuery ?? this.searchQuery,
       filters: filters ?? this.filters,
+      isLoadingImagenes: isLoadingImagenes ?? this.isLoadingImagenes,
     );
   }
 
@@ -123,6 +127,7 @@ class PlazoletaLoaded extends PlazoletaState {
     currentPage,
     searchQuery,
     filters,
+    isLoadingImagenes,
   ];
 }
 
