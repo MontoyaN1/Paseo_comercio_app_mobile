@@ -340,9 +340,7 @@ class TiendaBloc extends Bloc<TiendaEvent, TiendaState> {
   /// Disposición del BLoC
   @override
   Future<void> close() {
-    // No cerrar realmente para evitar errores de navegación
-    // El bloc se reutiliza en toda la aplicación
-    // return super.close();
-    return Future.value();
+    // Llamar al método de la clase base para liberar recursos
+    return super.close();
   }
 }
