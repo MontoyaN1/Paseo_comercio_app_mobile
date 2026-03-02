@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../widgets/custom_app_bar.dart';
 
 import '../../../di/service_locator.dart';
 import '../../blocs/tienda/tienda_bloc.dart';
@@ -12,6 +11,7 @@ import '../../widgets/common/loading_state.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/tienda/tienda_card.dart';
+import '../../widgets/profile_floating_button.dart';
 
 /// Wrapper para proporcionar el BLoC de tiendas
 class TiendaBlocProvider extends StatelessWidget {
@@ -194,48 +194,38 @@ class _TiendaListPageState extends State<TiendaListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        title: _isSearching ? null : 'Tiendas',
-        additionalActions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              setState(() {
-                _isSearching = true;
-              });
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              // TODO: Implementar filtros
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Filtros - En desarrollo')),
+      body: Stack(
+        children: [
+          BlocBuilder<TiendaBloc, TiendaState>(
+            bloc: getIt<TiendaBloc>(),
+            builder: (context, state) {
+              return Column(
+                children: [
+                  if (_isSearching) _buildSearchBar(),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        _onRefresh();
+                        // Esperar un momento para que se complete el refresh
+                        await Future.delayed(const Duration(milliseconds: 500));
+                      },
+                      child: _buildContent(state),
+                    ),
+                  ),
+                ],
               );
             },
           ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _onRefresh),
+          // Botón de perfil flotante en esquina inferior derecha
+          Positioned(
+            bottom: 24,
+            right: 24,
+            child: ProfileFloatingButton(
+              size: 64,
+              backgroundColor: const Color(0xFFD4AF37),
+            ),
+          ),
         ],
-      ),
-      body: BlocBuilder<TiendaBloc, TiendaState>(
-        bloc: getIt<TiendaBloc>(),
-        builder: (context, state) {
-          return Column(
-            children: [
-              if (_isSearching) _buildSearchBar(),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () async {
-                    _onRefresh();
-                    // Esperar un momento para que se complete el refresh
-                    await Future.delayed(const Duration(milliseconds: 500));
-                  },
-                  child: _buildContent(state),
-                ),
-              ),
-            ],
-          );
-        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {

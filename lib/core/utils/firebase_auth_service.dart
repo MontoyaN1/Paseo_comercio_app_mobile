@@ -348,7 +348,8 @@ class FirebaseAuthService {
             'FirebaseAuthService: Usuario canceló el flujo de Google Sign-In',
           );
         }
-        return Result.error(AuthException(message: 'Cancelado por el usuario'));
+        // El usuario canceló la operación, no es un error
+        return Result.success(null);
       }
 
       // Verificar que el usuario de Google tenga email (requerido)
@@ -1067,7 +1068,8 @@ class FirebaseAuthService {
       // Iniciar flujo de autenticación de Google
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        return Result.error(AuthException(message: 'Cancelado por el usuario'));
+        // El usuario canceló la operación, no es un error
+        return Result.success(null);
       }
 
       final GoogleSignInAuthentication googleAuth =

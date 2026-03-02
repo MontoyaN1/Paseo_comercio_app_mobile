@@ -1,18 +1,18 @@
 // lib/presentation/pages/productos/producto_list_page.dart
 
-import '../../widgets/custom_app_bar.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../di/service_locator.dart';
 import '../../blocs/producto/producto_bloc.dart';
-
 import '../../widgets/common/loading_state.dart';
 import '../../widgets/common/error_state.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/producto/producto_card.dart';
+import '../../widgets/profile_floating_button.dart';
+import '../../../core/utils/firebase_auth_service.dart';
 
 /// Wrapper para proporcionar el BLoC de productos
 class ProductoBlocProvider extends StatelessWidget {
@@ -41,56 +41,42 @@ class _ProductoListPageState extends State<ProductoListPage> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
-  String? _selectedCategoria;
-  String? _selectedTienda;
+  // String? _selectedCategoria; // TODO: Implementar filtro por categoría
+  // String? _selectedTienda; // TODO: Implementar filtro por tienda
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
+    _searchController.addListener(_onSearch);
+
     // Cargar productos iniciales
     getIt<ProductoBloc>().add(const ProductoLoadRequested(page: 1, limit: 20));
-
-    // Configurar scroll listener para paginación infinita
-    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _searchController.removeListener(_onSearch);
     _searchController.dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      // Cargar más productos cuando estemos cerca del final
-      final productoBloc = getIt<ProductoBloc>();
-      if (productoBloc.hasMoreProductos) {
-        productoBloc.add(const ProductoLoadMoreRequested(limit: 20));
-      }
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
+      // TODO: Implementar carga infinita
     }
   }
 
-  void _onSearch(String query) {
-    if (query.trim().isNotEmpty) {
-      getIt<ProductoBloc>().add(
-        ProductoSearchRequested(
-          query: query,
-          page: 1,
-          limit: 20,
-          categoriaId:
-              _selectedCategoria != null
-                  ? int.tryParse(_selectedCategoria!)
-                  : null,
-          tiendaId:
-              _selectedTienda != null ? int.tryParse(_selectedTienda!) : null,
-        ),
-      );
+  void _onSearch() {
+    final query = _searchController.text.trim();
+    if (query.isNotEmpty) {
+      getIt<ProductoBloc>().add(ProductoSearchRequested(query: query));
     } else {
-      // Si la búsqueda está vacía, volver a cargar todos los productos
       getIt<ProductoBloc>().add(
-        const ProductoLoadRequested(page: 1, limit: 20, forceRefresh: true),
+        const ProductoLoadRequested(page: 1, limit: 20),
       );
     }
   }
@@ -98,93 +84,22 @@ class _ProductoListPageState extends State<ProductoListPage> {
   void _onClearSearch() {
     _searchController.clear();
     _isSearching = false;
-    _selectedCategoria = null;
-    _selectedTienda = null;
+    getIt<ProductoBloc>().add(const ProductoLoadRequested(page: 1, limit: 20));
+  }
+
+  Future<void> _onRefresh() async {
     getIt<ProductoBloc>().add(
       const ProductoLoadRequested(page: 1, limit: 20, forceRefresh: true),
     );
   }
 
-  void _onRefresh() {
-    getIt<ProductoBloc>().add(const ProductoRefreshRequested());
-  }
-
-  void _onProductoTap(Map<String, dynamic> producto) {
-    final productoId = producto['id'] as int;
+  void _onProductoTap(int productoId) {
     context.go('/productos/$productoId');
-  }
-
-  void _onCategoriaFilter(String? categoriaId) {
-    setState(() {
-      _selectedCategoria = categoriaId;
-    });
-
-    if (_searchController.text.isNotEmpty) {
-      // Si hay búsqueda, aplicar filtro a la búsqueda
-      getIt<ProductoBloc>().add(
-        ProductoSearchRequested(
-          query: _searchController.text,
-          page: 1,
-          limit: 20,
-          categoriaId: categoriaId != null ? int.tryParse(categoriaId) : null,
-          tiendaId:
-              _selectedTienda != null ? int.tryParse(_selectedTienda!) : null,
-        ),
-      );
-    } else {
-      // Si no hay búsqueda, cargar productos con filtro
-      getIt<ProductoBloc>().add(
-        ProductoLoadRequested(
-          page: 1,
-          limit: 20,
-          categoriaId: categoriaId != null ? int.tryParse(categoriaId) : null,
-          tiendaId:
-              _selectedTienda != null ? int.tryParse(_selectedTienda!) : null,
-          forceRefresh: true,
-        ),
-      );
-    }
-  }
-
-  void _onTiendaFilter(String? tiendaId) {
-    setState(() {
-      _selectedTienda = tiendaId;
-    });
-
-    if (_searchController.text.isNotEmpty) {
-      // Si hay búsqueda, aplicar filtro a la búsqueda
-      getIt<ProductoBloc>().add(
-        ProductoSearchRequested(
-          query: _searchController.text,
-          page: 1,
-          limit: 20,
-          categoriaId:
-              _selectedCategoria != null
-                  ? int.tryParse(_selectedCategoria!)
-                  : null,
-          tiendaId: tiendaId != null ? int.tryParse(tiendaId) : null,
-        ),
-      );
-    } else {
-      // Si no hay búsqueda, cargar productos con filtro
-      getIt<ProductoBloc>().add(
-        ProductoLoadRequested(
-          page: 1,
-          limit: 20,
-          categoriaId:
-              _selectedCategoria != null
-                  ? int.tryParse(_selectedCategoria!)
-                  : null,
-          tiendaId: tiendaId != null ? int.tryParse(tiendaId) : null,
-          forceRefresh: true,
-        ),
-      );
-    }
   }
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
@@ -198,226 +113,270 @@ class _ProductoListPageState extends State<ProductoListPage> {
                   )
                   : null,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          filled: true,
-          fillColor: Theme.of(context).colorScheme.surface,
         ),
-        onChanged: (value) {
-          setState(() {
-            _isSearching = value.isNotEmpty;
-          });
-          if (value.isNotEmpty) {
-            _onSearch(value);
-          }
-        },
-        onSubmitted: _onSearch,
+        onChanged: (_) => _onSearch(),
       ),
     );
   }
 
-  Widget _buildFilterChips() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          if (_selectedCategoria != null)
-            FilterChip(
-              label: const Text('Categoría filtrada'),
-              selected: true,
-              onSelected: (selected) {
-                if (!selected) {
-                  _onCategoriaFilter(null);
-                }
-              },
-              deleteIcon: const Icon(Icons.close, size: 16),
-              onDeleted: () => _onCategoriaFilter(null),
-            ),
-          if (_selectedTienda != null)
-            FilterChip(
-              label: const Text('Tienda filtrada'),
-              selected: true,
-              onSelected: (selected) {
-                if (!selected) {
-                  _onTiendaFilter(null);
-                }
-              },
-              deleteIcon: const Icon(Icons.close, size: 16),
-              onDeleted: () => _onTiendaFilter(null),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProductoList(List<Map<String, dynamic>> productos) {
+  Widget _buildProductoList(List<dynamic> productos) {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.all(16),
-      itemCount: productos.length + 1, // +1 para el loading indicator
+      itemCount: productos.length,
       itemBuilder: (context, index) {
-        if (index < productos.length) {
-          final producto = productos[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: ProductoCard(
-              producto: producto,
-              onTap: () => _onProductoTap(producto),
-            ),
-          );
-        } else {
-          // Mostrar loading indicator al final si hay más productos
-          final productoBloc = getIt<ProductoBloc>();
-          if (productoBloc.hasMoreProductos) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          } else {
-            return const SizedBox.shrink();
-          }
-        }
+        final producto = productos[index];
+        return ProductoCard(
+          producto: producto,
+          onTap: () => _onProductoTap(producto.id),
+        );
       },
     );
   }
 
-  Widget _buildEmptyState(ProductoState state) {
+  Widget _buildEmptyState(dynamic state) {
+    String message = 'No hay productos disponibles';
+
     if (state is ProductoSearchEmpty) {
-      return EmptyState(
-        icon: Icons.search_off,
-        message:
-            'No se encontraron resultados. No hay productos que coincidan con "${state.query}"',
-        actionText: 'Limpiar búsqueda',
-        onActionPressed: _onClearSearch,
-      );
-    } else if (state is ProductoEmpty) {
-      return EmptyState(
-        icon: Icons.shopping_bag_outlined,
-        message:
-            'No hay productos disponibles. ${state.message ?? 'No se encontraron productos en este momento'}',
-        actionText: 'Recargar',
-        onActionPressed: _onRefresh,
-      );
+      message = 'No se encontraron productos que coincidan con la búsqueda';
     }
-    return const SizedBox.shrink();
+
+    return EmptyState(
+      icon: Icons.shopping_bag_outlined,
+      message: message,
+      actionText: 'Recargar',
+      onActionPressed: _onRefresh,
+    );
   }
 
   Widget _buildErrorState(ProductoError state) {
     return ErrorState(
       message: state.message,
-      actionText: state.isRetryable ? 'Reintentar' : null,
-      onActionPressed: state.isRetryable ? _onRefresh : null,
+      actionText: 'Reintentar',
+      onActionPressed: _onRefresh,
     );
+  }
+
+  void _showProfileMenu(BuildContext context, User currentUser) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            CircleAvatar(
+              radius: 40,
+              backgroundImage:
+                  currentUser.photoURL != null
+                      ? NetworkImage(currentUser.photoURL!)
+                      : null,
+              backgroundColor: Colors.grey[800],
+              child:
+                  currentUser.photoURL == null
+                      ? const Icon(Icons.person, size: 40, color: Colors.white)
+                      : null,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              currentUser.displayName ?? 'Usuario',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            if (currentUser.email != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                currentUser.email!,
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+            ],
+            const SizedBox(height: 24),
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text('Mi perfil'),
+              onTap: () {
+                Navigator.pop(context);
+                context.go('/profile');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Configuración'),
+              onTap: () {
+                Navigator.pop(context);
+                // TODO: Navegar a configuración
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text(
+                'Cerrar sesión',
+                style: TextStyle(color: Colors.red),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _showLogoutConfirmation(context);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showLogoutConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Cerrar sesión'),
+          content: const Text('¿Estás seguro de que quieres cerrar sesión?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _performLogout();
+              },
+              child: const Text(
+                'Cerrar sesión',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _performLogout() async {
+    final authService = getIt<FirebaseAuthService>();
+    try {
+      final result = await authService.signOut();
+      result.fold(
+        (success) {
+          context.go('/login');
+        },
+        (error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al cerrar sesión: ${error.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cerrar sesión: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        title: _isSearching ? null : 'Productos',
-        additionalActions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              setState(() {
-                _isSearching = true;
-              });
-            },
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.filter_list),
-            onSelected: (value) {
-              if (value == 'categoria') {
-                // TODO: Implementar selector de categorías
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Filtro por categoría - En desarrollo'),
-                  ),
-                );
-              } else if (value == 'tienda') {
-                // TODO: Implementar selector de tiendas
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Filtro por tienda - En desarrollo'),
-                  ),
-                );
-              } else if (value == 'precio') {
-                // TODO: Implementar filtro por precio
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Filtro por precio - En desarrollo'),
-                  ),
-                );
-              }
-            },
-            itemBuilder:
-                (context) => [
-                  const PopupMenuItem<String>(
-                    value: 'categoria',
-                    child: Row(
-                      children: [
-                        Icon(Icons.category, size: 20),
-                        SizedBox(width: 8),
-                        Text('Filtrar por categoría'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'tienda',
-                    child: Row(
-                      children: [
-                        Icon(Icons.store, size: 20),
-                        SizedBox(width: 8),
-                        Text('Filtrar por tienda'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'precio',
-                    child: Row(
-                      children: [
-                        Icon(Icons.attach_money, size: 20),
-                        SizedBox(width: 8),
-                        Text('Filtrar por precio'),
-                      ],
+      body: Stack(
+        children: [
+          BlocBuilder<ProductoBloc, ProductoState>(
+            bloc: getIt<ProductoBloc>(),
+            builder: (context, state) {
+              return Column(
+                children: [
+                  if (_isSearching) _buildSearchBar(),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        _onRefresh();
+                        // Esperar un momento para que se complete el refresh
+                        await Future.delayed(const Duration(milliseconds: 500));
+                      },
+                      child: _buildContent(state),
                     ),
                   ),
                 ],
+              );
+            },
           ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _onRefresh),
+          // Botón de perfil flotante en esquina inferior derecha
+          Positioned(
+            bottom: 24,
+            right: 24,
+            child: StreamBuilder<User?>(
+              stream: FirebaseAuth.instance.authStateChanges(),
+              builder: (context, snapshot) {
+                final isAuthenticated =
+                    snapshot.hasData && snapshot.data != null;
+                final currentUser = snapshot.data;
+
+                if (!isAuthenticated || currentUser == null) {
+                  return FloatingActionButton(
+                    onPressed: () {
+                      context.go('/login');
+                    },
+                    backgroundColor: const Color(0xFFD4AF37),
+                    child: const Icon(
+                      Icons.login,
+                      color: Colors.black,
+                      size: 28,
+                    ),
+                    elevation: 6,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  );
+                }
+
+                return FloatingActionButton(
+                  onPressed: () {
+                    _showProfileMenu(context, currentUser);
+                  },
+                  backgroundColor: const Color(0xFFD4AF37),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundImage:
+                        currentUser.photoURL != null
+                            ? NetworkImage(currentUser.photoURL!)
+                            : null,
+                    backgroundColor: Colors.grey[800],
+                    child:
+                        currentUser.photoURL == null
+                            ? const Icon(
+                              Icons.person,
+                              size: 24,
+                              color: Colors.white,
+                            )
+                            : null,
+                  ),
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
-      body: BlocBuilder<ProductoBloc, ProductoState>(
-        bloc: getIt<ProductoBloc>(),
-        builder: (context, state) {
-          return Column(
-            children: [
-              if (_isSearching) _buildSearchBar(),
-              if (_selectedCategoria != null || _selectedTienda != null)
-                _buildFilterChips(),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () async {
-                    _onRefresh();
-                    // Esperar un momento para que se complete el refresh
-                    await Future.delayed(const Duration(milliseconds: 500));
-                  },
-                  child: _buildContent(state),
-                ),
-              ),
-            ],
-          );
-        },
+      // Botón de perfil flotante en esquina inferior derecha
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 24, right: 24),
+        child: ProfileFloatingButton(
+          size: 64,
+          backgroundColor: const Color(0xFFD4AF37),
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Implementar creación de producto
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Crear producto - En desarrollo')),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 

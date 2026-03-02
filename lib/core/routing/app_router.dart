@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../presentation/pages/splash/splash_page.dart';
 import '../../presentation/pages/auth/login_page.dart';
 import '../../presentation/pages/profile/profile_page.dart';
 import '../../presentation/pages/tiendas/tienda_list_page.dart';
@@ -19,21 +20,26 @@ class AppRouter {
     debugLogDiagnostics: true,
     initialLocation: '/',
     routes: [
-      // Ruta raíz - redirige a login o plazoletas según autenticación
+      // Ruta raíz - pantalla de splash
       GoRoute(
         path: '/',
-        redirect: (context, state) {
-          final auth = FirebaseAuth.instance;
-          final user = auth.currentUser;
+        name: 'splash',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const SplashPage(),
+            ),
+      ),
 
-          // Si el usuario está autenticado, ir a plazoletas
-          if (user != null) {
-            return '/plazoletas';
-          }
-
-          // Si no está autenticado, ir a login
-          return '/login';
-        },
+      // Ruta de splash explícita
+      GoRoute(
+        path: '/splash',
+        name: 'splash_explicit',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const SplashPage(),
+            ),
       ),
 
       // Autenticación

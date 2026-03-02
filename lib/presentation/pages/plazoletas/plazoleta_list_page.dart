@@ -1,22 +1,15 @@
 // lib/presentation/pages/plazoletas/plazoleta_list_page.dart
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../widgets/custom_app_bar.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../di/service_locator.dart';
 import '../../../domain/entities/plazoleta.dart';
-import '../../../domain/entities/imagen_base.dart';
-import '../../../domain/entities/enums.dart';
 import '../../blocs/plazoleta/plazoleta_bloc.dart';
 import '../../blocs/plazoleta/plazoleta_event.dart';
 import '../../blocs/plazoleta/plazoleta_state.dart';
-
-import '../../widgets/common/loading_state.dart';
-import '../../widgets/common/error_state.dart';
-import '../../widgets/common/empty_state.dart';
+import '../../widgets/profile_floating_button.dart';
 
 /// Wrapper para proporcionar el BLoC de plazoletas
 class PlazoletaBlocProvider extends StatelessWidget {
@@ -33,7 +26,7 @@ class PlazoletaBlocProvider extends StatelessWidget {
   }
 }
 
-/// Pantalla principal que muestra la lista de plazoletas
+/// Pantalla de lista de plazoletas con diseño de centro comercial premium
 class PlazoletaListPage extends StatefulWidget {
   const PlazoletaListPage({super.key});
 
@@ -49,721 +42,718 @@ class _PlazoletaListPageState extends State<PlazoletaListPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Cargar plazoletas al iniciar
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        try {
-          final bloc = context.read<PlazoletaBloc>();
-          if (!bloc.isClosed) {
-            bloc.add(const LoadPlazoletasActivas());
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error loading plazoletas: $e');
-          }
-        }
-      }
-    });
+    getIt<PlazoletaBloc>().add(const LoadPlazoletasActivas(page: 1, limit: 20));
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    if (_isLoadingMore) return;
-
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.position.pixels;
-
-    // Cargar más datos cuando estamos cerca del final
-    if (currentScroll >= maxScroll * 0.8) {
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
       _loadMorePlazoletas();
     }
   }
 
-  void _loadMorePlazoletas() {
+  Future<void> _loadMorePlazoletas() async {
     if (_isLoadingMore) return;
 
-    final state = context.read<PlazoletaBloc>().state;
-    if (state is PlazoletaLoaded && state.hasMore) {
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final plazoletaBloc = getIt<PlazoletaBloc>();
+      final state = plazoletaBloc.state;
+      if (state is PlazoletaLoaded && state.hasMore) {
+        plazoletaBloc.add(
+          LoadPlazoletasActivas(page: state.currentPage + 1, limit: 20),
+        );
+      }
+    } finally {
       setState(() {
-        _isLoadingMore = true;
-      });
-
-      context.read<PlazoletaBloc>().add(
-        LoadPlazoletasActivas(page: state.currentPage + 1, limit: 20),
-      );
-
-      // Resetear flag después de un tiempo
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() {
-            _isLoadingMore = false;
-          });
-        }
+        _isLoadingMore = false;
       });
     }
   }
 
-  void _onRefresh() {
-    context.read<PlazoletaBloc>().add(
-      const LoadPlazoletasActivas(forceRefresh: true),
+  Future<void> _onRefresh() async {
+    getIt<PlazoletaBloc>().add(
+      const LoadPlazoletasActivas(page: 1, limit: 20, forceRefresh: true),
     );
   }
 
-  void _onPlazoletaTap(Plazoleta plazoleta) {
-    // Navegar a la pantalla de detalle de la plazoleta
-    context.go('/plazoletas/${plazoleta.id}');
-  }
-
-  void _onSearch(String query) {
-    if (query.isEmpty) {
-      context.read<PlazoletaBloc>().add(
-        const LoadPlazoletasActivas(forceRefresh: true),
-      );
-    } else {
-      context.read<PlazoletaBloc>().add(SearchPlazoletas(query: query));
-    }
+  void _onPlazoletaTap(int plazoletaId) {
+    context.go('/plazoletas/$plazoletaId');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: ListAppBar(
-        title: 'Plazoletas',
-        showSearchButton: true,
-        onSearchPressed: () {
-          showSearch(
-            context: context,
-            delegate: _PlazoletaSearchDelegate(onSearch: _onSearch),
-          );
-        },
-        additionalActions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              // TODO: Implementar filtros
-              // _showFilterDialog(); // Método movido a la clase correcta
+      backgroundColor: const Color(0xFF0F0F0F),
+      body: Stack(
+        children: [
+          // Fondo con gradiente sutil
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF1A1A1A), Color(0xFF0F0F0F)],
+              ),
+            ),
+          ),
+
+          BlocBuilder<PlazoletaBloc, PlazoletaState>(
+            bloc: getIt<PlazoletaBloc>(),
+            builder: (context, state) {
+              return Column(
+                children: [
+                  // Contador de plazoletas
+                  _buildMallHeader(state),
+                  const SizedBox(height: 16),
+
+                  // Lista de plazoletas
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        _onRefresh();
+                        await Future.delayed(const Duration(milliseconds: 500));
+                      },
+                      child: _buildContent(state),
+                    ),
+                  ),
+                ],
+              );
             },
+          ),
+
+          // Botón de perfil flotante
+          Positioned(
+            bottom: 24,
+            right: 24,
+            child: ProfileFloatingButton(
+              size: 64,
+              backgroundColor: const Color(0xFFD4AF37),
+            ),
           ),
         ],
       ),
-      body: BlocConsumer<PlazoletaBloc, PlazoletaState>(
-        listener: (context, state) {
-          // Manejar estados específicos si es necesario
-          if (state is PlazoletaErrorState) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return _buildContent(state);
-        },
+    );
+  }
+
+  Widget _buildMallHeader(PlazoletaState state) {
+    return Container(
+      padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 20),
+      child: _buildStatsBar(state),
+    );
+  }
+
+  Widget _buildStatsBar(PlazoletaState state) {
+    int count = 0;
+    if (state is PlazoletaLoaded) {
+      count = state.plazoletas.length;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFD4AF37).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.store_mall_directory,
+            size: 16,
+            color: const Color(0xFFD4AF37),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$count plazoletas',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFFD4AF37),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildContent(PlazoletaState state) {
-    // Manejar estado inicial - también mostrar loading
-    if (state is PlazoletaInitial) {
-      return const LoadingState(message: 'Inicializando plazoletas...');
-    }
-
     if (state is PlazoletaLoading) {
-      return const LoadingState(message: 'Cargando plazoletas...');
+      return _buildLoadingState();
     }
 
-    if (state is PlazoletasActivasLoading) {
-      return const LoadingState(message: 'Cargando plazoletas activas...');
+    if (state is PlazoletaLoaded) {
+      if (state.plazoletas.isEmpty) {
+        return _buildEmptyState();
+      }
+
+      return _buildPlazoletaList(state);
     }
 
     if (state is PlazoletaErrorState) {
-      return ErrorState(
-        message: state.message,
-        actionText: 'Reintentar',
-        onActionPressed: () {
-          context.read<PlazoletaBloc>().add(
-            const LoadPlazoletasActivas(forceRefresh: true),
-          );
-        },
-      );
+      return _buildErrorState(state);
     }
 
-    if (state is PlazoletaNoResults) {
-      return EmptyState(
-        message:
-            'No se encontraron resultados. Intenta con otros términos de búsqueda.',
-        icon: Icons.search_off,
-        onActionPressed: () {
-          context.read<PlazoletaBloc>().add(const LoadPlazoletasActivas());
-        },
-        actionText: 'Ver todas las plazoletas',
-      );
-    }
-
-    if (state is PlazoletaLoaded) {
-      if (!state.hasPlazoletas) {
-        return EmptyState(
-          message:
-              'No hay plazoletas disponibles. Pronto agregaremos más plazoletas.',
-          icon: Icons.location_city,
-          onActionPressed: _onRefresh,
-          actionText: 'Recargar',
-        );
-      }
-
-      return RefreshIndicator(
-        onRefresh: () async {
-          _onRefresh();
-          await Future.delayed(const Duration(seconds: 1));
-        },
-        child: ListView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(16),
-          itemCount: state.plazoletas.length + (_isLoadingMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index >= state.plazoletas.length) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            final plazoleta = state.plazoletas[index];
-            return _buildPlazoletaCard(plazoleta, state);
-          },
-        ),
-      );
-    }
-
-    if (state is PlazoletaOffline) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.wifi_off, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text(
-            'Sin conexión a internet',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Mostrando datos en caché',
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
-          if (state.hasCachedData && state.cachedPlazoletas != null)
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: state.cachedPlazoletas!.length,
-                itemBuilder: (context, index) {
-                  final plazoleta = state.cachedPlazoletas![index];
-                  return _buildPlazoletaCard(plazoleta, state);
-                },
-              ),
-            )
-          else
-            const Text('No hay datos en caché'),
-        ],
-      );
-    }
-
-    return const LoadingState(message: 'Inicializando...');
+    return _buildLoadingState();
   }
 
-  Widget _buildPlazoletaCard(Plazoleta plazoleta, PlazoletaState state) {
-    print(
-      '🎯 _buildPlazoletaCard llamado para plazoleta ${plazoleta.id} (${plazoleta.nombre})',
-    );
-    print('🎯 Estado: ${state.runtimeType}');
-    if (state is PlazoletaLoaded) {
-      print(
-        '🎯 imagenesPlazoleta: ${state.imagenesPlazoleta?.length ?? 0} imágenes',
-      );
-      if (state.imagenesPlazoleta != null) {
-        for (var img in state.imagenesPlazoleta!.where(
-          (i) => i.entidadRelacionadaId == plazoleta.id,
-        )) {
-          print(
-            '🎯   Imagen: id=${img.id}, plazoletaId=${img.entidadRelacionadaId}, esPrincipal=${img.esPrincipal}, url=${img.urlPreferida}, tipoImagen=${img.tipoImagen}',
-          );
-        }
-      }
-    }
-
-    // Obtener imagen principal si está disponible
-    String? imageUrl;
-    ImagenBase? imagenPrincipalObj;
-    if (state is PlazoletaLoaded && state.imagenesPlazoleta != null) {
-      print('🎯 Buscando imagen principal para plazoleta ${plazoleta.id}');
-      final foundImagenPrincipal = state.imagenesPlazoleta!.firstWhere(
-        (imagen) =>
-            imagen.entidadRelacionadaId == plazoleta.id && imagen.esPrincipal,
-        orElse:
-            () => state.imagenesPlazoleta!.firstWhere(
-              (imagen) => imagen.entidadRelacionadaId == plazoleta.id,
-              orElse:
-                  () => ImagenPlazoleta(
-                    id: 0,
-                    urlOriginal: '',
-                    nombreArchivo: '',
-                    extension: '',
-                    tamanoBytes: 0,
-                    ancho: 0,
-                    alto: 0,
-                    tipoImagen: TipoImagen.principal,
-                    esPrincipal: true,
-                    ordenVisual: 0,
-                    fechaCreacion: DateTime.now(),
-                    activa: true,
-                    plazoletaId: 0,
-                  ),
-            ),
-      );
-      imagenPrincipalObj = foundImagenPrincipal;
-      print(
-        '🎯 Imagen encontrada: id=${imagenPrincipalObj.id}, urlOriginal=${imagenPrincipalObj.urlOriginal}, urlPreferida=${imagenPrincipalObj.urlPreferida}',
-      );
-      print('🎯 Es imagen dummy? ${imagenPrincipalObj.id == 0 ? 'SÍ' : 'NO'}');
-      imageUrl = imagenPrincipalObj.urlPreferida;
-    }
-
-    // Si no se encontró imagen principal, intentar usar el icono de la plazoleta
-    if (imageUrl == null || imageUrl.isEmpty) {
-      print(
-        '🎯 No se encontró imagen principal, usando icono: ${plazoleta.icono}',
-      );
-      imageUrl = plazoleta.icono;
-    }
-
-    // Debug: log image URL
-    print(
-      '🔍 Plazoleta ${plazoleta.id} (${plazoleta.nombre}) - imageUrl: $imageUrl',
-    );
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      print('🔍 URL tipo: ${imageUrl.endsWith('.gif') ? 'GIF' : 'Imagen'}');
-    }
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _onPlazoletaTap(plazoleta),
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Imagen de la plazoleta
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 60,
+            height: 60,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                const Color(0xFFD4AF37),
               ),
-              child: SizedBox(
-                height: 180,
-                child:
-                    imageUrl != null && imageUrl.isNotEmpty
-                        ? _buildMultiFallbackImage(imageUrl, plazoleta, state)
-                        : Container(
-                          color: Colors.grey[200],
-                          child: const Center(
-                            child: Icon(
-                              Icons.location_city,
-                              size: 48,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ),
-              ),
+              backgroundColor: const Color(0xFFD4AF37).withOpacity(0.1),
             ),
-
-            // Contenido de la tarjeta
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Nombre de la plazoleta
-                  Text(
-                    plazoleta.nombre,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Descripción
-                  if (plazoleta.descripcion != null)
-                    Text(
-                      plazoleta.descripcion!,
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                  const SizedBox(height: 12),
-
-                  // Información adicional
-                  Row(
-                    children: [
-                      // Ubicación
-                      if (plazoleta.piso != null || plazoleta.sector != null)
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.location_on,
-                              size: 16,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              plazoleta.resumenUbicacion,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                      const Spacer(),
-
-                      // Estado
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              plazoleta.disponible
-                                  ? Colors.green[50]
-                                  : Colors.red[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color:
-                                plazoleta.disponible
-                                    ? Colors.green[100]!
-                                    : Colors.red[100]!,
-                          ),
-                        ),
-                        child: Text(
-                          plazoleta.estadoDescripcion,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color:
-                                plazoleta.disponible
-                                    ? Colors.green[800]
-                                    : Colors.red[800],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Servicios
-                  if (plazoleta.serviciosLista.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          children:
-                              plazoleta.serviciosLista
-                                  .take(3)
-                                  .map(
-                                    (servicio) => Chip(
-                                      label: Text(
-                                        servicio,
-                                        style: const TextStyle(fontSize: 11),
-                                      ),
-                                      backgroundColor: Colors.blue[50],
-                                      labelPadding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                      ),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                  )
-                                  .toList(),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Cargando plazoletas...',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.white.withOpacity(0.8),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Preparando tu experiencia de centro comercial',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              color: Colors.white.withOpacity(0.5),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildMultiFallbackImage(
-    String primaryUrl,
-    Plazoleta plazoleta,
-    PlazoletaState state,
-  ) {
-    return _MultiFallbackImage(
-      primaryUrl: primaryUrl,
-      plazoleta: plazoleta,
-      state: state,
+  Widget _buildPlazoletaList(PlazoletaLoaded state) {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.only(top: 8, bottom: 100, left: 8, right: 8),
+      itemCount: state.plazoletas.length + (_isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= state.plazoletas.length) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: CircularProgressIndicator(color: const Color(0xFFD4AF37)),
+            ),
+          );
+        }
+
+        final plazoleta = state.plazoletas[index];
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: _buildPlazoletaCard(plazoleta, state),
+        );
+      },
     );
   }
-}
 
-class _MultiFallbackImage extends StatefulWidget {
-  final String primaryUrl;
-  final Plazoleta plazoleta;
-  final PlazoletaState state;
+  String? _getPlazoletaImageUrl(Plazoleta plazoleta, PlazoletaLoaded state) {
+    if (state.imagenesPlazoleta != null) {
+      // Buscar imagen principal
+      for (final imagen in state.imagenesPlazoleta!) {
+        if (imagen.entidadRelacionadaId == plazoleta.id && imagen.esPrincipal) {
+          return imagen.urlPreferida;
+        }
+      }
 
-  const _MultiFallbackImage({
-    required this.primaryUrl,
-    required this.plazoleta,
-    required this.state,
-  });
-
-  @override
-  State<_MultiFallbackImage> createState() => __MultiFallbackImageState();
-}
-
-class __MultiFallbackImageState extends State<_MultiFallbackImage> {
-  List<String> _urlsToTry = [];
-  int _currentUrlIndex = 0;
-  bool _hasError = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _generateFallbackUrls();
-  }
-
-  void _generateFallbackUrls() {
-    _urlsToTry.clear();
-
-    // 1. Add primary URL (HTTPS)
-    _urlsToTry.add(widget.primaryUrl);
-
-    // 2. Add HTTP version if primary is HTTPS
-    if (widget.primaryUrl.startsWith('https://')) {
-      final httpUrl = widget.primaryUrl.replaceFirst('https://', 'http://');
-      _urlsToTry.add(httpUrl);
-    }
-
-    // 3. Try to get variant URLs from the imagen object
-    if (widget.state is PlazoletaLoaded) {
-      final loadedState = widget.state as PlazoletaLoaded;
-      if (loadedState.imagenesPlazoleta != null) {
-        final imagenPrincipal = loadedState.imagenesPlazoleta!.firstWhere(
-          (imagen) =>
-              imagen.entidadRelacionadaId == widget.plazoleta.id &&
-              imagen.esPrincipal,
-          orElse:
-              () => loadedState.imagenesPlazoleta!.firstWhere(
-                (imagen) => imagen.entidadRelacionadaId == widget.plazoleta.id,
-                orElse:
-                    () => ImagenPlazoleta(
-                      id: 0,
-                      urlOriginal: '',
-                      nombreArchivo: '',
-                      extension: '',
-                      tamanoBytes: 0,
-                      ancho: 0,
-                      alto: 0,
-                      tipoImagen: TipoImagen.principal,
-                      esPrincipal: true,
-                      ordenVisual: 0,
-                      fechaCreacion: DateTime.now(),
-                      activa: true,
-                      plazoletaId: 0,
-                    ),
-              ),
-        );
-
-        // Add variant URLs if they exist
-        if (imagenPrincipal.tieneVariantes) {
-          final thumbUrl = imagenPrincipal.getVarianteUrl('thumb');
-          final mediumUrl = imagenPrincipal.getVarianteUrl('medium');
-          final largeUrl = imagenPrincipal.getVarianteUrl('large');
-
-          if (thumbUrl != null && !_urlsToTry.contains(thumbUrl)) {
-            _urlsToTry.add(thumbUrl);
-          }
-          if (mediumUrl != null && !_urlsToTry.contains(mediumUrl)) {
-            _urlsToTry.add(mediumUrl);
-          }
-          if (largeUrl != null && !_urlsToTry.contains(largeUrl)) {
-            _urlsToTry.add(largeUrl);
-          }
-
-          // Also add HTTP versions of variants
-          for (final variantUrl in [thumbUrl, mediumUrl, largeUrl]) {
-            if (variantUrl != null && variantUrl.startsWith('https://')) {
-              final httpVariant = variantUrl.replaceFirst(
-                'https://',
-                'http://',
-              );
-              if (!_urlsToTry.contains(httpVariant)) {
-                _urlsToTry.add(httpVariant);
-              }
-            }
-          }
+      // Buscar cualquier imagen
+      for (final imagen in state.imagenesPlazoleta!) {
+        if (imagen.entidadRelacionadaId == plazoleta.id) {
+          return imagen.urlPreferida;
         }
       }
     }
 
-    print('🔄 URLs a intentar para plazoleta ${widget.plazoleta.id}:');
-    for (int i = 0; i < _urlsToTry.length; i++) {
-      print('   $i: ${_urlsToTry[i]}');
-    }
+    return plazoleta.icono;
   }
 
-  void _tryNextUrl() {
-    if (_currentUrlIndex < _urlsToTry.length - 1) {
-      setState(() {
-        _currentUrlIndex++;
-        _hasError = false;
-      });
-      print(
-        '🔄 Intentando siguiente URL (${_currentUrlIndex + 1}/${_urlsToTry.length}): ${_urlsToTry[_currentUrlIndex]}',
-      );
-    } else {
-      setState(() {
-        _hasError = true;
-      });
-      print('❌ Todas las URLs fallaron para plazoleta ${widget.plazoleta.id}');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final currentUrl =
-        _urlsToTry.isNotEmpty
-            ? _urlsToTry[_currentUrlIndex]
-            : widget.primaryUrl;
-
-    if (_hasError || _urlsToTry.isEmpty) {
-      return Container(
-        color: Colors.grey[200],
-        child: const Center(
-          child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
-        ),
-      );
-    }
-
+  Widget _buildPlazoletaImage(String imageUrl) {
     return Image.network(
-      currentUrl,
+      imageUrl,
       fit: BoxFit.cover,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
-        return Container(
-          color: Colors.grey[200],
-          child: const Center(
-            child: Icon(Icons.location_city, size: 48, color: Colors.grey),
-          ),
-        );
+        return _buildPlaceholderImage();
       },
       errorBuilder: (context, error, stackTrace) {
-        print('❌ Error cargando imagen $currentUrl: $error');
-        print('📋 Stack trace: $stackTrace');
-
-        // Schedule try next URL for next frame
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _tryNextUrl();
-        });
-
-        // Show loading placeholder while trying next URL
-        return Container(
-          color: Colors.grey[200],
-          child: const Center(
-            child: Icon(Icons.location_city, size: 48, color: Colors.grey),
-          ),
-        );
+        return _buildPlaceholderImage();
       },
     );
   }
-}
 
-/// Delegado para búsqueda de plazoletas
-class _PlazoletaSearchDelegate extends SearchDelegate {
-  final Function(String) onSearch;
-
-  _PlazoletaSearchDelegate({required this.onSearch});
-
-  @override
-  List<Widget> buildActions(BuildContext context) {
-    return [
-      IconButton(
-        icon: const Icon(Icons.clear),
-        onPressed: () {
-          query = '';
-        },
+  Widget _buildPlaceholderImage() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.grey[800]!, Colors.grey[900]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-    ];
-  }
-
-  @override
-  Widget buildLeading(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.arrow_back),
-      onPressed: () {
-        close(context, null);
-      },
+      child: const Center(
+        child: Icon(
+          Icons.store_mall_directory,
+          size: 64,
+          color: Color(0xFFD4AF37),
+        ),
+      ),
     );
   }
 
-  @override
-  Widget buildResults(BuildContext context) {
-    onSearch(query);
-    return const SizedBox.shrink();
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    // Mostrar sugerencias basadas en búsquedas anteriores
-    return ListView(
-      children: [
-        ListTile(
-          leading: const Icon(Icons.search),
-          title: const Text('Buscar plazoletas por nombre'),
-          onTap: () {
-            query = 'plazoleta';
-            showResults(context);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.location_on),
-          title: const Text('Buscar por ubicación'),
-          onTap: () {
-            query = 'piso 1';
-            showResults(context);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.restaurant),
-          title: const Text('Zonas de comida'),
-          onTap: () {
-            query = 'comida';
-            showResults(context);
-          },
-        ),
-      ],
+  Widget _buildServiceIcon(IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Icon(icon, size: 20, color: const Color(0xFFD4AF37)),
     );
   }
 
-  @override
-  String get searchFieldLabel => 'Buscar plazoletas...';
+  Widget _buildPlazoletaCard(Plazoleta plazoleta, PlazoletaLoaded state) {
+    final imageUrl = _getPlazoletaImageUrl(plazoleta, state);
+    final nombre = plazoleta.nombre;
+    final descripcion = plazoleta.descripcion;
+    final ubicacion = plazoleta.resumenUbicacion;
+    final tieneZonaComida = plazoleta.tieneZonaComida ?? false;
+    final tieneEstacionamiento = plazoleta.tieneEstacionamiento ?? false;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            spreadRadius: 2,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        borderRadius: BorderRadius.circular(24),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _onPlazoletaTap(plazoleta.id),
+          splashColor: const Color(0xFFD4AF37).withOpacity(0.3),
+          highlightColor: const Color(0xFFD4AF37).withOpacity(0.1),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Imagen con overlay
+              Stack(
+                children: [
+                  // Imagen principal
+                  SizedBox(
+                    height: 220,
+                    child:
+                        imageUrl != null && imageUrl.isNotEmpty
+                            ? _buildPlazoletaImage(imageUrl)
+                            : _buildPlaceholderImage(),
+                  ),
+
+                  // Overlay degradado
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.7),
+                          ],
+                          stops: const [0.5, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Badge de ubicación
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFD4AF37),
+                            const Color(0xFFC19B2E),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.location_pin,
+                            size: 14,
+                            color: Colors.black,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            ubicacion.isNotEmpty ? ubicacion : 'Piso 1',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              color: Colors.black,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Iconos de servicios
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: Row(
+                      children: [
+                        if (tieneZonaComida)
+                          _buildServiceIcon(Icons.restaurant),
+                        if (tieneZonaComida && tieneEstacionamiento)
+                          const SizedBox(width: 8),
+                        if (tieneEstacionamiento)
+                          _buildServiceIcon(Icons.local_parking),
+                      ],
+                    ),
+                  ),
+
+                  // Nombre y descripción
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          nombre,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.8),
+                                blurRadius: 8,
+                                offset: const Offset(2, 2),
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (descripcion?.isNotEmpty ?? false)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              descripcion!,
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.6),
+                                    blurRadius: 6,
+                                    offset: const Offset(1, 1),
+                                  ),
+                                ],
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              // Información adicional
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  border: Border.all(color: Colors.grey[200]!, width: 1),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Indicador de disponibilidad
+                    Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.green.withOpacity(0.7),
+                                blurRadius: 6,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Abierto ahora',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                            color: Colors.grey[800],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Botón de explorar
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFD4AF37),
+                            const Color(0xFFC19B2E),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Explorar',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 14,
+                            color: Colors.black,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.store_mall_directory_outlined,
+            size: 80,
+            color: const Color(0xFFD4AF37).withOpacity(0.5),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'No hay plazoletas disponibles',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withOpacity(0.8),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Pronto tendremos nuevas plazoletas para explorar',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Colors.white.withOpacity(0.5),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFFD4AF37).withOpacity(0.2),
+                  const Color(0xFFC19B2E).withOpacity(0.1),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFFD4AF37).withOpacity(0.3),
+              ),
+            ),
+            child: Text(
+              'Vuelve más tarde',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFFD4AF37),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(PlazoletaErrorState state) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 80,
+            color: Colors.red.withOpacity(0.7),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Error al cargar las plazoletas',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withOpacity(0.8),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            state.message.isNotEmpty
+                ? state.message
+                : 'Ocurrió un problema al cargar la información',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Colors.white.withOpacity(0.5),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFFD4AF37).withOpacity(0.2),
+                  const Color(0xFFC19B2E).withOpacity(0.1),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFFD4AF37).withOpacity(0.3),
+              ),
+            ),
+            child: InkWell(
+              onTap: () {
+                getIt<PlazoletaBloc>().add(
+                  const LoadPlazoletasActivas(page: 1, limit: 20),
+                );
+              },
+              child: Text(
+                'Reintentar',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFFD4AF37),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
