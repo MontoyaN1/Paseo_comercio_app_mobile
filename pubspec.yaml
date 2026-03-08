@@ -46,6 +46,7 @@ dependencies:
   # UI
   cupertino_icons: ^1.0.8
   google_fonts: ^6.3.0
+  flutter_staggered_animations: ^1.0.0
 
   # Navigation
   go_router: ^17.1.0
