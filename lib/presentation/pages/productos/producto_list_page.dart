@@ -198,7 +198,7 @@ class _ProductoListPageState extends State<ProductoListPage> {
               title: const Text('Mi perfil'),
               onTap: () {
                 Navigator.pop(context);
-                context.go('/profile');
+                context.push('/profile');
               },
             ),
             ListTile(
@@ -371,10 +371,7 @@ class _ProductoListPageState extends State<ProductoListPage> {
       // Botón de perfil flotante en esquina inferior derecha
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 24, right: 24),
-        child: ProfileFloatingButton(
-          size: 64,
-          backgroundColor: const Color(0xFFD4AF37),
-        ),
+        child: ProfileFloatingButton(),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );

@@ -393,7 +393,11 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
               setState(() => _buildPlazas(s.plazoletas));
           },
           builder: (_, s) {
-            if (s is PlazoletaLoading || _plazas.isEmpty) return _loading();
+            if (s is PlazoletaLoading ||
+                s is PlazoletasActivasLoading ||
+                s is PlazoletaLoadingMore ||
+                _plazas.isEmpty)
+              return _loading();
             if (s is PlazoletaErrorState) return _error(s);
             return _mainView(s as PlazoletaLoaded);
           },
@@ -489,11 +493,7 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
           right: 22,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            child: ProfileFloatingButton(
-              size: 54,
-              backgroundColor: _kGold,
-              hidePlazoletasOption: true,
-            ),
+            child: ProfileFloatingButton(hidePlazoletasOption: true),
           ),
         ),
 
@@ -551,7 +551,7 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
                               stops: [0.0, 0.35, 0.65, 1.0],
                             ).createShader(b),
                         child: const Text(
-                          'PLAZA UNIVERSE',
+                          'PASEO DEL COMERCIO',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 24,
@@ -573,7 +573,7 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
                           ),
                           const SizedBox(width: 7),
                           Text(
-                            '${state.plazoletas.length} plazoletas  •  centro comercial virtual',
+                            '${state.plazoletas.length} plazoletas  •  Centro Comercial Virtual',
                             style: TextStyle(
                               color: _kGold.withOpacity(0.65),
                               fontSize: 11,
@@ -596,21 +596,37 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
 
   Widget _mapControls() => Positioned(
     right: 14,
-    top: MediaQuery.of(context).padding.top + 80,
-    child: Column(
-      children: [
-        _mapBtn(
-          Icons.add,
-          () => setState(() => _scale = (_scale * 1.22).clamp(0.30, 3.2)),
-        ),
-        const SizedBox(height: 5),
-        _mapBtn(
-          Icons.remove,
-          () => setState(() => _scale = (_scale / 1.22).clamp(0.30, 3.2)),
-        ),
-        const SizedBox(height: 10),
-        _mapBtn(Icons.center_focus_strong_rounded, _resetView, accent: true),
-      ],
+    top: MediaQuery.of(context).padding.top + 120,
+    child: Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0E0E1E).withOpacity(0.85),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _kGold.withOpacity(0.25)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _mapBtn(
+            Icons.remove,
+            () => setState(() => _scale = (_scale / 1.22).clamp(0.30, 3.2)),
+          ),
+          Container(width: 1, height: 24, color: _kGold.withOpacity(0.2)),
+          _mapBtn(
+            Icons.add,
+            () => setState(() => _scale = (_scale * 1.22).clamp(0.30, 3.2)),
+          ),
+          Container(width: 1, height: 24, color: _kGold.withOpacity(0.2)),
+          _mapBtn(Icons.center_focus_strong_rounded, _resetView, accent: true),
+        ],
+      ),
     ),
   );
 
@@ -618,24 +634,17 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
       GestureDetector(
         onTap: onTap,
         child: Container(
-          width: 36,
-          height: 36,
-          margin: const EdgeInsets.only(bottom: 1),
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
-            color:
-                accent
-                    ? _kGold.withOpacity(0.18)
-                    : const Color(0xFF0E0E1E).withOpacity(0.92),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _kGold.withOpacity(accent ? 0.55 : 0.22)),
-            boxShadow:
-                accent
-                    ? [
-                      BoxShadow(color: _kGold.withOpacity(0.18), blurRadius: 8),
-                    ]
-                    : null,
+            color: accent ? _kGold.withOpacity(0.18) : Colors.transparent,
+            borderRadius: accent ? BorderRadius.circular(8) : BorderRadius.zero,
+            border: Border.all(
+              color: accent ? _kGold.withOpacity(0.55) : Colors.transparent,
+              width: accent ? 1 : 0,
+            ),
           ),
-          child: Icon(icon, color: _kGold, size: 17),
+          child: Icon(icon, color: _kGold, size: 18),
         ),
       );
 

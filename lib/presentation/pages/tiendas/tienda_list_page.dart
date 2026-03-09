@@ -217,14 +217,7 @@ class _TiendaListPageState extends State<TiendaListPage> {
             },
           ),
           // Botón de perfil flotante en esquina inferior derecha
-          Positioned(
-            bottom: 24,
-            right: 24,
-            child: ProfileFloatingButton(
-              size: 64,
-              backgroundColor: const Color(0xFFD4AF37),
-            ),
-          ),
+          Positioned(bottom: 24, right: 24, child: ProfileFloatingButton()),
         ],
       ),
       floatingActionButton: ProfileFloatingButton(),

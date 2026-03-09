@@ -1,282 +1,87 @@
 // lib/presentation/widgets/profile_floating_button.dart
+//
+// 🏛️  PLAZA UNIVERSE — Botón Maestro de Navegación
+// ────────────────────────────────────────────────────────────
+//  DISEÑO:
+//  • FAB: anillo dorado pulsante + avatar/inicial + glow
+//  • Bottom sheet: glassmorphism oscuro con header de usuario
+//  • Opciones: tiles con ícono en círculo dorado + press scale
+//  • Logout: fila roja con diálogo coherente con el sistema
+//  • Animación de apertura: slide-up suave del sheet
+// ────────────────────────────────────────────────────────────
+
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
-import '../../core/routing/app_router.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../di/service_locator.dart';
 import '../../core/utils/firebase_auth_service.dart';
 
-/// Botón flotante de perfil reutilizable para la esquina inferior derecha
-class ProfileFloatingButton extends StatelessWidget {
-  final double bottom;
-  final double right;
-  final double size;
-  final Color backgroundColor;
+// ── Paleta (idéntica al sistema de diseño) ────────────────────
+const _kGold = Color(0xFFD4AF37);
+const _kGoldLight = Color(0xFFFFE082);
+const _kGoldDeep = Color(0xFF9C7A1A);
+const _kBg = Color(0xFF07070F);
+const _kSurface = Color(0xFF0F0F1E);
+const _kBorder = Color(0xFF1E1E3A);
+const _kHint = Color(0xFF6B6B8A);
+
+// ══════════════════════════════════════════════════════════════
+//  BOTÓN FLOTANTE PRINCIPAL
+// ══════════════════════════════════════════════════════════════
+class ProfileFloatingButton extends StatefulWidget {
   final bool hideOrganizacionesOption;
   final bool hidePlazoletasOption;
 
   const ProfileFloatingButton({
     super.key,
-    this.bottom = 24,
-    this.right = 24,
-    this.size = 56,
-    this.backgroundColor = const Color(0xFFD4AF37),
     this.hideOrganizacionesOption = false,
     this.hidePlazoletasOption = false,
   });
 
-  void _showProfileMenu(BuildContext parentContext, User currentUser) {
+  @override
+  State<ProfileFloatingButton> createState() => _ProfileFloatingButtonState();
+}
+
+class _ProfileFloatingButtonState extends State<ProfileFloatingButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _pulseAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Abre el bottom sheet de navegación ────────────────────
+  void _openMenu(BuildContext context, User user) {
     showModalBottomSheet(
-      context: parentContext,
-      backgroundColor: const Color(0xFF1E1E1E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (bottomSheetContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Información del usuario
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundImage:
-                          currentUser.photoURL != null
-                              ? NetworkImage(currentUser.photoURL!)
-                              : null,
-                      backgroundColor: Colors.grey[700],
-                      child:
-                          currentUser.photoURL == null
-                              ? const Icon(
-                                Icons.person,
-                                size: 30,
-                                color: Colors.white,
-                              )
-                              : null,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            currentUser.displayName ?? 'Usuario',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            currentUser.email ?? '',
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 14,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(color: Colors.grey, height: 1),
-              // Opción de perfil
-              ListTile(
-                leading: const Icon(Icons.person, color: Colors.white),
-                title: const Text(
-                  'Mi perfil',
-                  style: TextStyle(color: Colors.white),
-                ),
-                onTap: () {
-                  Navigator.pop(bottomSheetContext);
-                  AppRouter.router.go('/profile');
-                },
-              ),
-              // Opción de plazoletas
-              if (!hidePlazoletasOption)
-                ListTile(
-                  leading: const Icon(Icons.location_city, color: Colors.white),
-                  title: const Text(
-                    'Plazoletas',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  onTap: () {
-                    Navigator.pop(bottomSheetContext);
-                    AppRouter.router.go('/plazoletas');
-                  },
-                ),
-              // Opción de organizaciones
-              if (!hideOrganizacionesOption)
-                ListTile(
-                  leading: const Icon(Icons.group, color: Colors.white),
-                  title: const Text(
-                    'Organizaciones',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  onTap: () {
-                    Navigator.pop(bottomSheetContext);
-                    AppRouter.router.go('/organizaciones');
-                  },
-                ),
-              // Opción de configuración
-              ListTile(
-                leading: const Icon(Icons.settings, color: Colors.white),
-                title: const Text(
-                  'Configuración',
-                  style: TextStyle(color: Colors.white),
-                ),
-                onTap: () {
-                  Navigator.pop(bottomSheetContext);
-                  ScaffoldMessenger.of(parentContext).showSnackBar(
-                    const SnackBar(
-                      content: Text('Configuración - En desarrollo'),
-                      backgroundColor: Colors.blue,
-                    ),
-                  );
-                },
-              ),
-              const Divider(color: Colors.grey, height: 1),
-              // Opción de cerrar sesión
-              ListTile(
-                leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text(
-                  'Cerrar sesión',
-                  style: TextStyle(color: Colors.red),
-                ),
-                onTap: () {
-                  Navigator.pop(bottomSheetContext);
-                  _showLogoutConfirmation(parentContext);
-                },
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _showLogoutConfirmation(BuildContext context) async {
-    debugPrint('_showLogoutConfirmation called');
-    final result = await showDialog<bool>(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder:
-          (context) => AlertDialog(
-            backgroundColor: const Color(0xFF1E1E1E),
-            title: const Text(
-              'Cerrar sesión',
-              style: TextStyle(color: Colors.white),
-            ),
-            content: const Text(
-              '¿Estás seguro de que quieres cerrar sesión?',
-              style: TextStyle(color: Colors.grey),
-            ),
-            actions: [
-              TextButton(
-                onPressed:
-                    () => Navigator.of(context, rootNavigator: true).pop(false),
-                child: const Text(
-                  'Cancelar',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-              TextButton(
-                onPressed:
-                    () => Navigator.of(context, rootNavigator: true).pop(true),
-                child: const Text(
-                  'Cerrar sesión',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            ],
+          (_) => _ProfileSheet(
+            user: user,
+            hideOrganizacionesOption: widget.hideOrganizacionesOption,
+            hidePlazoletasOption: widget.hidePlazoletasOption,
           ),
     );
-
-    if (result == true) {
-      debugPrint('User confirmed logout');
-      await _performLogout(context);
-    } else {
-      debugPrint('User cancelled logout');
-    }
-  }
-
-  Future<void> _performLogout(BuildContext context) async {
-    debugPrint('_performLogout started');
-    // Capturar el contexto antes de operaciones asíncronas
-    final logoutContext = context;
-    final authService = getIt<FirebaseAuthService>();
-
-    try {
-      debugPrint('Showing loading dialog');
-      // Mostrar indicador de carga
-      showDialog(
-        context: logoutContext,
-        barrierDismissible: false,
-        useRootNavigator: true,
-        builder:
-            (context) => const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            ),
-      );
-
-      debugPrint('Calling authService.signOut()');
-      // Cerrar sesión usando el servicio de autenticación
-      final result = await authService.signOut();
-
-      debugPrint('Closing loading dialog');
-      // Cerrar el diálogo de carga
-      Navigator.of(logoutContext, rootNavigator: true).pop();
-
-      result.fold(
-        (success) {
-          debugPrint('authService.signOut completed successfully');
-          // Pequeño delay para asegurar que el estado de autenticación se actualice
-          Future.delayed(const Duration(milliseconds: 100), () {
-            debugPrint('Navigating to /login using AppRouter.router.go');
-            // Navegar a la pantalla de login usando el router de la aplicación
-            AppRouter.router.go('/login');
-            debugPrint('Navigation to /login completed');
-          });
-        },
-        (error) {
-          debugPrint('Error during authService.signOut: ${error.toString()}');
-          // Mostrar mensaje de error
-          ScaffoldMessenger.of(logoutContext).showSnackBar(
-            SnackBar(
-              content: Text('Error al cerrar sesión: ${error.toString()}'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        },
-      );
-    } catch (error) {
-      debugPrint('Unexpected error in _performLogout: ${error.toString()}');
-      // Intentar cerrar el diálogo de carga si aún está abierto
-      try {
-        Navigator.of(logoutContext, rootNavigator: true).pop();
-      } catch (e) {
-        // Ignorar error si el diálogo ya está cerrado
-      }
-      // Mostrar mensaje de error
-      ScaffoldMessenger.of(logoutContext).showSnackBar(
-        SnackBar(
-          content: Text('Error inesperado: ${error.toString()}'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-    debugPrint('_performLogout method completed');
   }
 
   @override
@@ -284,46 +89,769 @@ class ProfileFloatingButton extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        final isAuthenticated = snapshot.hasData && snapshot.data != null;
-        final currentUser = snapshot.data;
+        final user = snapshot.data;
+        final isAuth = user != null;
 
-        if (!isAuthenticated || currentUser == null) {
-          return FloatingActionButton(
-            onPressed: () {
-              AppRouter.router.go('/login');
+        return AnimatedBuilder(
+          animation: _pulseAnim,
+          builder:
+              (_, child) => Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Anillo de glow exterior pulsante
+                  Container(
+                    width: 68,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: _kGold.withOpacity(0.28 * _pulseAnim.value),
+                          blurRadius: 22 * _pulseAnim.value,
+                          spreadRadius: 4 * _pulseAnim.value,
+                        ),
+                      ],
+                    ),
+                  ),
+                  child!,
+                ],
+              ),
+          child: GestureDetector(
+            onTap: () {
+              if (isAuth) {
+                _openMenu(context, user);
+              } else {
+                context.push('/login');
+              }
             },
-            backgroundColor: backgroundColor,
-            child: const Icon(Icons.login, color: Colors.black, size: 28),
-            elevation: 6,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const SweepGradient(
+                  colors: [_kGoldDeep, _kGold, _kGoldLight, _kGold, _kGoldDeep],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.50),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(2.5),
+              child: Container(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _kBg,
+                ),
+                padding: const EdgeInsets.all(2),
+                child: ClipOval(
+                  child: isAuth ? _buildUserAvatar(user) : _buildLoginIcon(),
+                ),
+              ),
             ),
-          );
-        }
-
-        return FloatingActionButton(
-          onPressed: () {
-            _showProfileMenu(context, currentUser);
-          },
-          backgroundColor: backgroundColor,
-          child: CircleAvatar(
-            radius: 20,
-            backgroundImage:
-                currentUser.photoURL != null
-                    ? NetworkImage(currentUser.photoURL!)
-                    : null,
-            backgroundColor: Colors.grey[800],
-            child:
-                currentUser.photoURL == null
-                    ? const Icon(Icons.person, size: 24, color: Colors.white)
-                    : null,
-          ),
-          elevation: 6,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildUserAvatar(User user) {
+    if (user.photoURL != null && user.photoURL!.isNotEmpty) {
+      return Image.network(
+        user.photoURL!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildInitialAvatar(user),
+      );
+    }
+    return _buildInitialAvatar(user);
+  }
+
+  Widget _buildInitialAvatar(User user) {
+    final initial =
+        (user.displayName?.isNotEmpty == true)
+            ? user.displayName![0].toUpperCase()
+            : (user.email?.isNotEmpty == true)
+            ? user.email![0].toUpperCase()
+            : '?';
+    return Container(
+      color: _kGold.withOpacity(0.10),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: _kGold,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoginIcon() {
+    return Container(
+      color: _kGold.withOpacity(0.08),
+      child: const Center(
+        child: Icon(Icons.login_rounded, color: _kGold, size: 22),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BOTTOM SHEET DE PERFIL Y NAVEGACIÓN
+// ══════════════════════════════════════════════════════════════
+class _ProfileSheet extends StatelessWidget {
+  final User user;
+  final bool hideOrganizacionesOption;
+  final bool hidePlazoletasOption;
+
+  const _ProfileSheet({
+    required this.user,
+    required this.hideOrganizacionesOption,
+    required this.hidePlazoletasOption,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _kSurface.withOpacity(0.95),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(top: BorderSide(color: _kBorder, width: 1)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Pill handle ────────────────────────────────
+                const SizedBox(height: 12),
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: _kBorder,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // ── Header de usuario ──────────────────────────
+                _buildUserHeader(context),
+
+                const SizedBox(height: 16),
+
+                // ── Separador dorado ───────────────────────────
+                Container(
+                  height: 1,
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        _kGold.withOpacity(0.35),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // ── Opciones de navegación ─────────────────────
+                _SheetTile(
+                  icon: Icons.person_outline_rounded,
+                  label: 'Mi perfil',
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/profile');
+                  },
+                ),
+                if (!hidePlazoletasOption)
+                  _SheetTile(
+                    icon: Icons.location_city_rounded,
+                    label: 'Plazoletas',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/plazoletas');
+                    },
+                  ),
+                if (!hideOrganizacionesOption)
+                  _SheetTile(
+                    icon: Icons.account_balance_rounded,
+                    label: 'Organizaciones',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/organizaciones');
+                    },
+                  ),
+                _SheetTile(
+                  icon: Icons.settings_outlined,
+                  label: 'Configuración',
+                  onTap: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: _kSurface,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: _kBorder),
+                        ),
+                        content: const Row(
+                          children: [
+                            Icon(
+                              Icons.settings_outlined,
+                              color: _kGold,
+                              size: 16,
+                            ),
+                            SizedBox(width: 10),
+                            Text(
+                              'Configuración — En desarrollo',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                // ── Separador rojo ─────────────────────────────
+                Container(
+                  height: 1,
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Colors.red.withOpacity(0.20),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ── Logout ─────────────────────────────────────
+                _SheetTile(
+                  icon: Icons.logout_rounded,
+                  label: 'Cerrar sesión',
+                  isDestructive: true,
+                  onTap: () => _showLogoutConfirmationWithOverlay(context),
+                ),
+
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Header con avatar y datos ─────────────────────────────
+  Widget _buildUserHeader(BuildContext context) {
+    final hasPhoto = user.photoURL != null && user.photoURL!.isNotEmpty;
+    final initial =
+        (user.displayName?.isNotEmpty == true)
+            ? user.displayName![0].toUpperCase()
+            : (user.email?.isNotEmpty == true)
+            ? user.email![0].toUpperCase()
+            : '?';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          // Avatar con anillo dorado
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const SweepGradient(
+                colors: [_kGoldDeep, _kGold, _kGoldLight, _kGold, _kGoldDeep],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _kGold.withOpacity(0.22),
+                  blurRadius: 14,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(2),
+            child: Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: _kBg,
+              ),
+              padding: const EdgeInsets.all(2),
+              child: ClipOval(
+                child:
+                    hasPhoto
+                        ? Image.network(
+                          user.photoURL!,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (_, __, ___) => _buildInitialWidget(initial),
+                        )
+                        : _buildInitialWidget(initial),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 14),
+
+          // Nombre y email
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShaderMask(
+                  shaderCallback:
+                      (b) => const LinearGradient(
+                        colors: [Colors.white, _kGoldLight],
+                        stops: [0.5, 1.0],
+                      ).createShader(b),
+                  child: Text(
+                    user.displayName ?? 'Usuario',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  user.email ?? '',
+                  style: const TextStyle(
+                    color: _kHint,
+                    fontSize: 12,
+                    letterSpacing: 0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+
+          // Badge sesión activa
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.green.withOpacity(0.28),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.greenAccent,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                const Text(
+                  'Activo',
+                  style: TextStyle(
+                    color: Colors.greenAccent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInitialWidget(String initial) {
+    return Container(
+      color: _kGold.withOpacity(0.10),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: _kGold,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showLogoutConfirmationWithOverlay(BuildContext context) async {
+    // Obtener el overlay del root navigator ANTES de cerrar el BottomSheet
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    final overlayContext = rootNavigator.overlay?.context;
+
+    if (overlayContext == null || !overlayContext.mounted) {
+      // Fallback: usar el contexto actual
+      _showLogoutConfirmationFallback(context);
+      return;
+    }
+
+    // Cerrar el BottomSheet primero
+    Navigator.of(context).pop();
+
+    // Usar Future.microtask para asegurar que el BottomSheet se haya cerrado
+    Future.microtask(() async {
+      if (!overlayContext.mounted) {
+        _showLogoutConfirmationFallback(context);
+        return;
+      }
+
+      // Mostrar diálogo de confirmación usando el overlay context
+      final result = await showDialog<bool>(
+        context: overlayContext,
+        useRootNavigator: true,
+        barrierDismissible: true,
+        builder: (dialogContext) => _buildLogoutDialog(dialogContext),
+      );
+
+      if (result == true && overlayContext.mounted) {
+        // Realizar logout
+        await _performLogout(overlayContext);
+      }
+    });
+  }
+
+  void _showLogoutConfirmationFallback(BuildContext context) {
+    // Cerrar el BottomSheet
+    Navigator.of(context).pop();
+
+    // Mostrar diálogo directamente usando el contexto después de un delay
+    Future.microtask(() async {
+      final result = await showDialog<bool>(
+        context: context,
+        useRootNavigator: true,
+        barrierDismissible: true,
+        builder: (dialogContext) => _buildLogoutDialog(dialogContext),
+      );
+
+      if (result == true && context.mounted) {
+        await _performLogout(context);
+      }
+    });
+  }
+
+  Widget _buildLogoutDialog(BuildContext dialogContext) {
+    return AlertDialog(
+      backgroundColor: _kSurface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: _kBorder, width: 1),
+      ),
+      title: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.red.withOpacity(0.10),
+              border: Border.all(color: Colors.red.withOpacity(0.30), width: 1),
+            ),
+            child: Icon(Icons.logout_rounded, color: Colors.red[300], size: 16),
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            'Cerrar sesión',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+      content: const Text(
+        '¿Estás seguro de que quieres cerrar sesión?',
+        style: TextStyle(color: _kHint, fontSize: 14, height: 1.5),
+      ),
+      actions: [
+        TextButton(
+          onPressed:
+              () => Navigator.of(dialogContext, rootNavigator: true).pop(false),
+          child: const Text(
+            'Cancelar',
+            style: TextStyle(color: _kHint, fontWeight: FontWeight.w500),
+          ),
+        ),
+        TextButton(
+          onPressed:
+              () => Navigator.of(dialogContext, rootNavigator: true).pop(true),
+          child: Text(
+            'Cerrar sesión',
+            style: TextStyle(
+              color: Colors.red[300],
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _performLogout(BuildContext context) async {
+    final authService = getIt<FirebaseAuthService>();
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        useRootNavigator: true,
+        builder:
+            (_) => Container(
+              color: Colors.black.withOpacity(0.55),
+              child: const Center(
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(_kGold),
+                  ),
+                ),
+              ),
+            ),
+      );
+
+      final result = await authService.signOut();
+      Navigator.of(context, rootNavigator: true).pop();
+
+      result.fold(
+        (_) {
+          Future.microtask(() {
+            context.push('/login');
+          });
+        },
+        (error) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: const Color(0xFF1A0808),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.red.withOpacity(0.35)),
+                ),
+                content: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline_rounded,
+                      color: Colors.red[300],
+                      size: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Error al cerrar sesión: ${error.toString()}',
+                        style: TextStyle(color: Colors.red[300], fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+        },
+      );
+    } catch (error) {
+      try {
+        Navigator.of(context, rootNavigator: true).pop();
+      } catch (_) {}
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF1A0808),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.red.withOpacity(0.35)),
+            ),
+            content: Text(
+              'Error inesperado: ${error.toString()}',
+              style: TextStyle(color: Colors.red[300], fontSize: 13),
+            ),
+          ),
+        );
+      }
+      debugPrint('Error in _performLogout: $error');
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TILE DEL BOTTOM SHEET CON PRESS SCALE
+// ══════════════════════════════════════════════════════════════
+class _SheetTile extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isDestructive;
+
+  const _SheetTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isDestructive = false,
+  });
+
+  @override
+  State<_SheetTile> createState() => _SheetTileState();
+}
+
+class _SheetTileState extends State<_SheetTile>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  bool _pressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 110),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.97,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final iconColor = widget.isDestructive ? Colors.red[300]! : _kGold;
+    final textColor = widget.isDestructive ? Colors.red[300]! : Colors.white;
+    final bgColor =
+        widget.isDestructive
+            ? Colors.red.withOpacity(0.05)
+            : _kGold.withOpacity(0.05);
+    final borderColor =
+        widget.isDestructive
+            ? Colors.red.withOpacity(0.20)
+            : _kGold.withOpacity(0.15);
+
+    return GestureDetector(
+      onTapDown: (_) {
+        _ctrl.forward();
+        setState(() => _pressed = true);
+      },
+      onTapUp: (_) {
+        _ctrl.reverse();
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () {
+        _ctrl.reverse();
+        setState(() => _pressed = false);
+      },
+      child: AnimatedBuilder(
+        animation: _scale,
+        builder:
+            (_, __) => Transform.scale(
+              scale: _scale.value,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 130),
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: _pressed ? bgColor : Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: _pressed ? borderColor : Colors.transparent,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // Ícono en círculo
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: iconColor.withOpacity(0.09),
+                        border: Border.all(
+                          color: iconColor.withOpacity(_pressed ? 0.38 : 0.18),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        widget.icon,
+                        color: iconColor.withOpacity(_pressed ? 1.0 : 0.75),
+                        size: 18,
+                      ),
+                    ),
+
+                    const SizedBox(width: 14),
+
+                    // Label
+                    Expanded(
+                      child: Text(
+                        widget.label,
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ),
+
+                    // Flecha (solo en opciones normales)
+                    if (!widget.isDestructive)
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: _kGold.withOpacity(_pressed ? 0.70 : 0.28),
+                        size: 13,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+      ),
     );
   }
 }

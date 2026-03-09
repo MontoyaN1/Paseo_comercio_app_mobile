@@ -235,7 +235,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   ) async {
     switch (value) {
       case 'profile_page':
-        context.go('/profile');
+        context.push('/profile');
         break;
       case 'settings':
         // TODO: Implementar página de configuración
