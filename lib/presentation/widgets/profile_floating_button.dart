@@ -13,6 +13,8 @@ class ProfileFloatingButton extends StatelessWidget {
   final double right;
   final double size;
   final Color backgroundColor;
+  final bool hideOrganizacionesOption;
+  final bool hidePlazoletasOption;
 
   const ProfileFloatingButton({
     super.key,
@@ -20,6 +22,8 @@ class ProfileFloatingButton extends StatelessWidget {
     this.right = 24,
     this.size = 56,
     this.backgroundColor = const Color(0xFFD4AF37),
+    this.hideOrganizacionesOption = false,
+    this.hidePlazoletasOption = false,
   });
 
   void _showProfileMenu(BuildContext parentContext, User currentUser) {
@@ -97,6 +101,32 @@ class ProfileFloatingButton extends StatelessWidget {
                   AppRouter.router.go('/profile');
                 },
               ),
+              // Opción de plazoletas
+              if (!hidePlazoletasOption)
+                ListTile(
+                  leading: const Icon(Icons.location_city, color: Colors.white),
+                  title: const Text(
+                    'Plazoletas',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    AppRouter.router.go('/plazoletas');
+                  },
+                ),
+              // Opción de organizaciones
+              if (!hideOrganizacionesOption)
+                ListTile(
+                  leading: const Icon(Icons.group, color: Colors.white),
+                  title: const Text(
+                    'Organizaciones',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    AppRouter.router.go('/organizaciones');
+                  },
+                ),
               // Opción de configuración
               ListTile(
                 leading: const Icon(Icons.settings, color: Colors.white),

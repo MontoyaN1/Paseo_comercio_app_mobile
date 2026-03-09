@@ -13,6 +13,9 @@ import '../../presentation/pages/tiendas/tienda_list_page.dart';
 import '../../presentation/pages/productos/producto_list_page.dart';
 import '../../presentation/pages/plazoletas/plazoleta_list_page.dart';
 import '../../presentation/pages/plazoletas/plazoleta_detail_page.dart';
+import '../../presentation/pages/organizaciones/organizacion_list_page.dart';
+import '../../presentation/pages/organizaciones/organizacion_detail_page.dart';
+import '../../domain/entities/organizacion.dart';
 
 /// Configuración de rutas de la aplicación usando GoRouter
 class AppRouter {
@@ -189,6 +192,7 @@ class AppRouter {
       ),
 
       // Productos (protegida)
+      // Lista de productos
       GoRoute(
         path: '/productos',
         name: 'productos',
@@ -209,6 +213,62 @@ class AppRouter {
               key: state.pageKey,
               child: const ProductoListPage(),
             ),
+      ),
+
+      // Lista de organizaciones
+      GoRoute(
+        path: '/organizaciones',
+        name: 'organizaciones',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario no está autenticado, redirigir a login
+          if (user == null) {
+            return '/login';
+          }
+
+          // Permitir acceso a organizaciones
+          return null;
+        },
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const OrganizacionListPage(),
+            ),
+      ),
+
+      // Detalle de organización
+      GoRoute(
+        path: '/organizaciones/:id',
+        name: 'organizacion_detail',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario no está autenticado, redirigir a login
+          if (user == null) {
+            return '/login';
+          }
+
+          // Permitir acceso a detalle de organización
+          return null;
+        },
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          final organizacionId = int.tryParse(id) ?? 0;
+
+          // Obtener organización de los argumentos si está disponible
+          final organizacion = state.extra as Organizacion?;
+
+          return MaterialPage<void>(
+            key: state.pageKey,
+            child: OrganizacionDetailPage(
+              organizacionId: organizacionId,
+              organizacion: organizacion,
+            ),
+          );
+        },
       ),
 
       // Detalle de producto (placeholder - por implementar)

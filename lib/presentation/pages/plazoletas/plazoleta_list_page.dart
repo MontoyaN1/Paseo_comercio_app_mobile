@@ -489,7 +489,11 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
           right: 22,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            child: ProfileFloatingButton(size: 54, backgroundColor: _kGold),
+            child: ProfileFloatingButton(
+              size: 54,
+              backgroundColor: _kGold,
+              hidePlazoletasOption: true,
+            ),
           ),
         ),
 

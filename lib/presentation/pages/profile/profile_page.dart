@@ -184,6 +184,16 @@ class ProfilePage extends StatelessWidget {
           const Divider(height: 1, indent: 16),
           _buildActionTile(
             context,
+            icon: Icons.group,
+            title: 'Organizaciones',
+            subtitle: 'Ver y gestionar organizaciones',
+            onTap: () {
+              Navigator.of(context).pushNamed('/organizaciones');
+            },
+          ),
+          const Divider(height: 1, indent: 16),
+          _buildActionTile(
+            context,
             icon: Icons.history_outlined,
             title: 'Historial',
             subtitle: 'Actividad reciente',

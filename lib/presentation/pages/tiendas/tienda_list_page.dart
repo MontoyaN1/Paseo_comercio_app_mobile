@@ -227,15 +227,7 @@ class _TiendaListPageState extends State<TiendaListPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Implementar creación de tienda
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Crear tienda - En desarrollo')),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: ProfileFloatingButton(),
     );
   }
 

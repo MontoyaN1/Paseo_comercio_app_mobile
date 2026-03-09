@@ -148,7 +148,7 @@ enum TipoOrganizacion {
   factory TipoOrganizacion.fromString(String value) {
     return TipoOrganizacion.values.firstWhere(
       (e) => e.value == value,
-      orElse: () => TipoOrganizacion.empresa,
+      orElse: () => TipoOrganizacion.fundacion,
     );
   }
 

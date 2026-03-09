@@ -16,10 +16,12 @@ import '../data/repositories/auth_repository.dart';
 import '../data/repositories/tienda_repository.dart';
 import '../data/repositories/plazoleta_repository.dart';
 import '../data/repositories/producto_repository.dart';
+import '../data/repositories/organizacion_repository.dart';
 import '../domain/repositories/auth_repository_interface.dart';
 import '../domain/repositories/tienda_repository_interface.dart';
 import '../domain/repositories/plazoleta_repository_interface.dart';
 import '../domain/repositories/producto_repository_interface.dart';
+import '../domain/repositories/organizacion_repository_interface.dart';
 // Los siguientes repositorios no existen aún, se comentan temporalmente
 // import '../data/repositories/categoria_repository.dart';
 // import '../data/repositories/imagen_repository.dart';
@@ -35,6 +37,7 @@ import '../presentation/blocs/tienda/tienda_bloc.dart';
 import '../presentation/blocs/plazoleta/plazoleta_bloc.dart';
 import '../presentation/blocs/producto/producto_bloc.dart';
 import '../presentation/blocs/image/image_bloc.dart';
+import '../presentation/blocs/organizacion/organizacion_bloc.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -136,6 +139,13 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
     ),
   );
 
+  getIt.registerLazySingleton<OrganizacionRepositoryInterface>(
+    () => OrganizacionRepository(
+      supabaseClient: getIt<SupabaseClientService>(),
+      localCache: getIt<LocalCacheService>(),
+    ),
+  );
+
   // Los siguientes repositorios están comentados porque no existen aún
   /*
   getIt.registerLazySingleton<CategoriaRepository>(
@@ -217,6 +227,12 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
       imageService: getIt<ImageService>(),
       cacheService: getIt<CacheService>(),
       connectivityService: getIt<ConnectivityService>(),
+    ),
+  );
+
+  getIt.registerLazySingleton<OrganizacionBloc>(
+    () => OrganizacionBloc(
+      organizacionRepository: getIt<OrganizacionRepositoryInterface>(),
     ),
   );
 
