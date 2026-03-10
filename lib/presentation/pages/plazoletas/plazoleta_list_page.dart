@@ -173,6 +173,7 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
   AnimationController? _introCtrl;
   AnimationController? _inertiaCtrl;
   AnimationController? _skylightCtrl; // luz cenital independiente
+  AnimationController? _navCtrl; // animaciones de navegación (zoom/centrar)
   bool _initialized = false;
 
   // Navegación
@@ -181,8 +182,14 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
   double _baseSc = 0.72;
   Offset _basePan = Offset.zero;
   Offset _focal = Offset.zero;
+  Offset _worldFocalAtStart = Offset.zero;
+
   Offset _velocity = Offset.zero;
   DateTime _lastPanTime = DateTime.now();
+
+  // Animación de navegación
+  Animation<double>? _scaleAnim;
+  Animation<Offset>? _panAnim;
 
   // Estado
   int? _selectedIdx;
@@ -218,6 +225,11 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
       duration: const Duration(milliseconds: 900),
     );
     _inertiaCtrl!.addListener(_applyInertia);
+    _navCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _navCtrl!.addListener(_updateNavAnimation);
     _initialized = true;
     getIt<PlazoletaBloc>().add(const LoadPlazoletasActivas(page: 1, limit: 20));
   }
@@ -225,11 +237,12 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
   @override
   void dispose() {
     _ambientCtrl?.dispose();
-    _skylightCtrl?.dispose();
     _selectCtrl?.dispose();
     _panelCtrl?.dispose();
     _introCtrl?.dispose();
     _inertiaCtrl?.dispose();
+    _skylightCtrl?.dispose();
+    _navCtrl?.dispose();
     super.dispose();
   }
 
@@ -274,11 +287,18 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
   // ── Navegación (fix v4) ────────────────────────────────────
   void _onScaleStart(ScaleStartDetails d) {
     _inertiaCtrl?.stop();
+    _navCtrl?.stop(); // Detener animaciones de navegación al comenzar gesto
     _baseSc = _scale;
     _basePan = _pan;
     _focal = d.localFocalPoint;
     _velocity = Offset.zero;
     _lastPanTime = DateTime.now();
+
+    // Convertir el punto táctil a coordenadas del mundo
+    // Nota: _screenToWorld ya considera _kOriginOffsetY
+    final size = context.size ?? Size.zero;
+    if (size.isEmpty) return;
+    _worldFocalAtStart = _screenToWorld(_focal, size);
   }
 
   void _onScaleUpdate(ScaleUpdateDetails d) {
@@ -287,10 +307,30 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
 
     setState(() {
       final newScale = (_baseSc * d.scale).clamp(0.30, 3.2);
+      final size = context.size ?? Size.zero;
+      if (size.isEmpty) return;
+
       if (d.scale != 1.0) {
-        // Zoom: mantener focal fijo
-        final ratio = newScale / _baseSc;
-        _pan = _focal - (_focal - _basePan) * ratio + d.focalPointDelta;
+        // Zoom: mantener el punto del mundo fijo bajo los dedos
+        // Fórmula: newPan = currentFocalPoint - worldPoint * newScale - center
+        // IMPORTANTE: centerY incluye _kOriginOffsetY para la proyección isométrica
+        final centerX = size.width / 2;
+        final centerY = size.height / 2 + _kOriginOffsetY;
+
+        // El punto del mundo que estaba bajo los dedos al inicio del gesto
+        final worldPoint = _worldFocalAtStart;
+
+        // Calcular el pan necesario para que worldPoint se proyecte a d.localFocalPoint con newScale
+        final requiredPanX =
+            d.localFocalPoint.dx - worldPoint.dx * newScale - centerX;
+        // Ajuste para compensar desfase vertical en proyección isométrica
+        // Usar la relación tH/tW = 55/110 = 0.5 de la transformación isométrica
+        final verticalCompensation = 0.9; // tH/tW ratio
+        final adjustedWorldY = worldPoint.dy * verticalCompensation;
+        final requiredPanY =
+            d.localFocalPoint.dy - adjustedWorldY * newScale - centerY;
+
+        _pan = Offset(requiredPanX, requiredPanY);
       } else {
         // Pan puro: delta absoluto desde inicio del gesto
         _pan = _basePan + (d.localFocalPoint - _focal);
@@ -298,7 +338,7 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
       _scale = newScale;
     });
 
-    if (dt > 0 && d.scale == 1.0) {
+    if (dt > 0) {
       _velocity = d.focalPointDelta / dt.toDouble() * 16;
     }
     _lastPanTime = now;
@@ -312,6 +352,38 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
     if (_inertiaCtrl == null) return;
     final decay = 1.0 - Curves.decelerate.transform(_inertiaCtrl!.value);
     setState(() => _pan += _velocity * decay);
+  }
+
+  void _updateNavAnimation() {
+    if (_navCtrl == null || _scaleAnim == null || _panAnim == null) return;
+    setState(() {
+      _scale = _scaleAnim!.value;
+      _pan = _panAnim!.value;
+    });
+  }
+
+  void _animateZoom(double targetScale) {
+    _inertiaCtrl?.stop();
+    _navCtrl?.stop();
+
+    final newScale = targetScale.clamp(0.30, 3.2);
+
+    // Zoom simple: mantener el mismo punto relativo fijo
+    // Para zoom desde el centro de la vista actual
+    final scaleRatio = newScale / _scale;
+    final newPan = Offset(_pan.dx * scaleRatio, _pan.dy * scaleRatio);
+
+    _scaleAnim = Tween<double>(
+      begin: _scale,
+      end: newScale,
+    ).animate(CurvedAnimation(parent: _navCtrl!, curve: Curves.easeOutCubic));
+
+    _panAnim = Tween<Offset>(
+      begin: _pan,
+      end: newPan,
+    ).animate(CurvedAnimation(parent: _navCtrl!, curve: Curves.easeOutCubic));
+
+    _navCtrl!.forward(from: 0);
   }
 
   // ── Tap ────────────────────────────────────────────────────
@@ -328,16 +400,30 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
         break;
       }
     }
-    if (hit != null)
+    if (hit != null) {
       _select(hit);
-    else
+    } else {
       _deselect();
+    }
   }
 
-  Offset _screenToWorld(Offset screen, Size size) => Offset(
-    (screen.dx - size.width / 2 - _pan.dx) / _scale,
-    (screen.dy - size.height / 2 - _pan.dy - _kOriginOffsetY) / _scale,
-  );
+  Offset _screenToWorld(Offset screen, Size size) {
+    if (size.isEmpty || _scale == 0) return Offset.zero;
+    return Offset(
+      (screen.dx - size.width / 2 - _pan.dx) / _scale,
+      (screen.dy - size.height / 2 - _pan.dy - _kOriginOffsetY) / _scale,
+    );
+  }
+
+  // Función para convertir coordenadas del mundo a coordenadas de pantalla
+  // Esta es la inversa de _screenToWorld
+  Offset _worldToScreen(Offset world, Size size) {
+    if (size.isEmpty) return Offset.zero;
+    return Offset(
+      world.dx * _scale + size.width / 2 + _pan.dx,
+      world.dy * _scale + size.height / 2 + _pan.dy + _kOriginOffsetY,
+    );
+  }
 
   bool _hitTestPlaza(_Plaza p, Offset world) {
     final c = p.slot.col.toDouble();
@@ -354,10 +440,19 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
 
   void _resetView() {
     _inertiaCtrl?.stop();
-    setState(() {
-      _scale = _initScale;
-      _pan = Offset.zero;
-    });
+    _navCtrl?.stop();
+
+    _scaleAnim = Tween<double>(
+      begin: _scale,
+      end: _initScale,
+    ).animate(CurvedAnimation(parent: _navCtrl!, curve: Curves.easeOutCubic));
+
+    _panAnim = Tween<Offset>(
+      begin: _pan,
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _navCtrl!, curve: Curves.easeOutCubic));
+
+    _navCtrl!.forward(from: 0);
     _deselect();
   }
 
@@ -374,13 +469,14 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
   // ══════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
-    if (!_initialized)
+    if (!_initialized) {
       return const Scaffold(
         backgroundColor: _kBg,
         body: Center(
           child: CircularProgressIndicator(color: _kGold, strokeWidth: 2),
         ),
       );
+    }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -389,8 +485,9 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
         body: BlocConsumer<PlazoletaBloc, PlazoletaState>(
           bloc: getIt<PlazoletaBloc>(),
           listener: (_, s) {
-            if (s is PlazoletaLoaded)
+            if (s is PlazoletaLoaded) {
               setState(() => _buildPlazas(s.plazoletas));
+            }
           },
           builder: (_, s) {
             if (s is PlazoletaLoading ||
@@ -462,7 +559,7 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
         _mapControls(),
 
         // ── Panel ────────────────────────────────────────────
-        if (hasPanel)
+        if (hasPanel) ...[
           AnimatedBuilder(
             animation: _panelCtrl!,
             builder: (_, __) {
@@ -486,6 +583,7 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
               );
             },
           ),
+        ],
 
         // ── FAB perfil ───────────────────────────────────────
         Positioned(
@@ -614,15 +712,9 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _mapBtn(
-            Icons.remove,
-            () => setState(() => _scale = (_scale / 1.22).clamp(0.30, 3.2)),
-          ),
+          _mapBtn(Icons.remove, () => _animateZoom(_scale / 1.4)),
           Container(width: 1, height: 24, color: _kGold.withOpacity(0.2)),
-          _mapBtn(
-            Icons.add,
-            () => setState(() => _scale = (_scale * 1.22).clamp(0.30, 3.2)),
-          ),
+          _mapBtn(Icons.add, () => _animateZoom(_scale * 1.4)),
           Container(width: 1, height: 24, color: _kGold.withOpacity(0.2)),
           _mapBtn(Icons.center_focus_strong_rounded, _resetView, accent: true),
         ],
@@ -2874,8 +2966,9 @@ class _DetailPanel extends StatelessWidget {
     if (d == null) return null;
     if (state.imagenesPlazoleta != null) {
       for (final img in state.imagenesPlazoleta!) {
-        if (img.entidadRelacionadaId == d.id && img.esPrincipal)
+        if (img.entidadRelacionadaId == d.id && img.esPrincipal) {
           return img.urlPreferida;
+        }
       }
       for (final img in state.imagenesPlazoleta!) {
         if (img.entidadRelacionadaId == d.id) return img.urlPreferida;
