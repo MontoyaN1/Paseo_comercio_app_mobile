@@ -31,9 +31,101 @@ const Color _kGold = Color(0xFFD4AF37);
 extension StringExtension on String {
   String capitalize() {
     if (isEmpty) return this;
-    return '${this[0].toUpperCase()}${substring(1)}';
+    return '${this[0].toUpperCase()}${substring(1).toLowerCase()}';
   }
 }
+
+/// Extrae el código de país de un número de teléfono
+String? extractCountryCode(String phoneNumber) {
+  if (phoneNumber.startsWith('+')) {
+    final plusIndex = phoneNumber.indexOf('+');
+    final spaceIndex = phoneNumber.indexOf(' ');
+    if (spaceIndex > plusIndex) {
+      return phoneNumber.substring(plusIndex, spaceIndex);
+    } else {
+      // Buscar donde terminan los dígitos del código
+      int i = 1;
+      while (i < phoneNumber.length &&
+          phoneNumber[i].contains(RegExp(r'[0-9]'))) {
+        i++;
+      }
+      return phoneNumber.substring(0, i);
+    }
+  }
+  return null;
+}
+
+/// Obtiene la bandera emoji para un código de país dado
+String? getFlagForCountryCode(String countryCode) {
+  // Mapa para búsquedas más eficientes
+  final Map<String, String> countryCodeToFlag = {
+    '+57': '🇨🇴',
+    '+34': '🇪🇸',
+    '+1': '🇺🇸',
+    '+52': '🇲🇽',
+    '+54': '🇦🇷',
+    '+56': '🇨🇱',
+    '+51': '🇵🇪',
+    '+58': '🇻🇪',
+    '+55': '🇧🇷',
+    '+44': '🇬🇧',
+    '+33': '🇫🇷',
+    '+49': '🇩🇪',
+    '+39': '🇮🇹',
+    '+81': '🇯🇵',
+    '+86': '🇨🇳',
+    '+91': '🇮🇳',
+    '+7': '🇷🇺',
+    '+61': '🇦🇺',
+    '+64': '🇳🇿',
+    '+27': '🇿🇦',
+  };
+  return countryCodeToFlag[countryCode];
+}
+
+/// Extrae solo el número sin el código de país
+String extractPhoneWithoutCode(String phoneNumber) {
+  if (phoneNumber.startsWith('+')) {
+    final plusIndex = phoneNumber.indexOf('+');
+    final spaceIndex = phoneNumber.indexOf(' ');
+    if (spaceIndex > plusIndex) {
+      return phoneNumber.substring(spaceIndex + 1);
+    } else {
+      // Buscar donde terminan los dígitos del código
+      int i = 1;
+      while (i < phoneNumber.length &&
+          phoneNumber[i].contains(RegExp(r'[0-9]'))) {
+        i++;
+      }
+      return phoneNumber.substring(i);
+    }
+  }
+  return phoneNumber;
+}
+
+// Lista de países con códigos comunes
+const List<Map<String, String>> _countryCodes = [
+  {'code': '+57', 'name': 'Colombia', 'flag': '🇨🇴'},
+  {'code': '+34', 'name': 'España', 'flag': '🇪🇸'},
+  {'code': '+1', 'name': 'Estados Unidos', 'flag': '🇺🇸'},
+  {'code': '+52', 'name': 'México', 'flag': '🇲🇽'},
+  {'code': '+54', 'name': 'Argentina', 'flag': '🇦🇷'},
+  {'code': '+56', 'name': 'Chile', 'flag': '🇨🇱'},
+  {'code': '+51', 'name': 'Perú', 'flag': '🇵🇪'},
+  {'code': '+58', 'name': 'Venezuela', 'flag': '🇻🇪'},
+  {'code': '+55', 'name': 'Brasil', 'flag': '🇧🇷'},
+  {'code': '+44', 'name': 'Reino Unido', 'flag': '🇬🇧'},
+  {'code': '+33', 'name': 'Francia', 'flag': '🇫🇷'},
+  {'code': '+49', 'name': 'Alemania', 'flag': '🇩🇪'},
+  {'code': '+39', 'name': 'Italia', 'flag': '🇮🇹'},
+  {'code': '+81', 'name': 'Japón', 'flag': '🇯🇵'},
+  {'code': '+86', 'name': 'China', 'flag': '🇨🇳'},
+  {'code': '+91', 'name': 'India', 'flag': '🇮🇳'},
+  {'code': '+7', 'name': 'Rusia', 'flag': '🇷🇺'},
+  {'code': '+61', 'name': 'Australia', 'flag': '🇦🇺'},
+  {'code': '+64', 'name': 'Nueva Zelanda', 'flag': '🇳🇿'},
+  {'code': '+27', 'name': 'Sudáfrica', 'flag': '🇿🇦'},
+];
 
 const _kGoldLight = Color(0xFFFFE082);
 const _kGoldDeep = Color(0xFF9C7A1A);
@@ -487,13 +579,7 @@ class _ProfilePageState extends State<ProfilePage>
           _SectionDivider(),
           Row(
             children: [
-              Expanded(
-                child: _GoldInfoRow(
-                  icon: Icons.phone_outlined,
-                  label: 'Teléfono',
-                  value: authService.currentUserPhoneNumber ?? 'No disponible',
-                ),
-              ),
+              Expanded(child: _buildPhoneInfoRow()),
               const SizedBox(width: 8),
               _GoldIconButton(
                 icon: Icons.edit_outlined,
@@ -558,6 +644,251 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
+  // ── Información de teléfono ───────────────────────────────
+  Widget _buildPhoneInfoRow() {
+    final authService = getIt<FirebaseAuthService>();
+    final phoneNumber = authService.currentUserPhoneNumber ?? 'No disponible';
+    final countryCode = extractCountryCode(phoneNumber);
+    final phoneWithoutCode = extractPhoneWithoutCode(phoneNumber);
+    final countryFlag =
+        countryCode != null ? getFlagForCountryCode(countryCode) : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.phone_outlined, color: _kGold, size: 20),
+            const SizedBox(width: 12),
+            Text('Teléfono', style: TextStyle(color: _kHint, fontSize: 14)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (phoneNumber == 'No disponible')
+          Text(
+            'No disponible',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 16,
+            ),
+          )
+        else
+          Row(
+            children: [
+              if (countryCode != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _kGold.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: _kGold.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (countryFlag != null)
+                        Text(countryFlag, style: TextStyle(fontSize: 16)),
+                      if (countryFlag != null) const SizedBox(width: 4),
+                      Text(
+                        countryCode,
+                        style: TextStyle(
+                          color: _kGold,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (countryCode != null) const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  phoneWithoutCode,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  // ── Selector de país simple ──────────────────────────────────
+  Future<String?> _showSimpleCountryPicker(
+    BuildContext context,
+    String currentCode,
+  ) async {
+    return await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: _kSurface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: _kBorder, width: 1),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.6,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _kSurface,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                    border: Border(
+                      bottom: BorderSide(color: _kBorder, width: 1),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.language, color: _kGold, size: 24),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Seleccionar país',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Lista de países
+                Expanded(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _countryCodes.length,
+                    itemBuilder: (context, index) {
+                      final country = _countryCodes[index];
+                      final isSelected = country['code'] == currentCode;
+
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.pop(context, country['code']);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  isSelected
+                                      ? _kGold.withOpacity(0.1)
+                                      : Colors.transparent,
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _kBorder.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  country['flag']!,
+                                  style: TextStyle(fontSize: 24),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        country['name']!,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        country['code']!,
+                                        style: TextStyle(
+                                          color: _kHint,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: _kGold,
+                                    size: 20,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                // Footer
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _kSurfaceCard,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                    border: Border(top: BorderSide(color: _kBorder, width: 1)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                        ),
+                        child: Text(
+                          'Cancelar',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // ── Logout ────────────────────────────────────────────────
   Future<void> _showEditProfileDialog(
     BuildContext context,
@@ -565,18 +896,25 @@ class _ProfilePageState extends State<ProfilePage>
   ) async {
     final authService = getIt<FirebaseAuthService>();
     final TextEditingController controller = TextEditingController();
-    final String currentValue;
+    String currentValue = '';
     final String label;
+    String selectedCountryCode = '+57'; // Código por defecto para Colombia
+    String currentPhoneWithoutCode = '';
+    bool countryChanged = false;
 
     if (field == 'nombre') {
       currentValue = authService.currentUserName ?? '';
       label = 'Nombre completo';
+      controller.text = currentValue;
     } else {
-      currentValue = authService.currentUserPhoneNumber ?? '';
+      // Extraer código de país si existe en el número actual
+      final phoneValue = authService.currentUserPhoneNumber ?? '';
+      currentValue = phoneValue;
+      selectedCountryCode = extractCountryCode(phoneValue) ?? '+57';
+      currentPhoneWithoutCode = extractPhoneWithoutCode(phoneValue);
+      controller.text = currentPhoneWithoutCode;
       label = 'Teléfono';
     }
-
-    controller.text = currentValue;
 
     final result = await showDialog<String>(
       context: context,
@@ -622,46 +960,153 @@ class _ProfilePageState extends State<ProfilePage>
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 8),
-                TextFormField(
-                  controller: controller,
-                  decoration: InputDecoration(
-                    labelText: label,
-                    labelStyle: TextStyle(color: _kHint),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: _kBorder),
+                if (field == 'telefono')
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () async {
+                              final newCode = await _showSimpleCountryPicker(
+                                context,
+                                selectedCountryCode,
+                              );
+                              if (newCode != null &&
+                                  newCode != selectedCountryCode) {
+                                selectedCountryCode = newCode;
+                                countryChanged = true;
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _kGold.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _kGold.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    getFlagForCountryCode(
+                                          selectedCountryCode,
+                                        ) ??
+                                        '',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    selectedCountryCode,
+                                    style: TextStyle(
+                                      color: _kGold,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.arrow_drop_down_rounded,
+                                    color: _kGold,
+                                    size: 20,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: TextFormField(
+                              controller: controller,
+                              decoration: InputDecoration(
+                                labelText: 'Número de teléfono',
+                                labelStyle: TextStyle(color: _kHint),
+                                hintText: 'Ej: 3001234567',
+                                hintStyle: TextStyle(
+                                  color: _kHint.withOpacity(0.7),
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: _kBorder),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: _kBorder),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: _kGold),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                              ),
+                              style: TextStyle(color: Colors.white),
+                              cursorColor: _kGold,
+                              keyboardType: TextInputType.phone,
+                              validator: (value) {
+                                if (value == null || value.isEmpty)
+                                  return 'Ingresa un número de teléfono';
+                                if (value.contains(' '))
+                                  return 'No incluyas espacios';
+                                if (value.contains('-'))
+                                  return 'No incluyas guiones';
+                                if (!RegExp(r'^[0-9]+$').hasMatch(value))
+                                  return 'Solo se permiten números';
+                                if (value.length < 7) return 'Mínimo 7 dígitos';
+                                return null;
+                              },
+                              autovalidateMode:
+                                  AutovalidateMode.onUserInteraction,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Formato: $selectedCountryCode + número (ej: 3001234567)',
+                        style: TextStyle(
+                          color: _kHint,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  TextFormField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: label,
+                      labelStyle: TextStyle(color: _kHint),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: _kBorder),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: _kBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: _kGold),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: _kBorder),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: _kGold),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
+                    style: TextStyle(color: Colors.white),
+                    cursorColor: _kGold,
+                    keyboardType: TextInputType.text,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                   ),
-                  style: TextStyle(color: Colors.white),
-                  cursorColor: _kGold,
-                  keyboardType:
-                      field == 'telefono'
-                          ? TextInputType.phone
-                          : TextInputType.text,
-                  validator:
-                      field == 'telefono'
-                          ? (value) {
-                            if (value == null || value.isEmpty)
-                              return 'Ingresa un número de teléfono';
-                            if (!RegExp(r'^[0-9]+$').hasMatch(value))
-                              return 'Solo se permiten números';
-                            return null;
-                          }
-                          : null,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
@@ -687,20 +1132,107 @@ class _ProfilePageState extends State<ProfilePage>
                       child: _ShimmerButton(
                         label: 'Guardar',
                         onTap: () async {
-                          final newValue = controller.text.trim();
-                          if (newValue.isNotEmpty && newValue != currentValue) {
-                            // Validar teléfono si es necesario
-                            if (field == 'telefono' &&
-                                !RegExp(r'^[0-9]+$').hasMatch(newValue)) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Solo se permiten números en el teléfono',
-                                  ),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
+                          String newValue = controller.text.trim();
+                          if (field == 'telefono') {
+                            // Combinar código de país con número
+                            newValue = '$selectedCountryCode $newValue';
+                          }
+
+                          if (newValue.isNotEmpty) {
+                            // Para teléfono, permitir cambiar solo el código de país
+                            if (field == 'telefono') {
+                              final phoneOnly = controller.text.trim();
+                              // Permitir guardar si el número es igual pero el código de país cambió
+                              if (phoneOnly == currentPhoneWithoutCode) {
+                                if (!countryChanged) {
+                                  Navigator.of(
+                                    context,
+                                    rootNavigator: true,
+                                  ).pop();
+                                  return;
+                                } else {
+                                  // Mostrar mensaje informativo cuando solo se cambia el código de país
+                                  final flag = getFlagForCountryCode(
+                                    selectedCountryCode,
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        flag != null
+                                            ? 'Código de país actualizado a $flag $selectedCountryCode'
+                                            : 'Código de país actualizado a $selectedCountryCode',
+                                      ),
+                                      backgroundColor: _kGold.withOpacity(0.9),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              }
+                            } else if (newValue == currentValue) {
+                              Navigator.of(context, rootNavigator: true).pop();
                               return;
+                            }
+                            // Validar teléfono si es necesario
+                            if (field == 'telefono') {
+                              final phoneNumber = controller.text.trim();
+                              if (phoneNumber.isEmpty && !countryChanged) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Ingresa un número de teléfono',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                              if (phoneNumber.contains(' ')) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'No incluyas espacios en el número de teléfono',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                              if (phoneNumber.contains('-')) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'No incluyas guiones en el número de teléfono',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                              if (phoneNumber.isNotEmpty &&
+                                  !RegExp(r'^[0-9]+$').hasMatch(phoneNumber)) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Solo se permiten números en el teléfono',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                              // Validar longitud mínima del número de teléfono solo si hay número
+                              if (phoneNumber.isNotEmpty &&
+                                  phoneNumber.length < 7) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'El número de teléfono debe tener al menos 7 dígitos',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
                             }
 
                             // Cerrar diálogo primero con el resultado
@@ -719,8 +1251,22 @@ class _ProfilePageState extends State<ProfilePage>
     );
 
     // Procesar resultado después de cerrar el diálogo
-    if (result != null && result.isNotEmpty && result != currentValue) {
-      await _updateProfile(field, result);
+    if (result != null && result.isNotEmpty) {
+      // Para teléfono, permitir actualizar incluso si solo cambió el código de país
+      if (field == 'telefono') {
+        final phoneOnly = extractPhoneWithoutCode(result);
+        final currentPhoneOnly = extractPhoneWithoutCode(currentValue);
+        final resultCountryCode = extractCountryCode(result);
+        final currentCountryCode = extractCountryCode(currentValue);
+
+        // Actualizar si el número cambió O si el código de país cambió
+        if (phoneOnly != currentPhoneOnly ||
+            resultCountryCode != currentCountryCode) {
+          await _updateProfile(field, result);
+        }
+      } else if (result != currentValue) {
+        await _updateProfile(field, result);
+      }
     }
   }
 
