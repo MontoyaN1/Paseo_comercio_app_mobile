@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart'
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../errors/app_exceptions.dart';
 import 'auth_state.dart';
 import 'cache_service.dart';
@@ -19,7 +19,7 @@ import '../../data/datasources/remote/supabase_client.dart';
 class FirebaseAuthService {
   // Instancias de Firebase
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   late GoogleSignIn _googleSignIn;
   final SupabaseClientService _supabaseClient;
 
@@ -135,11 +135,15 @@ class FirebaseAuthService {
 
   /// Obtener nombre del usuario actual
   String? get currentUserName =>
-      _currentUser?.displayName ?? _userProfile?['nombre'];
+      _currentUser?.displayName ?? _userProfile?['nombre_completo'];
 
   /// Obtener URL de imagen del usuario actual
   String? get currentUserImageUrl =>
-      _currentUser?.photoURL ?? _userProfile?['fotoUrl'];
+      _currentUser?.photoURL ?? _userProfile?['avatar_url'];
+
+  /// Obtener teléfono del usuario actual
+  String? get currentUserPhoneNumber =>
+      _userProfile?['telefono'] ?? _currentUser?.phoneNumber;
 
   /// Iniciar sesión con email y contraseña
   Future<Result<void, Exception>> signInWithEmail(
@@ -263,12 +267,8 @@ class FirebaseAuthService {
       );
 
       if (userCredential.user != null) {
-        // Crear perfil del usuario en Firestore
-        await _createUserProfile(
-          userId: userCredential.user!.uid,
-          email: email,
-          nombre: nombre,
-        );
+        // Sincronizar con Supabase
+        await _syncUserWithSupabase(userCredential.user!);
 
         // Actualizar display name si se proporcionó
         if (nombre != null) {
@@ -448,13 +448,8 @@ class FirebaseAuthService {
           );
         }
 
-        // Crear o actualizar perfil del usuario
-        await _createOrUpdateUserProfile(
-          userId: userCredential.user!.uid,
-          email: userCredential.user!.email!,
-          nombre: userCredential.user!.displayName,
-          fotoUrl: userCredential.user!.photoURL,
-        );
+        // Sincronizar usuario con Supabase
+        await _syncUserWithSupabase(userCredential.user!);
 
         await _loadUserProfile(userCredential.user!.uid);
 
@@ -510,8 +505,8 @@ class FirebaseAuthService {
       final userCredential = await _auth.signInAnonymously();
 
       if (userCredential.user != null) {
-        // Crear perfil básico para usuario anónimo
-        await _createBasicUserProfile(userCredential.user!.uid);
+        // Sincronizar con Supabase
+        await _syncUserWithSupabase(userCredential.user!);
         await _loadUserProfile(userCredential.user!.uid);
         await _updateAuthState(AuthState.authenticated);
         return Result.success(null);
@@ -580,16 +575,7 @@ class FirebaseAuthService {
         );
       }
 
-      // Actualizar en Firestore
-      final updates = <String, dynamic>{};
-      if (nombre != null) updates['nombre'] = nombre;
-      if (telefono != null) updates['telefono'] = telefono;
-      if (fotoUrl != null) updates['fotoUrl'] = fotoUrl;
-      updates['fechaActualizacion'] = FieldValue.serverTimestamp();
-
-      await _firestore.collection('usuarios').doc(userId).update(updates);
-
-      // Actualizar en Firebase Auth si es necesario
+      // Actualizar en Firebase Auth
       if (nombre != null && _currentUser != null) {
         await _currentUser!.updateDisplayName(nombre);
       }
@@ -598,8 +584,46 @@ class FirebaseAuthService {
         await _currentUser!.updatePhotoURL(fotoUrl);
       }
 
-      // Recargar perfil
+      // Actualizar en Supabase usando syncUsuario
+      try {
+        final email = _currentUser!.email;
+        if (email == null || email.isEmpty) {
+          if (kDebugMode) {
+            print(
+              'FirebaseAuthService: No se puede actualizar en Supabase sin email',
+            );
+          }
+        } else {
+          final nombreCompleto =
+              nombre ?? _currentUser!.displayName ?? email.split('@')[0];
+          await _supabaseClient.syncUsuario(
+            firebaseUserId: userId,
+            email: email,
+            nombreCompleto: nombreCompleto,
+            telefono: telefono,
+            avatarUrl: fotoUrl,
+          );
+
+          if (kDebugMode) {
+            print(
+              'FirebaseAuthService: Perfil actualizado en Supabase correctamente',
+            );
+          }
+        }
+      } catch (supabaseError) {
+        if (kDebugMode) {
+          print(
+            'FirebaseAuthService: Advertencia - No se pudo actualizar en Supabase: $supabaseError',
+          );
+          print(
+            'FirebaseAuthService: El perfil se actualizó en Firebase Auth pero no en Supabase',
+          );
+        }
+      }
+
+      // Recargar perfil localmente
       await _loadUserProfile(userId);
+
       return Result.success(null);
     } catch (error) {
       return Result.error(
@@ -681,8 +705,8 @@ class FirebaseAuthService {
         );
       }
 
-      // Eliminar perfil de Firestore
-      await _firestore.collection('usuarios').doc(user.uid).delete();
+      // Eliminar perfil de Supabase
+      await _supabaseClient.usuarios.delete().eq('firebase_user_id', user.uid);
 
       // Eliminar cuenta de Firebase Auth
       await user.delete();
@@ -718,25 +742,28 @@ class FirebaseAuthService {
     }
   }
 
-  /// Cargar perfil del usuario desde Firestore
+  /// Cargar perfil del usuario desde Supabase
   Future<void> _loadUserProfile(String userId) async {
     try {
-      final doc = await _firestore.collection('usuarios').doc(userId).get();
-      if (doc.exists) {
-        _userProfile = doc.data();
+      final userProfile = await _supabaseClient.getUsuarioByFirebaseId(userId);
+      if (userProfile != null) {
+        _userProfile = userProfile;
       } else {
-        // Crear perfil básico si no existe
-        await _createBasicUserProfile(userId);
-        _userProfile = {
-          'id': userId,
-          'email': _currentUser?.email,
-          'nombre': _currentUser?.displayName,
-          'fechaRegistro': FieldValue.serverTimestamp(),
-        };
+        // Si no existe en Supabase, sincronizar usuario
+        if (_currentUser != null) {
+          await _syncUserWithSupabase(_currentUser!);
+          // Intentar cargar nuevamente después de sincronizar
+          final refreshedProfile = await _supabaseClient.getUsuarioByFirebaseId(
+            userId,
+          );
+          _userProfile = refreshedProfile;
+        } else {
+          _userProfile = null;
+        }
       }
     } catch (error) {
       if (kDebugMode) {
-        print('Error al cargar perfil de usuario: $error');
+        print('Error al cargar perfil de usuario desde Supabase: $error');
       }
       _userProfile = null;
     }
@@ -781,99 +808,6 @@ class FirebaseAuthService {
         print('Error en _syncUserWithSupabase: $e');
       }
       // No lanzar excepción para no romper el flujo de autenticación
-    }
-  }
-
-  /// Crear perfil básico de usuario
-  Future<void> _createBasicUserProfile(String userId) async {
-    try {
-      await _firestore.collection('usuarios').doc(userId).set({
-        'id': userId,
-        'email': _currentUser?.email,
-        'nombre': _currentUser?.displayName,
-        'fotoUrl': _currentUser?.photoURL,
-        'fechaRegistro': FieldValue.serverTimestamp(),
-        'fechaActualizacion': FieldValue.serverTimestamp(),
-        'preferencias': {
-          'notificaciones': true,
-          'tema': 'light',
-          'idioma': 'es',
-        },
-        'favoritos': [],
-      });
-    } catch (error) {
-      if (kDebugMode) {
-        print('Error al crear perfil básico: $error');
-      }
-    }
-  }
-
-  /// Crear perfil de usuario
-  Future<void> _createUserProfile({
-    required String userId,
-    required String email,
-    String? nombre,
-  }) async {
-    try {
-      await _firestore.collection('usuarios').doc(userId).set({
-        'id': userId,
-        'email': email,
-        'nombre': nombre,
-        'fechaRegistro': FieldValue.serverTimestamp(),
-        'fechaActualizacion': FieldValue.serverTimestamp(),
-        'preferencias': {
-          'notificaciones': true,
-          'tema': 'light',
-          'idioma': 'es',
-        },
-        'favoritos': [],
-      });
-    } catch (error) {
-      if (kDebugMode) {
-        print('Error al crear perfil de usuario: $error');
-      }
-    }
-  }
-
-  /// Crear o actualizar perfil de usuario
-  Future<void> _createOrUpdateUserProfile({
-    required String userId,
-    required String email,
-    String? nombre,
-    String? fotoUrl,
-  }) async {
-    try {
-      final userRef = _firestore.collection('usuarios').doc(userId);
-      final doc = await userRef.get();
-
-      if (doc.exists) {
-        // Actualizar perfil existente
-        await userRef.update({
-          'nombre': nombre,
-          'fotoUrl': fotoUrl,
-          'fechaActualizacion': FieldValue.serverTimestamp(),
-        });
-      } else {
-        // Crear nuevo perfil
-        await userRef.set({
-          'id': userId,
-          'email': email,
-          'nombre': nombre,
-          'fotoUrl': fotoUrl,
-          'fechaRegistro': FieldValue.serverTimestamp(),
-          'fechaActualizacion': FieldValue.serverTimestamp(),
-          'preferencias': {
-            'notificaciones': true,
-            'tema': 'light',
-            'idioma': 'es',
-          },
-          'favoritos': [],
-        });
-      }
-    } catch (error) {
-      if (kDebugMode) {
-        print('Error al crear/actualizar perfil: $error');
-      }
     }
   }
 
@@ -1081,13 +1015,8 @@ class FirebaseAuthService {
 
       await user.linkWithCredential(credential);
 
-      // Actualizar perfil con información de Google
-      await _createOrUpdateUserProfile(
-        userId: user.uid,
-        email: user.email!,
-        nombre: googleUser.displayName,
-        fotoUrl: googleUser.photoUrl,
-      );
+      // Sincronizar usuario con Supabase
+      await _syncUserWithSupabase(user);
 
       await _loadUserProfile(user.uid);
       return Result.success(null);
@@ -1150,10 +1079,24 @@ class FirebaseAuthService {
 
   /// Obtener fecha de registro del usuario
   DateTime? get registrationDate {
-    if (_userProfile != null && _userProfile!['fechaRegistro'] != null) {
-      final timestamp = _userProfile!['fechaRegistro'];
-      if (timestamp is Timestamp) {
-        return timestamp.toDate();
+    if (_userProfile != null) {
+      // Intentar obtener de Supabase primero
+      final supabaseDate = _userProfile!['created_at'];
+      if (supabaseDate != null) {
+        if (supabaseDate is String) {
+          return DateTime.tryParse(supabaseDate);
+        } else if (supabaseDate is DateTime) {
+          return supabaseDate;
+        }
+      }
+      // Fallback a fecha de registro de Firestore (obsoleta)
+      final firestoreDate = _userProfile!['fechaRegistro'];
+      if (firestoreDate != null) {
+        if (firestoreDate is String) {
+          return DateTime.tryParse(firestoreDate);
+        } else if (firestoreDate is DateTime) {
+          return firestoreDate;
+        }
       }
     }
     return _currentUser?.metadata.creationTime;
@@ -1161,10 +1104,24 @@ class FirebaseAuthService {
 
   /// Obtener fecha del último acceso
   DateTime? get lastSignInDate {
-    if (_userProfile != null && _userProfile!['fechaActualizacion'] != null) {
-      final timestamp = _userProfile!['fechaActualizacion'];
-      if (timestamp is Timestamp) {
-        return timestamp.toDate();
+    if (_userProfile != null) {
+      // Intentar obtener de Supabase primero
+      final supabaseDate = _userProfile!['updated_at'];
+      if (supabaseDate != null) {
+        if (supabaseDate is String) {
+          return DateTime.tryParse(supabaseDate);
+        } else if (supabaseDate is DateTime) {
+          return supabaseDate;
+        }
+      }
+      // Fallback a fecha de actualización de Firestore (obsoleta)
+      final firestoreDate = _userProfile!['fechaActualizacion'];
+      if (firestoreDate != null) {
+        if (firestoreDate is String) {
+          return DateTime.tryParse(firestoreDate);
+        } else if (firestoreDate is DateTime) {
+          return firestoreDate;
+        }
       }
     }
     return _currentUser?.metadata.lastSignInTime;
@@ -1175,35 +1132,6 @@ class FirebaseAuthService {
     return _userProfile?['preferencias'];
   }
 
-  /// Actualizar preferencias del usuario
-  Future<Result<void, Exception>> updatePreferences(
-    Map<String, dynamic> preferences,
-  ) async {
-    try {
-      final userId = _currentUser?.uid;
-      if (userId == null) {
-        return Result.error(
-          AuthException(message: 'No hay usuario autenticado'),
-        );
-      }
-
-      await _firestore.collection('usuarios').doc(userId).update({
-        'preferencias': preferences,
-        'fechaActualizacion': FieldValue.serverTimestamp(),
-      });
-
-      await _loadUserProfile(userId);
-      return Result.success(null);
-    } catch (error) {
-      return Result.error(
-        AuthException(
-          message: 'Error al actualizar preferencias',
-          cause: error,
-        ),
-      );
-    }
-  }
-
   /// Obtener favoritos del usuario
   List<String>? get userFavorites {
     final favorites = _userProfile?['favoritos'];
@@ -1211,54 +1139,6 @@ class FirebaseAuthService {
       return favorites.cast<String>();
     }
     return null;
-  }
-
-  /// Agregar favorito
-  Future<Result<void, Exception>> addFavorite(String itemId) async {
-    try {
-      final userId = _currentUser?.uid;
-      if (userId == null) {
-        return Result.error(
-          AuthException(message: 'No hay usuario autenticado'),
-        );
-      }
-
-      await _firestore.collection('usuarios').doc(userId).update({
-        'favoritos': FieldValue.arrayUnion([itemId]),
-        'fechaActualizacion': FieldValue.serverTimestamp(),
-      });
-
-      await _loadUserProfile(userId);
-      return Result.success(null);
-    } catch (error) {
-      return Result.error(
-        AuthException(message: 'Error al agregar favorito', cause: error),
-      );
-    }
-  }
-
-  /// Eliminar favorito
-  Future<Result<void, Exception>> removeFavorite(String itemId) async {
-    try {
-      final userId = _currentUser?.uid;
-      if (userId == null) {
-        return Result.error(
-          AuthException(message: 'No hay usuario autenticado'),
-        );
-      }
-
-      await _firestore.collection('usuarios').doc(userId).update({
-        'favoritos': FieldValue.arrayRemove([itemId]),
-        'fechaActualizacion': FieldValue.serverTimestamp(),
-      });
-
-      await _loadUserProfile(userId);
-      return Result.success(null);
-    } catch (error) {
-      return Result.error(
-        AuthException(message: 'Error al eliminar favorito', cause: error),
-      );
-    }
   }
 
   /// Verificar si un item está en favoritos

@@ -308,6 +308,16 @@ class SupabaseClientService {
           _logger.d(
             'Usuario encontrado por clerkUserId: ${userByClerkId['id']}',
           );
+          // Actualizar campos del usuario si se proporcionan
+          await _actualizarCamposUsuario(
+            usuarioId: userByClerkId['id'] as int,
+            nombreCompleto: nombreCompleto,
+            telefono: telefono,
+          );
+          // Actualizar avatar si se proporciona
+          if (avatarUrl != null && avatarUrl.isNotEmpty) {
+            await _actualizarAvatar(userByClerkId['id'] as int, avatarUrl);
+          }
           await _actualizarUltimoLogin(clerkUserId, null);
           return userByClerkId;
         } else {
@@ -322,6 +332,16 @@ class SupabaseClientService {
           _logger.d(
             'Usuario encontrado por firebaseUserId: ${userByFirebaseId['id']}',
           );
+          // Actualizar campos del usuario si se proporcionan
+          await _actualizarCamposUsuario(
+            usuarioId: userByFirebaseId['id'] as int,
+            nombreCompleto: nombreCompleto,
+            telefono: telefono,
+          );
+          // Actualizar avatar si se proporciona
+          if (avatarUrl != null && avatarUrl.isNotEmpty) {
+            await _actualizarAvatar(userByFirebaseId['id'] as int, avatarUrl);
+          }
           await _actualizarUltimoLogin(null, firebaseUserId);
           return userByFirebaseId;
         } else {
@@ -345,9 +365,14 @@ class SupabaseClientService {
           clerkUserId,
           firebaseUserId,
         );
+        // Actualizar campos del usuario si se proporcionan
+        await _actualizarCamposUsuario(
+          usuarioId: userByEmail['id'] as int,
+          nombreCompleto: nombreCompleto,
+          telefono: telefono,
+        );
         // Actualizar avatar si se proporciona
         if (avatarUrl != null && avatarUrl.isNotEmpty) {
-          _logger.d('Actualizando avatar para usuario ${userByEmail['id']}');
           await _actualizarAvatar(userByEmail['id'] as int, avatarUrl);
         }
         await _actualizarUltimoLogin(clerkUserId, firebaseUserId);
@@ -419,6 +444,30 @@ class SupabaseClientService {
       }
     } catch (e) {
       _logger.e('Error actualizando ID externo: $e');
+    }
+  }
+
+  /// Método privado para actualizar campos del usuario
+  Future<void> _actualizarCamposUsuario({
+    required int usuarioId,
+    String? nombreCompleto,
+    String? telefono,
+  }) async {
+    try {
+      final updates = <String, dynamic>{};
+      if (nombreCompleto != null && nombreCompleto.isNotEmpty) {
+        updates['nombre_completo'] = nombreCompleto;
+      }
+      if (telefono != null && telefono.isNotEmpty) {
+        updates['telefono'] = telefono;
+      }
+
+      if (updates.isNotEmpty) {
+        await usuarios.update(updates).eq('id', usuarioId);
+        _logger.d('Campos de usuario actualizados exitosamente: $updates');
+      }
+    } catch (e) {
+      _logger.e('Error actualizando campos del usuario: $e');
     }
   }
 

@@ -174,7 +174,7 @@ class UpdateProfileParams extends Equatable {
     if (telefono != null) json['telefono'] = telefono;
     if (perfilPublico != null) json['perfil_publico'] = perfilPublico;
     if (avatarUrl != null) json['avatar_url'] = avatarUrl;
-    json['updated_at'] = DateTime.now().toIso8601String();
+
     return json;
   }
 

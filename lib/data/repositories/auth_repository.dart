@@ -243,7 +243,6 @@ class AuthRepository implements AuthRepositoryInterface {
       if (nombreCompleto != null) updates['nombre_completo'] = nombreCompleto;
       if (telefono != null) updates['telefono'] = telefono;
       if (perfilPublico != null) updates['perfil_publico'] = perfilPublico;
-      updates['updated_at'] = DateTime.now().toIso8601String();
 
       if (updates.isNotEmpty) {
         final response = await _supabaseClient.usuarios

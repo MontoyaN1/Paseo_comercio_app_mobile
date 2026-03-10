@@ -1,4 +1,5 @@
 // lib/presentation/pages/profile/profile_page.dart
+
 //
 // 🏛️  PLAZA UNIVERSE — Perfil de Usuario
 // ────────────────────────────────────────────────────────────
@@ -20,9 +21,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:paseo_del_comercio/di/service_locator.dart';
 import 'package:paseo_del_comercio/core/utils/firebase_auth_service.dart';
+import 'package:paseo_del_comercio/core/errors/app_exceptions.dart';
+import 'package:paseo_del_comercio/core/utils/result.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
-const _kGold = Color(0xFFD4AF37);
+const Color _kGold = Color(0xFFD4AF37);
+
+// Extensión para capitalizar strings
+extension StringExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return '${this[0].toUpperCase()}${substring(1)}';
+  }
+}
+
 const _kGoldLight = Color(0xFFFFE082);
 const _kGoldDeep = Color(0xFF9C7A1A);
 const _kBg = Color(0xFF07070F);
@@ -246,7 +258,7 @@ class _ProfilePageState extends State<ProfilePage>
                     child: child,
                   ),
                 ),
-            child: _buildAvatarHero(user),
+            child: _buildAvatarHero(),
           ),
 
           const SizedBox(height: 32),
@@ -264,7 +276,7 @@ class _ProfilePageState extends State<ProfilePage>
                 ),
             child: Column(
               children: [
-                _buildInfoSection(user),
+                _buildInfoSection(),
                 const SizedBox(height: 16),
                 _buildActionsSection(context),
                 const SizedBox(height: 28),
@@ -278,7 +290,12 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   // ── Hero del Avatar ───────────────────────────────────────
-  Widget _buildAvatarHero(User user) {
+  Widget _buildAvatarHero() {
+    final authService = getIt<FirebaseAuthService>();
+    final imageUrl = authService.currentUserImageUrl;
+    final displayName = authService.currentUserName;
+    final email = authService.currentUserEmail;
+
     return Column(
       children: [
         // Avatar con anillo dorado animado
@@ -329,14 +346,14 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                     child: ClipOval(
                       child:
-                          user.photoURL != null && user.photoURL!.isNotEmpty
+                          imageUrl != null && imageUrl.isNotEmpty
                               ? Image.network(
-                                user.photoURL!,
+                                imageUrl,
                                 fit: BoxFit.cover,
                                 errorBuilder:
-                                    (_, __, ___) => _buildAvatarFallback(user),
+                                    (_, __, ___) => _buildAvatarFallback(),
                               )
-                              : _buildAvatarFallback(user),
+                              : _buildAvatarFallback(),
                     ),
                   ),
                 ],
@@ -353,7 +370,7 @@ class _ProfilePageState extends State<ProfilePage>
                 stops: [0.5, 1.0],
               ).createShader(b),
           child: Text(
-            user.displayName ?? 'Usuario',
+            displayName ?? 'Usuario',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
@@ -368,12 +385,8 @@ class _ProfilePageState extends State<ProfilePage>
 
         // Email
         Text(
-          user.email ?? 'usuario@ejemplo.com',
-          style: const TextStyle(
-            color: _kHint,
-            fontSize: 14,
-            letterSpacing: 0.3,
-          ),
+          email ?? '',
+          style: TextStyle(color: _kHint, fontSize: 13),
           textAlign: TextAlign.center,
         ),
 
@@ -415,11 +428,11 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildAvatarFallback(User user) {
+  Widget _buildAvatarFallback() {
+    final authService = getIt<FirebaseAuthService>();
+    final displayName = authService.currentUserName;
     final initials =
-        (user.displayName?.isNotEmpty == true)
-            ? user.displayName![0].toUpperCase()
-            : '?';
+        (displayName?.isNotEmpty == true) ? displayName![0].toUpperCase() : '?';
     return Container(
       color: _kGold.withOpacity(0.10),
       child: Center(
@@ -436,11 +449,12 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   // ── Sección de información ────────────────────────────────
-  Widget _buildInfoSection(User user) {
-    final creationTime = user.metadata.creationTime;
+  Widget _buildInfoSection() {
+    final authService = getIt<FirebaseAuthService>();
+    final registrationDate = authService.registrationDate;
     final fechaCreacion =
-        creationTime != null
-            ? '${creationTime.day}/${creationTime.month}/${creationTime.year}'
+        registrationDate != null
+            ? '${registrationDate.day}/${registrationDate.month}/${registrationDate.year}'
             : 'No disponible';
 
     return _GlassSection(
@@ -448,22 +462,44 @@ class _ProfilePageState extends State<ProfilePage>
       icon: Icons.badge_outlined,
       child: Column(
         children: [
-          _GoldInfoRow(
-            icon: Icons.person_outline_rounded,
-            label: 'Nombre completo',
-            value: user.displayName ?? 'No disponible',
+          Row(
+            children: [
+              Expanded(
+                child: _GoldInfoRow(
+                  icon: Icons.person_outline_rounded,
+                  label: 'Nombre completo',
+                  value: authService.currentUserName ?? 'No disponible',
+                ),
+              ),
+              const SizedBox(width: 8),
+              _GoldIconButton(
+                icon: Icons.edit_outlined,
+                onTap: () => _showEditProfileDialog(context, 'nombre'),
+              ),
+            ],
           ),
           _SectionDivider(),
           _GoldInfoRow(
             icon: Icons.alternate_email_rounded,
             label: 'Email',
-            value: user.email ?? 'No disponible',
+            value: authService.currentUserEmail ?? 'No disponible',
           ),
           _SectionDivider(),
-          _GoldInfoRow(
-            icon: Icons.phone_outlined,
-            label: 'Teléfono',
-            value: user.phoneNumber ?? 'No disponible',
+          Row(
+            children: [
+              Expanded(
+                child: _GoldInfoRow(
+                  icon: Icons.phone_outlined,
+                  label: 'Teléfono',
+                  value: authService.currentUserPhoneNumber ?? 'No disponible',
+                ),
+              ),
+              const SizedBox(width: 8),
+              _GoldIconButton(
+                icon: Icons.edit_outlined,
+                onTap: () => _showEditProfileDialog(context, 'telefono'),
+              ),
+            ],
           ),
           _SectionDivider(),
           _GoldInfoRow(
@@ -523,6 +559,343 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   // ── Logout ────────────────────────────────────────────────
+  Future<void> _showEditProfileDialog(
+    BuildContext context,
+    String field,
+  ) async {
+    final authService = getIt<FirebaseAuthService>();
+    final TextEditingController controller = TextEditingController();
+    final String currentValue;
+    final String label;
+
+    if (field == 'nombre') {
+      currentValue = authService.currentUserName ?? '';
+      label = 'Nombre completo';
+    } else {
+      currentValue = authService.currentUserPhoneNumber ?? '';
+      label = 'Teléfono';
+    }
+
+    controller.text = currentValue;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder:
+          (dialogContext) => AlertDialog(
+            backgroundColor: _kSurface,
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: _kBorder, width: 1),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _kGold.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    field == 'nombre'
+                        ? Icons.person_outline
+                        : Icons.phone_outlined,
+                    color: _kGold,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Editar $label',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    labelText: label,
+                    labelStyle: TextStyle(color: _kHint),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _kBorder),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _kBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _kGold),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                  style: TextStyle(color: Colors.white),
+                  cursorColor: _kGold,
+                  keyboardType:
+                      field == 'telefono'
+                          ? TextInputType.phone
+                          : TextInputType.text,
+                  validator:
+                      field == 'telefono'
+                          ? (value) {
+                            if (value == null || value.isEmpty)
+                              return 'Ingresa un número de teléfono';
+                            if (!RegExp(r'^[0-9]+$').hasMatch(value))
+                              return 'Solo se permiten números';
+                            return null;
+                          }
+                          : null,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          backgroundColor: _kSurfaceCard,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: _kBorder),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text(
+                          'Cancelar',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ShimmerButton(
+                        label: 'Guardar',
+                        onTap: () async {
+                          final newValue = controller.text.trim();
+                          if (newValue.isNotEmpty && newValue != currentValue) {
+                            // Validar teléfono si es necesario
+                            if (field == 'telefono' &&
+                                !RegExp(r'^[0-9]+$').hasMatch(newValue)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Solo se permiten números en el teléfono',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            // Cerrar diálogo primero con el resultado
+                            Navigator.pop(context, newValue);
+                          } else {
+                            Navigator.of(context, rootNavigator: true).pop();
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+    );
+
+    // Procesar resultado después de cerrar el diálogo
+    if (result != null && result.isNotEmpty && result != currentValue) {
+      await _updateProfile(field, result);
+    }
+  }
+
+  Future<void> _updateProfile(String field, String newValue) async {
+    BuildContext context = this.context;
+    print('_updateProfile: Iniciando actualización de $field a "$newValue"');
+    print('_updateProfile: Contexto montado inicialmente: ${context.mounted}');
+    // Verificar que el contexto esté montado antes de mostrar el diálogo
+    if (!context.mounted) {
+      print('_updateProfile: Contexto no montado, abortando actualización');
+      return;
+    }
+
+    try {
+      // Mostrar overlay de carga
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        useRootNavigator: true,
+        builder: (context) => _LoadingOverlay(),
+      );
+
+      // Obtener el servicio de autenticación
+      final authService = getIt<FirebaseAuthService>();
+      print('_updateProfile: AuthService obtenido');
+
+      // Actualizar el perfil según el campo
+      Result<void, Exception> result;
+      final String fieldLabel;
+      print('_updateProfile: Llamando a updateProfile para $field');
+      if (field == 'nombre') {
+        result = await authService.updateProfile(nombre: newValue);
+        fieldLabel = 'Nombre';
+      } else {
+        result = await authService.updateProfile(telefono: newValue);
+        fieldLabel = 'Teléfono';
+      }
+      print(
+        '_updateProfile: Resultado obtenido: ${result.isSuccess ? "éxito" : "error"}',
+      );
+
+      // Cerrar overlay primero, antes de mostrar snackbars
+      print(
+        '_updateProfile: Intentando cerrar diálogo de carga, contexto montado: ${context.mounted}',
+      );
+      if (context.mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+          print('_updateProfile: Diálogo de carga cerrado exitosamente');
+        } catch (e) {
+          print('_updateProfile: Error al cerrar diálogo de carga: $e');
+        }
+      } else {
+        print(
+          '_updateProfile: Contexto no montado, no se puede cerrar diálogo',
+        );
+      }
+
+      // Manejar el resultado con fold para obtener error específico
+      result.fold(
+        (_) {
+          // Éxito
+          print(
+            '_updateProfile: Operación exitosa, verificando contexto: ${context.mounted}',
+          );
+          if (context.mounted) {
+            try {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: _kGold.withOpacity(0.9),
+                  content: Text(
+                    '$fieldLabel actualizado correctamente',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  duration: const Duration(seconds: 3),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              );
+              print('_updateProfile: SnackBar de éxito mostrado');
+            } catch (e) {
+              print('_updateProfile: Error al mostrar snackbar de éxito: $e');
+            }
+
+            // Recargar la página después de un breve delay
+            Future.delayed(const Duration(milliseconds: 500), () {
+              print(
+                '_updateProfile: Recargando página después de delay, contexto montado: ${context.mounted}',
+              );
+              if (context.mounted) {
+                try {
+                  setState(() {});
+                  print('_updateProfile: Página recargada exitosamente');
+                } catch (e) {
+                  print('_updateProfile: Error al recargar página: $e');
+                }
+              }
+            });
+          } else {
+            print(
+              '_updateProfile: Contexto no montado después de éxito, no se puede mostrar feedback',
+            );
+          }
+        },
+        (error) {
+          // Error
+          print('_updateProfile: Error recibido: $error');
+          print('_updateProfile: StackTrace: ${error.toString()}');
+          String errorMessage = 'Error al actualizar $field';
+          if (error is AuthException) {
+            errorMessage = error.message;
+          } else if (error.toString().contains('NOT_FOUND') ||
+              error.toString().contains('database does not exist')) {
+            errorMessage =
+                'Base de datos no configurada. Contacta al administrador.';
+          } else if (error.toString().isNotEmpty) {
+            errorMessage = 'Error: ${error.toString()}';
+          }
+          print(
+            '_updateProfile: Mostrando mensaje: $errorMessage, contexto montado: ${context.mounted}',
+          );
+          if (context.mounted) {
+            try {
+              _showErrorSnackBar(context, errorMessage);
+              print('_updateProfile: SnackBar de error mostrado');
+            } catch (e) {
+              print('_updateProfile: Error al mostrar snackbar de error: $e');
+            }
+          } else {
+            print(
+              '_updateProfile: Contexto no montado, no se puede mostrar error al usuario',
+            );
+          }
+        },
+      );
+    } catch (error) {
+      print('_updateProfile: Excepción no manejada: $error');
+      print('_updateProfile: StackTrace: ${StackTrace.current}');
+      print(
+        '_updateProfile: Verificando contexto después de excepción: ${context.mounted}',
+      );
+      // Intentar cerrar el diálogo de carga si existe
+      if (context.mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+          print(
+            '_updateProfile: Diálogo de carga cerrado después de excepción',
+          );
+        } catch (e) {
+          print(
+            '_updateProfile: Error al cerrar diálogo después de excepción: $e',
+          );
+        }
+      }
+      // Mostrar error usando el contexto de la página
+      if (context.mounted) {
+        try {
+          _showErrorSnackBar(
+            context,
+            'Error al actualizar $field: ${error.toString()}',
+          );
+          print('_updateProfile: Error mostrado después de excepción');
+        } catch (e) {
+          print(
+            '_updateProfile: Error al mostrar error después de excepción: $e',
+          );
+        }
+      } else {
+        print(
+          '_updateProfile: Contexto no montado después de excepción, no se puede mostrar error',
+        );
+      }
+    }
+  }
+
   Future<void> _performLogout(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -535,6 +908,7 @@ class _ProfilePageState extends State<ProfilePage>
     showDialog(
       context: context,
       barrierDismissible: false,
+      useRootNavigator: true,
       builder: (_) => const _LoadingOverlay(),
     );
 
@@ -542,7 +916,7 @@ class _ProfilePageState extends State<ProfilePage>
       final authService = getIt<FirebaseAuthService>();
       final result = await authService.signOut();
 
-      if (context.mounted) Navigator.of(context).pop();
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
 
       result.fold(
         (_) {
@@ -557,8 +931,8 @@ class _ProfilePageState extends State<ProfilePage>
         },
       );
     } catch (error) {
-      if (context.mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
       }
       if (context.mounted) {
         _showErrorSnackBar(context, 'Error inesperado: $error');
