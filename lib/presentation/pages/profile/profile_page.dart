@@ -605,13 +605,15 @@ class _ProfilePageState extends State<ProfilePage>
                     size: 20,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  'Editar $label',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                Expanded(
+                  child: Text(
+                    'Editar $label',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -805,20 +807,13 @@ class _ProfilePageState extends State<ProfilePage>
               print('_updateProfile: Error al mostrar snackbar de éxito: $e');
             }
 
-            // Recargar la página después de un breve delay
-            Future.delayed(const Duration(milliseconds: 500), () {
-              print(
-                '_updateProfile: Recargando página después de delay, contexto montado: ${context.mounted}',
-              );
-              if (context.mounted) {
-                try {
-                  setState(() {});
-                  print('_updateProfile: Página recargada exitosamente');
-                } catch (e) {
-                  print('_updateProfile: Error al recargar página: $e');
-                }
-              }
-            });
+            // Recargar la página inmediatamente
+            try {
+              setState(() {});
+              print('_updateProfile: Página recargada exitosamente');
+            } catch (e) {
+              print('_updateProfile: Error al recargar página: $e');
+            }
           } else {
             print(
               '_updateProfile: Contexto no montado después de éxito, no se puede mostrar feedback',

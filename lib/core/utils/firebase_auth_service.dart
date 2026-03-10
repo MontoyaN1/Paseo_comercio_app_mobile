@@ -134,16 +134,32 @@ class FirebaseAuthService {
   String? get currentUserEmail => _currentUser?.email;
 
   /// Obtener nombre del usuario actual
-  String? get currentUserName =>
-      _currentUser?.displayName ?? _userProfile?['nombre_completo'];
+  String? get currentUserName {
+    final displayName = _currentUser?.displayName;
+    final nombreCompleto = _userProfile?['nombre_completo'];
+    if (kDebugMode) {
+      print(
+        'FirebaseAuthService.currentUserName: displayName=$displayName, nombreCompleto=$nombreCompleto',
+      );
+    }
+    return displayName ?? nombreCompleto;
+  }
 
   /// Obtener URL de imagen del usuario actual
   String? get currentUserImageUrl =>
       _currentUser?.photoURL ?? _userProfile?['avatar_url'];
 
   /// Obtener teléfono del usuario actual
-  String? get currentUserPhoneNumber =>
-      _userProfile?['telefono'] ?? _currentUser?.phoneNumber;
+  String? get currentUserPhoneNumber {
+    final telefono = _userProfile?['telefono'];
+    final phoneNumber = _currentUser?.phoneNumber;
+    if (kDebugMode) {
+      print(
+        'FirebaseAuthService.currentUserPhoneNumber: telefono=$telefono, phoneNumber=$phoneNumber',
+      );
+    }
+    return telefono ?? phoneNumber;
+  }
 
   /// Iniciar sesión con email y contraseña
   Future<Result<void, Exception>> signInWithEmail(
@@ -622,6 +638,11 @@ class FirebaseAuthService {
       }
 
       // Recargar perfil localmente
+      // Recargar usuario de Firebase Auth para obtener datos actualizados
+      if (_currentUser != null) {
+        await _currentUser!.reload();
+        _currentUser = _auth.currentUser; // Actualizar referencia
+      }
       await _loadUserProfile(userId);
 
       return Result.success(null);
