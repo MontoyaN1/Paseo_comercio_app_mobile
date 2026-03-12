@@ -1,25 +1,50 @@
 // lib/presentation/pages/plazoletas/plazoleta_detail_page.dart
+//
+// 🏛️  PLAZA UNIVERSE — Detalle de Plazoleta
+// ────────────────────────────────────────────────────────────
+//  DISEÑO (idéntico al sistema de diseño de OrganizacionDetailPage):
+//  • Hero header: imagen principal con overlay degradado dorado
+//  • Fondo: partículas isométricas flotantes (mismo que login)
+//  • SliverAppBar colapsable con glassmorphism al hacer scroll
+//  • Tabs glassmorphism: Información, Productos y Tiendas
+//  • Stats con glow dorado animado
+//  • Cards de productos/tiendas: glassmorphism + hover glow
+//  • Info de contacto: filas elegantes sobre fondo oscuro
+// ────────────────────────────────────────────────────────────
 
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../domain/entities/plazoleta.dart';
-import '../../../domain/entities/imagen_base.dart';
-import '../../../domain/entities/producto.dart';
-import '../../../domain/entities/tienda.dart';
-import '../../blocs/plazoleta/plazoleta_bloc.dart';
-import '../../blocs/plazoleta/plazoleta_event.dart';
-import '../../blocs/plazoleta/plazoleta_state.dart';
-import '../../widgets/images/resilient_image.dart';
-import '../../widgets/common/loading_state.dart';
-import '../../widgets/common/error_state.dart';
-import '../../widgets/common/empty_state.dart';
-import '../../widgets/producto/producto_card.dart';
-import '../../widgets/tienda/tienda_card.dart';
+import 'package:paseo_del_comercio/domain/entities/plazoleta.dart';
+import 'package:paseo_del_comercio/domain/entities/producto.dart';
+import 'package:paseo_del_comercio/domain/entities/tienda.dart';
+import 'package:paseo_del_comercio/domain/entities/imagen_base.dart';
 
-/// Pantalla de detalle de una plazoleta específica
+import 'package:paseo_del_comercio/presentation/blocs/plazoleta/plazoleta_bloc.dart';
+import 'package:paseo_del_comercio/presentation/blocs/plazoleta/plazoleta_event.dart';
+import 'package:paseo_del_comercio/presentation/blocs/plazoleta/plazoleta_state.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/producto_card.dart';
+import 'package:paseo_del_comercio/presentation/widgets/tienda/tienda_card.dart';
+import '../../widgets/profile_floating_button.dart';
+
+// ── Paleta (idéntica al sistema de diseño) ────────────────────
+const _kGold = Color(0xFFD4AF37);
+const _kGoldLight = Color(0xFFFFE082);
+const _kGoldDeep = Color(0xFF9C7A1A);
+const _kBg = Color(0xFF07070F);
+const _kSurface = Color(0xFF0F0F1E);
+const _kSurfaceCard = Color(0xFF12121F);
+const _kBorder = Color(0xFF1E1E3A);
+const _kHint = Color(0xFF6B6B8A);
+
+// ══════════════════════════════════════════════════════════════
+//  PAGE PRINCIPAL
+// ══════════════════════════════════════════════════════════════
 class PlazoletaDetailPage extends StatefulWidget {
   final int plazoletaId;
 
@@ -30,10 +55,25 @@ class PlazoletaDetailPage extends StatefulWidget {
 }
 
 class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+    with TickerProviderStateMixin {
+  // ── Controllers ───────────────────────────────────────────
+  late final TabController _tabController;
+  final _scrollController = ScrollController();
   int _currentTabIndex = 0;
-  bool _imagesLoaded = false;
+
+  // ── Animaciones ───────────────────────────────────────────
+  late final AnimationController _bgCtrl;
+  late final AnimationController _heroCtrl;
+  late final AnimationController _contentCtrl;
+
+  late final Animation<double> _heroFade;
+  late final Animation<double> _heroScale;
+  late final Animation<double> _contentSlide;
+  late final Animation<double> _contentFade;
+
+  // ── Scroll state para AppBar ──────────────────────────────
+  double _scrollOffset = 0;
+  static const double _heroHeight = 300;
 
   @override
   void initState() {
@@ -41,7 +81,57 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_onTabChanged);
 
-    // Cargar solo la plazoleta al iniciar
+    // Fondo continuo
+    _bgCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 18),
+    )..repeat();
+
+    // Hero entrada
+    _heroCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _heroFade = CurvedAnimation(
+      parent: _heroCtrl,
+      curve: const Interval(0.0, 0.6),
+    );
+    _heroScale = Tween<double>(
+      begin: 1.08,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _heroCtrl, curve: Curves.easeOutCubic));
+
+    // Contenido stagger
+    _contentCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _contentSlide = Tween<double>(begin: 40, end: 0).animate(
+      CurvedAnimation(parent: _contentCtrl, curve: Curves.easeOutCubic),
+    );
+    _contentFade = CurvedAnimation(
+      parent: _contentCtrl,
+      curve: const Interval(0.0, 0.7),
+    );
+
+    // Listener de scroll para AppBar
+    _scrollController.addListener(() {
+      setState(() => _scrollOffset = _scrollController.offset);
+    });
+
+    // Cargar plazoleta al iniciar (productos y tiendas se cargan automáticamente)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPlazoleta();
+    });
+
+    Future.delayed(const Duration(milliseconds: 120), () {
+      if (mounted) _heroCtrl.forward();
+    });
+    Future.delayed(const Duration(milliseconds: 380), () {
+      if (mounted) _contentCtrl.forward();
+    });
+
+    // Cargar plazoleta al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadPlazoleta();
     });
@@ -50,794 +140,1372 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
   @override
   void dispose() {
     _tabController.dispose();
+    _scrollController.dispose();
+    _bgCtrl.dispose();
+    _heroCtrl.dispose();
+    _contentCtrl.dispose();
     super.dispose();
   }
 
+  // ── Tab change ────────────────────────────────────────────
   void _onTabChanged() {
     if (_tabController.indexIsChanging) {
-      setState(() {
-        _currentTabIndex = _tabController.index;
-      });
-      // Cargar datos según la pestaña activa
+      setState(() => _currentTabIndex = _tabController.index);
       _loadTabData(_tabController.index);
     }
   }
 
-  /// Cargar la plazoleta por ID
   void _loadPlazoleta() {
-    if (kDebugMode) {
-      print('=== _loadPlazoleta called ===');
-      print('Plazoleta ID: ${widget.plazoletaId}');
-      print('Mounted: $mounted');
-    }
-
-    if (!mounted) return;
-
     try {
       final bloc = context.read<PlazoletaBloc>();
       if (!bloc.isClosed) {
-        if (kDebugMode) {
-          print('Adding LoadPlazoletaById event for ID: ${widget.plazoletaId}');
-        }
         bloc.add(LoadPlazoletaById(id: widget.plazoletaId, forceRefresh: true));
       }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error loading plazoleta: $e');
-      }
-    }
+    } catch (_) {}
   }
 
-  /// Cargar datos según la pestaña activa
   void _loadTabData(int tabIndex) {
     if (!mounted) return;
-
     try {
       final bloc = context.read<PlazoletaBloc>();
       if (bloc.isClosed) return;
-
-      if (kDebugMode) {
-        print('=== _loadTabData called ===');
-        print('Tab index: $tabIndex');
-        print('Plazoleta ID: ${widget.plazoletaId}');
-      }
-
       switch (tabIndex) {
-        case 0: // Información
-          // Cargar imágenes de la plazoleta
+        case 0:
           bloc.add(LoadImagenesPlazoleta(plazoletaId: widget.plazoletaId));
           break;
-        case 1: // Productos
-          // Cargar productos
+        case 1:
           bloc.add(LoadProductosPlazoleta(plazoletaId: widget.plazoletaId));
           break;
-        case 2: // Tiendas
-          // Cargar tiendas
+        case 2:
           bloc.add(LoadTiendasPlazoleta(plazoletaId: widget.plazoletaId));
           break;
       }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error loading tab data: $e');
-      }
+    } catch (_) {}
+  }
+
+  Future<void> _onRefresh() async {
+    _loadPlazoleta();
+    _loadTabData(_currentTabIndex);
+  }
+
+  void _onProductoTap(Producto producto) =>
+      context.push('/productos/${producto.id}');
+  void _onTiendaTap(Tienda tienda) => context.push('/tiendas/${tienda.id}');
+
+  // ── Cuánto ha colapsado el hero (0..1) ────────────────────
+  double get _collapseProgress =>
+      (_scrollOffset / (_heroHeight - kToolbarHeight)).clamp(0.0, 1.0);
+
+  String _emojiForTipo(Plazoleta p) {
+    if (p.esPlazoletaPrincipal) return '🏛️';
+    if (p.esAreaSecundaria) return '🚶';
+    if (p.esEntradaSalida) return '🚪';
+    return '📍';
+  }
+
+  // ── Conversores ───────────────────────────────────────────
+  Map<String, dynamic> _productoToMap(Producto p) {
+    String? imagenUrl;
+    if (p.imagenes != null && p.imagenes!.isNotEmpty) {
+      final first = p.imagenes!.first;
+      if (first is Map<String, dynamic>)
+        imagenUrl = first['url_imagen'] as String?;
     }
-  }
-
-  void _onRefresh() {
-    context.read<PlazoletaBloc>().add(
-      LoadPlazoletaById(id: widget.plazoletaId, forceRefresh: true),
-    );
-    context.read<PlazoletaBloc>().add(
-      LoadImagenesPlazoleta(
-        plazoletaId: widget.plazoletaId,
-        forceRefresh: true,
-      ),
-    );
-
-    if (_currentTabIndex == 1) {
-      context.read<PlazoletaBloc>().add(
-        LoadProductosPlazoleta(
-          plazoletaId: widget.plazoletaId,
-          forceRefresh: true,
-        ),
-      );
-    } else if (_currentTabIndex == 2) {
-      context.read<PlazoletaBloc>().add(
-        LoadTiendasPlazoleta(
-          plazoletaId: widget.plazoletaId,
-          forceRefresh: true,
-        ),
-      );
-    }
-  }
-
-  void _onProductoTap(Producto producto) {
-    // Navegar a detalle de producto
-    context.go('/productos/${producto.id}');
-  }
-
-  void _onTiendaTap(Tienda tienda) {
-    // Navegar a detalle de tienda
-    context.go('/tiendas/${tienda.id}');
-  }
-
-  /// Convertir Producto a Map<String, dynamic> para widgets que esperan Map
-  Map<String, dynamic> _productoToMap(Producto producto) {
     return {
-      'id': producto.id,
-      'nombre_producto': producto.nombreProducto,
-      'descripcion': producto.descripcion,
-      'precio': producto.precio,
-      'moneda': producto.moneda,
-      'categoria_id': producto.categoriaId,
-      'estado_producto': producto.estadoProducto.toString(),
-      'stock_disponible': producto.stockDisponible,
-      'stock_minimo': producto.stockMinimo,
-      'stock_maximo': producto.stockMaximo,
-      'caracteristicas': producto.caracteristicas,
-      'etiquetas': producto.etiquetas,
-      'promedio_valoracion': producto.calificacionPromedio,
-      'total_valoraciones': producto.totalValoraciones,
-      'total_visualizaciones': producto.totalVisualizaciones,
-      'total_compartidos': producto.totalCompartidos,
-      'total_favoritos': producto.totalFavoritos,
-      'fecha_creacion': producto.fechaCreacion,
-      'fecha_actualizacion': producto.fechaActualizacion,
-      'fecha_publicacion': producto.fechaPublicacion,
-      'fecha_eliminacion': producto.fechaEliminacion,
-      'destacado': producto.destacado,
-      'en_oferta': producto.enOferta,
-      'precio_oferta': producto.precioOferta,
-      'fecha_inicio_oferta': producto.fechaInicioOferta,
-      'fecha_fin_oferta': producto.fechaFinOferta,
-      'sku': producto.sku,
-      'codigo_barras': producto.codigoBarras,
-      'peso': producto.peso,
-      'unidad_peso': producto.unidadPeso,
-      'dimension_alto': producto.dimensionAlto,
-      'dimension_ancho': producto.dimensionAncho,
-      'dimension_profundidad': producto.dimensionProfundidad,
-      'unidad_dimension': producto.unidadDimension,
-      'material': producto.material,
-      'color': producto.color,
-      'marca': producto.marca,
-      'modelo': producto.modelo,
-      'garantia_meses': producto.garantiaMeses,
-      'instrucciones_uso': producto.instruccionesUso,
-      'cuidados': producto.cuidados,
-      'tienda_id': producto.tiendaId,
-      // Campos que pueden faltar en la entidad pero los widgets los esperan
-      'imagenes': [], // Se puede poblar si hay datos disponibles
-      'tienda': {}, // Se puede poblar si hay datos disponibles
-      'categoria': {}, // Se puede poblar si hay datos disponibles
-    };
-  }
-
-  /// Convertir Tienda a Map<String, dynamic> para widgets que esperan Map
-  Map<String, dynamic> _tiendaToMap(Tienda tienda) {
-    return {
-      'id': tienda.id,
-      'nombre_tienda': tienda.nombreTienda,
-      'descripcion': tienda.descripcion,
-      'telefono_contacto': tienda.telefonoContacto,
-      'email_contacto': tienda.emailContacto,
-      'direccion': tienda.direccion,
-      'redes_sociales': tienda.redesSociales,
-      'fecha_creacion': tienda.fechaCreacion,
-      'total_visitas': tienda.totalVisitas,
-      'total_contactos_whatsapp': tienda.totalContactosWhatsapp,
-      // Campos que pueden faltar en la entidad pero los widgets los esperan
-      'logo_url': null,
-      'banner_url': null,
-      'categoria_tienda': null,
-      'estado_tienda': 'activa',
-      'fecha_actualizacion': tienda.updatedAt,
-      'fecha_aprobacion': null,
-      'fecha_suspension': null,
-      'plazoleta_id': tienda.organizacionId,
-      'usuario_propietario_id': tienda.idPropietario,
-      'sitio_web': null,
-      'calificacion_promedio': 0.0,
-      'total_valoraciones': 0,
-      'total_ventas': 0,
-      'total_seguidores': 0,
-      'total_productos': 0,
-      'verificado': false,
+      'id': p.id,
+      'nombre': p.nombre,
+      'nombre_producto': p.nombre,
+      'descripcion': p.descripcion,
+      'precio': p.precioBase,
+      'precio_base': p.precioBase,
+      'imagenUrl': imagenUrl,
+      'imagenes': p.imagenes,
+      'tiendaId': p.tiendaId,
+      'tienda_id': p.tiendaId,
+      'categoriaId': p.categoriaId,
+      'categoria_id': p.categoriaId,
+      'estado': p.estadoProducto?.value ?? 'publicado',
+      'stock': p.cantidad,
+      'stock_disponible': p.cantidad,
+      'cantidad': p.cantidad,
+      'calificacion': p.calificacionPromedio,
+      'calificacion_promedio': p.calificacionPromedio,
+      'totalValoraciones': p.totalValoracion ?? 0,
+      'total_valoracion': p.totalValoracion,
+      'total_visualizaciones': p.totalVisualizaciones,
+      'estado_producto': p.estadoProducto?.value ?? 'publicado',
       'destacado': false,
-      'activo': true,
-      'horarios': null,
-      'ubicacion': null,
-      'radio_entrega': null,
-      'costo_envio': null,
-      'tiempo_entrega_promedio': null,
-      'politicas': null,
-      'terminos_condiciones': null,
-      'metodos_pago': null,
-      'imagenes': [],
-      'productos': [],
-      'etiquetas': [],
-      'categoria': {},
+      'enOferta': false,
+      'precioOferta': null,
     };
   }
 
+  Map<String, dynamic> _tiendaToMap(Tienda t) => {
+    'id': t.id,
+    'nombre': t.nombreTienda,
+    'descripcion': t.descripcion,
+    'logoUrl': t.logoUrl,
+    'imagen_tienda': t.imagenTienda,
+    'categorias': [],
+    'calificacion': 0.0,
+    'totalValoraciones': 0,
+    'abierta': true,
+    'distancia': '-- km',
+    'direccion': t.direccion,
+    'telefono': t.telefonoContacto,
+    'email': t.emailContacto,
+    'redesSociales': t.redesSociales,
+    'totalVisitas': t.totalVisitas,
+    'totalContactosWhatsapp': t.totalContactosWhatsapp,
+  };
+
+  bool _isValidUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      return uri.isAbsolute && (uri.scheme == 'http' || uri.scheme == 'https');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: BlocConsumer<PlazoletaBloc, PlazoletaState>(
-        listener: (context, state) {
-          if (state is PlazoletaErrorState) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+    return BlocBuilder<PlazoletaBloc, PlazoletaState>(
+      builder: (context, state) {
+        Plazoleta? plazoleta;
+        List<ImagenBase> imagenes = [];
+        List<Producto> productos = [];
+        List<Tienda> tiendas = [];
 
-          // Cargar imágenes cuando la plazoleta se carga exitosamente
-          if (state is PlazoletaLoaded && state.plazoletaSeleccionada != null) {
-            if (!_imagesLoaded && mounted) {
-              if (kDebugMode) {
-                print('=== Cargando imágenes de la plazoleta ===');
-                print('Plazoleta ID: ${widget.plazoletaId}');
-              }
-              _imagesLoaded = true;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  try {
-                    final bloc = context.read<PlazoletaBloc>();
-                    if (!bloc.isClosed) {
-                      bloc.add(
-                        LoadImagenesPlazoleta(plazoletaId: widget.plazoletaId),
-                      );
-                    }
-                  } catch (e) {
-                    if (kDebugMode) {
-                      print('Error loading images: $e');
-                    }
-                  }
-                }
-              });
-            }
-          }
-        },
-        builder: (context, state) {
-          if (kDebugMode) {
-            print('=== PlazoletaDetailPage State Change ===');
-            print('State type: ${state.runtimeType}');
-            print('State toString: $state');
-          }
-          return _buildContent(state);
-        },
+        if (state is PlazoletaLoaded && state.plazoletaSeleccionada != null) {
+          plazoleta = state.plazoletaSeleccionada!;
+          imagenes = state.imagenesPlazoleta ?? [];
+          productos = state.productosPlazoleta ?? [];
+          tiendas = state.tiendasPlazoleta ?? [];
+        }
+
+        if (plazoleta == null) {
+          return Scaffold(
+            backgroundColor: _kBg,
+            body: Stack(
+              children: [
+                AnimatedBuilder(
+                  animation: _bgCtrl,
+                  builder:
+                      (_, __) => CustomPaint(
+                        size: MediaQuery.of(context).size,
+                        painter: _BgPainter(_bgCtrl.value),
+                      ),
+                ),
+                // Loading / Error overlay
+                _buildLoadingOrError(state),
+              ],
+            ),
+          );
+        }
+
+        return _buildPage(context, plazoleta, imagenes, productos, tiendas);
+      },
+    );
+  }
+
+  // ── Loading / error mientras no hay plazoleta ──────────────
+  Widget _buildLoadingOrError(PlazoletaState state) {
+    if (state is PlazoletaDetailError) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: _kGold, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              state.message,
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            _GoldOutlineButton(label: 'Reintentar', onTap: _loadPlazoleta),
+          ],
+        ),
+      );
+    }
+    return const Center(
+      child: SizedBox(
+        width: 36,
+        height: 36,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation(_kGold),
+        ),
       ),
     );
   }
 
-  Widget _buildContent(PlazoletaState state) {
-    if (kDebugMode) {
-      print('=== _buildContent called ===');
-      print('State type: ${state.runtimeType}');
-      print('State: $state');
-      print('Plazoleta ID: ${widget.plazoletaId}');
-    }
+  Widget _buildPage(
+    BuildContext context,
+    Plazoleta plazoleta,
+    List<ImagenBase> imagenes,
+    List<Producto> productos,
+    List<Tienda> tiendas,
+  ) {
+    final size = MediaQuery.of(context).size;
 
-    if (state is PlazoletaInitial) {
-      if (kDebugMode) {
-        print('Rendering PlazoletaInitial state');
-      }
-      return const LoadingState(message: 'Preparando carga de la plazoleta...');
-    }
+    return Scaffold(
+      backgroundColor: _kBg,
+      body: Stack(
+        children: [
+          // ── Fondo animado ──────────────────────────────────
+          AnimatedBuilder(
+            animation: _bgCtrl,
+            builder:
+                (_, __) =>
+                    CustomPaint(size: size, painter: _BgPainter(_bgCtrl.value)),
+          ),
 
-    if (state is PlazoletaLoading) {
-      if (kDebugMode) {
-        print('Rendering PlazoletaLoading state');
-      }
-      return const LoadingState(message: 'Cargando lista de plazoletas...');
-    }
+          // ── Contenido scrollable ───────────────────────────
+          NestedScrollView(
+            controller: _scrollController,
+            headerSliverBuilder:
+                (context, _) => [
+                  SliverToBoxAdapter(
+                    child: _buildHero(plazoleta, imagenes, productos, tiendas),
+                  ),
+                ],
+            body: Column(
+              children: [
+                _buildTabBar(plazoleta),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildInfoTab(plazoleta, imagenes),
+                      _buildProductosTab(productos),
+                      _buildTiendasTab(tiendas),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
 
-    if (state is PlazoletaDetailLoading) {
-      if (kDebugMode) {
-        print('Rendering PlazoletaDetailLoading state');
-        print('Plazoleta ID: ${state.plazoletaId}');
-        print('Is refreshing: ${state.isRefreshing}');
-      }
-      return const LoadingState(
-        message: 'Cargando detalles de la plazoleta...',
-      );
-    }
-
-    if (state is PlazoletaDetailError) {
-      if (kDebugMode) {
-        print('Rendering PlazoletaDetailError state');
-        print('Error message: ${state.message}');
-        print('Plazoleta ID: ${state.plazoletaId}');
-      }
-      return ErrorState(
-        message: state.message,
-        actionText: 'Reintentar',
-        onActionPressed: () {
-          context.read<PlazoletaBloc>().add(
-            LoadPlazoletaById(id: widget.plazoletaId, forceRefresh: true),
-          );
-        },
-      );
-    }
-
-    if (state is PlazoletaImagenesLoading) {
-      if (kDebugMode) {
-        print('Rendering PlazoletaImagenesLoading state');
-        print('Plazoleta ID: ${state.plazoletaId}');
-        print('Is refreshing: ${state.isRefreshing}');
-      }
-      // Si ya tenemos datos de la plazoleta, mostrarlos con indicador de carga de imágenes
-      // De lo contrario, mostrar loading state general
-      return const LoadingState(
-        message: 'Cargando imágenes de la plazoleta...',
-      );
-    }
-
-    if (state is PlazoletaProductosLoading) {
-      if (kDebugMode) {
-        print('Rendering PlazoletaProductosLoading state');
-        print('Plazoleta ID: ${state.plazoletaId}');
-        print('Is refreshing: ${state.isRefreshing}');
-      }
-      // Si ya tenemos datos de la plazoleta, mostrarlos con indicador de carga de productos
-      // De lo contrario, mostrar loading state general
-      return const LoadingState(
-        message: 'Cargando productos de la plazoleta...',
-      );
-    }
-
-    if (state is PlazoletaTiendasLoading) {
-      if (kDebugMode) {
-        print('Rendering PlazoletaTiendasLoading state');
-        print('Plazoleta ID: ${state.plazoletaId}');
-        print('Is refreshing: ${state.isRefreshing}');
-      }
-      // Si ya tenemos datos de la plazoleta, mostrarlos con indicador de carga de tiendas
-      // De lo contrario, mostrar loading state general
-      return const LoadingState(message: 'Cargando tiendas de la plazoleta...');
-    }
-
-    if (state is PlazoletaLoaded && state.plazoletaSeleccionada != null) {
-      if (kDebugMode) {
-        print('Rendering PlazoletaLoaded state');
-        print('Plazoleta seleccionada: ${state.plazoletaSeleccionada!.nombre}');
-        print('Total imagenes: ${state.imagenesPlazoleta?.length ?? 0}');
-        print('Total productos: ${state.productosPlazoleta?.length ?? 0}');
-        print('Total tiendas: ${state.tiendasPlazoleta?.length ?? 0}');
-      }
-      final plazoleta = state.plazoletaSeleccionada!;
-      return _buildPlazoletaDetail(plazoleta, state);
-    }
-
-    if (kDebugMode) {
-      print('Rendering fallback LoadingState - unrecognized state');
-    }
-    // Estado no reconocido o sin datos
-    return const LoadingState(message: 'Cargando datos...');
+          // ── AppBar flotante con glassmorphism ──────────────
+          SafeArea(child: _buildFloatingAppBar(plazoleta)),
+        ],
+      ),
+      floatingActionButton: ProfileFloatingButton(
+        hideOrganizacionesOption: true,
+      ),
+    );
   }
 
-  Widget _buildPlazoletaDetail(Plazoleta plazoleta, PlazoletaState state) {
-    final imagenes = state is PlazoletaLoaded ? state.imagenesPlazoleta : null;
-    final productos =
-        state is PlazoletaLoaded ? state.productosPlazoleta : null;
-    final tiendas = state is PlazoletaLoaded ? state.tiendasPlazoleta : null;
-
-    return NestedScrollView(
-      headerSliverBuilder: (context, innerBoxIsScrolled) {
-        return [
-          SliverAppBar(
-            expandedHeight: 250,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/plazoletas');
-                }
-              },
+  // ── AppBar glassmorphism ──────────────────────────────────
+  Widget _buildFloatingAppBar(Plazoleta plazoleta) {
+    final opacity = _collapseProgress;
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 20 * opacity, sigmaY: 20 * opacity),
+        child: AnimatedContainer(
+          duration: Duration.zero,
+          height: kToolbarHeight,
+          decoration: BoxDecoration(
+            color: _kSurface.withOpacity(0.85 * opacity),
+            border: Border(
+              bottom: BorderSide(
+                color: _kBorder.withOpacity(opacity),
+                width: 1,
+              ),
             ),
-            floating: false,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                plazoleta.nombre,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 4,
-                      color: Colors.black87,
-                      offset: Offset(1, 1),
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 8),
+              _GoldIconButton(
+                icon: Icons.arrow_back_ios_new_rounded,
+                onTap: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    Future.microtask(() => context.go('/plazoletas'));
+                  }
+                },
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AnimatedOpacity(
+                  opacity: opacity,
+                  duration: Duration.zero,
+                  child: Text(
+                    plazoleta.nombre,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              _GoldIconButton(
+                icon: Icons.share_rounded,
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: _kSurface,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(color: _kBorder),
+                      ),
+                      content: const Row(
+                        children: [
+                          Icon(Icons.share_rounded, color: _kGold, size: 18),
+                          SizedBox(width: 10),
+                          Text(
+                            'Compartir plazoleta (pendiente)',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Hero expandible ───────────────────────────────────────
+  Widget _buildHero(
+    Plazoleta plazoleta,
+    List<ImagenBase> imagenes,
+    List<Producto> productos,
+    List<Tienda> tiendas,
+  ) {
+    final imagenPrincipal =
+        imagenes.isNotEmpty
+            ? imagenes.firstWhere(
+              (i) => i.esPrincipal,
+              orElse: () => imagenes.first,
+            )
+            : null;
+
+    final tieneImagen =
+        imagenPrincipal != null && _isValidUrl(imagenPrincipal.urlPreferida);
+
+    return AnimatedBuilder(
+      animation: _heroCtrl,
+      builder:
+          (_, __) => Opacity(
+            opacity: _heroFade.value,
+            child: Transform.scale(
+              scale: _heroScale.value,
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                height: _heroHeight,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // ── Imagen de fondo ─────────────────────────
+                    if (tieneImagen)
+                      CachedNetworkImage(
+                        imageUrl: imagenPrincipal.urlPreferida,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => _buildHeroFallback(plazoleta),
+                        errorWidget:
+                            (_, __, ___) => _buildHeroFallback(plazoleta),
+                      )
+                    else
+                      _buildHeroFallback(plazoleta),
+
+                    // ── Overlay degradado negro → transparente → negro ──
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xCC07070F),
+                            Color(0x3307070F),
+                            Color(0xFF07070F),
+                          ],
+                          stops: [0.0, 0.45, 1.0],
+                        ),
+                      ),
+                    ),
+
+                    // ── Overlay dorado sutil ─────────────────────
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            _kGold.withOpacity(0.06),
+                            Colors.transparent,
+                            _kGoldDeep.withOpacity(0.08),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // ── Información en la parte inferior ─────────
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Badge de tipo
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _kGold.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: _kGold.withOpacity(0.40),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _emojiForTipo(plazoleta),
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    plazoleta.tipoUbicacionTexto,
+                                    style: const TextStyle(
+                                      color: _kGold,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Nombre principal
+                            ShaderMask(
+                              shaderCallback:
+                                  (b) => const LinearGradient(
+                                    colors: [Colors.white, _kGoldLight],
+                                    stops: [0.6, 1.0],
+                                  ).createShader(b),
+                              child: Text(
+                                plazoleta.nombre,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.3,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+
+                            // Stats rápidos en el hero
+                            Row(
+                              children: [
+                                _HeroStatPill(
+                                  icon: Icons.shopping_bag_rounded,
+                                  value: '${productos.length} productos',
+                                ),
+                                const SizedBox(width: 8),
+                                _HeroStatPill(
+                                  icon: Icons.store_rounded,
+                                  value: '${tiendas.length} tiendas',
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              background: _buildHeaderImage(imagenes),
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.share),
-                onPressed: () {
-                  // TODO: Implementar compartir
-                },
+          ),
+    );
+  }
+
+  Widget _buildHeroFallback(Plazoleta plazoleta) {
+    return Container(
+      color: _kSurface,
+      child: Center(
+        child: Container(
+          width: 90,
+          height: 90,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _kGold.withOpacity(0.08),
+            border: Border.all(color: _kGold.withOpacity(0.35), width: 1.5),
+          ),
+          child: Center(
+            child: Text(
+              _emojiForTipo(plazoleta),
+              style: const TextStyle(fontSize: 42),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── TabBar glassmorphism ──────────────────────────────────
+  Widget _buildTabBar(Plazoleta plazoleta) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _kSurface.withOpacity(0.88),
+            border: Border(bottom: BorderSide(color: _kBorder, width: 1)),
+          ),
+          child: TabBar(
+            controller: _tabController,
+            labelColor: _kGold,
+            unselectedLabelColor: _kHint,
+            indicatorColor: _kGold,
+            indicatorSize: TabBarIndicatorSize.label,
+            indicatorWeight: 2,
+            dividerColor: Colors.transparent,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              letterSpacing: 0.5,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w400,
+              fontSize: 13,
+            ),
+            tabs: const [
+              Tab(
+                icon: Icon(Icons.info_outline_rounded, size: 18),
+                text: 'Información',
+                iconMargin: EdgeInsets.only(bottom: 2),
               ),
-              IconButton(
-                icon: const Icon(Icons.favorite_border),
-                onPressed: () {
-                  // TODO: Implementar favoritos
-                },
+              Tab(
+                icon: Icon(Icons.shopping_bag_rounded, size: 18),
+                text: 'Productos',
+                iconMargin: EdgeInsets.only(bottom: 2),
+              ),
+              Tab(
+                icon: Icon(Icons.store_rounded, size: 18),
+                text: 'Tiendas',
+                iconMargin: EdgeInsets.only(bottom: 2),
               ),
             ],
           ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _TabBarDelegate(
-              tabController: _tabController,
-              plazoleta: plazoleta,
+        ),
+      ),
+    );
+  }
+
+  // ── Tab: Información ──────────────────────────────────────
+  Widget _buildInfoTab(Plazoleta plazoleta, List<ImagenBase> imagenes) {
+    return AnimatedBuilder(
+      animation: _contentCtrl,
+      builder:
+          (_, child) => Opacity(
+            opacity: _contentFade.value.clamp(0.0, 1.0),
+            child: Transform.translate(
+              offset: Offset(0, _contentSlide.value),
+              child: child,
             ),
           ),
-        ];
-      },
-      body: TabBarView(
-        controller: _tabController,
+      child: RefreshIndicator(
+        color: _kGold,
+        backgroundColor: _kSurface,
+        onRefresh: _onRefresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Galería de imágenes ───────────────────────
+              if (imagenes.isNotEmpty) ...[
+                _buildSection(
+                  title: 'Galería',
+                  icon: Icons.photo_library_rounded,
+                  child: SizedBox(
+                    height: 130,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: imagenes.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 10),
+                      itemBuilder: (context, i) {
+                        final img = imagenes[i];
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Stack(
+                            children: [
+                              CachedNetworkImage(
+                                imageUrl: img.urlPreferida,
+                                width: 160,
+                                height: 130,
+                                fit: BoxFit.cover,
+                                placeholder:
+                                    (_, __) => Container(
+                                      width: 160,
+                                      color: _kSurface,
+                                      child: const Center(
+                                        child: SizedBox(
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 1.5,
+                                            valueColor: AlwaysStoppedAnimation(
+                                              _kGold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                errorWidget:
+                                    (_, __, ___) => Container(
+                                      width: 160,
+                                      color: _kSurface,
+                                      child: Icon(
+                                        Icons.broken_image_rounded,
+                                        color: _kGold.withOpacity(0.4),
+                                        size: 28,
+                                      ),
+                                    ),
+                              ),
+                              if (img.esPrincipal)
+                                Positioned(
+                                  top: 6,
+                                  left: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _kGold.withOpacity(0.85),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Text(
+                                      'Principal',
+                                      style: TextStyle(
+                                        color: _kBg,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // ── Descripción ───────────────────────────────
+              if (plazoleta.descripcion != null &&
+                  plazoleta.descripcion!.isNotEmpty) ...[
+                _buildSection(
+                  title: 'Sobre la plazoleta',
+                  icon: Icons.auto_stories_rounded,
+                  child: Text(
+                    plazoleta.descripcion!,
+                    style: const TextStyle(
+                      color: _kHint,
+                      fontSize: 14,
+                      height: 1.65,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // ── Info general ──────────────────────────────
+              _buildSection(
+                title: 'Información general',
+                icon: Icons.info_outline_rounded,
+                child: Column(
+                  children: [
+                    _GoldInfoRow(
+                      icon: Icons.category_rounded,
+                      label: 'Tipo de ubicación',
+                      value: plazoleta.tipoUbicacionTexto,
+                    ),
+                    _GoldDivider(),
+                    _GoldInfoRow(
+                      icon: Icons.calendar_today_rounded,
+                      label: 'Fecha de creación',
+                      value: plazoleta.fechaCreacionFormateada,
+                    ),
+                    if (plazoleta.esReciente) ...[
+                      _GoldDivider(),
+                      _GoldInfoRow(
+                        icon: Icons.fiber_new_rounded,
+                        label: 'Estado',
+                        value: 'Nueva',
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _kSurfaceCard.withOpacity(0.90),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: _kBorder, width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Encabezado de sección
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _kGold.withOpacity(0.10),
+                        border: Border.all(
+                          color: _kGold.withOpacity(0.30),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(icon, color: _kGold, size: 15),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Separador dorado
+              Container(
+                height: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [_kGold.withOpacity(0.30), Colors.transparent],
+                  ),
+                ),
+              ),
+              // Contenido
+              Padding(padding: const EdgeInsets.all(16), child: child),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Tab: Productos ────────────────────────────────────────
+  Widget _buildProductosTab(List<Producto> productos) {
+    return AnimatedBuilder(
+      animation: _contentCtrl,
+      builder:
+          (_, child) => Opacity(
+            opacity: _contentFade.value.clamp(0.0, 1.0),
+            child: Transform.translate(
+              offset: Offset(0, _contentSlide.value),
+              child: child,
+            ),
+          ),
+      child:
+          productos.isEmpty
+              ? _buildEmptyState(
+                icon: Icons.shopping_bag_rounded,
+                title: 'Sin productos',
+                subtitle: 'Esta plazoleta no tiene\nproductos disponibles aún',
+                onRetry:
+                    () => context.read<PlazoletaBloc>().add(
+                      LoadProductosPlazoleta(plazoletaId: widget.plazoletaId),
+                    ),
+              )
+              : RefreshIndicator(
+                color: _kGold,
+                backgroundColor: _kSurface,
+                onRefresh: () async {
+                  context.read<PlazoletaBloc>().add(
+                    LoadProductosPlazoleta(
+                      plazoletaId: widget.plazoletaId,
+                      forceRefresh: true,
+                    ),
+                  );
+                  await Future.delayed(const Duration(seconds: 1));
+                },
+                child: GridView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.5,
+                  ),
+                  itemCount: productos.length,
+                  itemBuilder: (context, index) {
+                    final producto = productos[index];
+                    return TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: Duration(milliseconds: 400 + index * 60),
+                      curve: Curves.easeOutCubic,
+                      builder:
+                          (_, v, child) => Opacity(
+                            opacity: v,
+                            child: Transform.translate(
+                              offset: Offset(0, 20 * (1 - v)),
+                              child: child,
+                            ),
+                          ),
+                      child: ProductoCard(
+                        producto: _productoToMap(producto),
+                        onTap: () => _onProductoTap(producto),
+                      ),
+                    );
+                  },
+                ),
+              ),
+    );
+  }
+
+  // ── Tab: Tiendas ──────────────────────────────────────────
+  Widget _buildTiendasTab(List<Tienda> tiendas) {
+    return AnimatedBuilder(
+      animation: _contentCtrl,
+      builder:
+          (_, child) => Opacity(
+            opacity: _contentFade.value.clamp(0.0, 1.0),
+            child: Transform.translate(
+              offset: Offset(0, _contentSlide.value),
+              child: child,
+            ),
+          ),
+      child:
+          tiendas.isEmpty
+              ? _buildEmptyState(
+                icon: Icons.store_rounded,
+                title: 'Sin tiendas',
+                subtitle: 'Esta plazoleta no tiene\ntiendas asociadas aún',
+                onRetry:
+                    () => context.read<PlazoletaBloc>().add(
+                      LoadTiendasPlazoleta(plazoletaId: widget.plazoletaId),
+                    ),
+              )
+              : RefreshIndicator(
+                color: _kGold,
+                backgroundColor: _kSurface,
+                onRefresh: () async {
+                  context.read<PlazoletaBloc>().add(
+                    LoadTiendasPlazoleta(
+                      plazoletaId: widget.plazoletaId,
+                      forceRefresh: true,
+                    ),
+                  );
+                  await Future.delayed(const Duration(seconds: 1));
+                },
+                child: ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+                  itemCount: tiendas.length,
+                  itemBuilder: (context, index) {
+                    final tienda = tiendas[index];
+                    return TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: Duration(milliseconds: 400 + index * 60),
+                      curve: Curves.easeOutCubic,
+                      builder:
+                          (_, v, child) => Opacity(
+                            opacity: v,
+                            child: Transform.translate(
+                              offset: Offset(0, 20 * (1 - v)),
+                              child: child,
+                            ),
+                          ),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: TiendaCard(
+                          tienda: _tiendaToMap(tienda),
+                          onTap: () => _onTiendaTap(tienda),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+    );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onRetry,
+  }) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Tab 1: Información
-          _buildInfoTab(plazoleta, imagenes),
-          // Tab 2: Productos
-          _buildProductosTab(productos),
-          // Tab 3: Tiendas
-          _buildTiendasTab(tiendas),
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _kGold.withOpacity(0.06),
+              border: Border.all(color: _kGold.withOpacity(0.22), width: 1.5),
+            ),
+            child: Icon(icon, size: 36, color: _kGold),
+          ),
+          const SizedBox(height: 18),
+          ShaderMask(
+            shaderCallback:
+                (b) => const LinearGradient(
+                  colors: [_kGoldDeep, _kGold, _kGoldLight],
+                ).createShader(b),
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: const TextStyle(color: _kHint, fontSize: 13, height: 1.5),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          _GoldOutlineButton(label: 'Reintentar', onTap: onRetry),
         ],
       ),
     );
   }
+}
 
-  Widget _buildHeaderImage(List<ImagenBase>? imagenes) {
-    String? imageUrl;
+// ══════════════════════════════════════════════════════════════
+//  FONDO ISOMÉTRICO (idéntico al sistema de diseño)
+// ══════════════════════════════════════════════════════════════
+class _BgPainter extends CustomPainter {
+  final double t;
+  _BgPainter(this.t);
 
-    if (imagenes != null && imagenes.isNotEmpty) {
-      // Prefer image with tipoImagen 'detalle' for background
-      ImagenBase? selectedImagen;
-      for (final imagen in imagenes) {
-        if (imagen.tipoImagen == 'detalle') {
-          selectedImagen = imagen;
-          break;
+  static final _rng = math.Random(42);
+  static final _particles = List.generate(
+    60,
+    (i) => [
+      _rng.nextDouble(),
+      _rng.nextDouble(),
+      _rng.nextDouble() * 0.6 + 0.2,
+      _rng.nextDouble() * 2.5 + 0.5,
+      _rng.nextInt(3).toDouble(),
+    ],
+  );
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, w, h),
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(0, -0.4),
+          radius: 1.0,
+          colors: [const Color(0xFF111128), const Color(0xFF09091A), _kBg],
+          stops: const [0.0, 0.55, 1.0],
+        ).createShader(Rect.fromLTWH(0, 0, w, h)),
+    );
+
+    final beamOp = math.sin(t * math.pi * 2) * 0.04 + 0.07;
+    canvas.drawPath(
+      Path()
+        ..moveTo(w * 0.35, 0)
+        ..lineTo(w * 0.65, 0)
+        ..lineTo(w * 0.80, h * 0.50)
+        ..lineTo(w * 0.20, h * 0.50)
+        ..close(),
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [_kGoldLight.withOpacity(beamOp), Colors.transparent],
+        ).createShader(Rect.fromLTWH(0, 0, w, h * 0.50)),
+    );
+
+    final tW = w * 0.18;
+    final tH = tW * 0.5;
+    for (int row = -1; row <= 14; row++) {
+      for (int col = -1; col <= 6; col++) {
+        final cx = (col - row) * tW / 2 + w * 0.5;
+        final cy = (col + row) * tH / 2 - t * tH * 0.5;
+        final pulse = math.sin(t * math.pi * 2 + col * 0.4 + row * 0.3) * 0.012;
+        final alpha = (0.05 + pulse).clamp(0.0, 0.10);
+        final path =
+            Path()
+              ..moveTo(cx, cy - tH / 2)
+              ..lineTo(cx + tW / 2, cy)
+              ..lineTo(cx, cy + tH / 2)
+              ..lineTo(cx - tW / 2, cy)
+              ..close();
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = _kGold.withOpacity(alpha)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 0.6,
+        );
+        if (row % 3 == 0) {
+          canvas.drawPath(
+            path,
+            Paint()..color = _kGold.withOpacity(alpha * 0.22),
+          );
         }
       }
-      if (selectedImagen == null) {
-        // Fallback to principal image
-        selectedImagen = imagenes.firstWhere(
-          (imagen) => imagen.esPrincipal,
-          orElse: () => imagenes.first,
-        );
-      }
-      imageUrl = selectedImagen.urlPreferida;
     }
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (imageUrl != null && imageUrl.isNotEmpty)
-          ResilientImage(
-            imageUrl: imageUrl,
-            fit: BoxFit.cover,
-            placeholder: Container(
-              color: Colors.grey[200],
-              child: const Center(
-                child: Icon(Icons.location_city, size: 64, color: Colors.grey),
-              ),
-            ),
-            errorWidget: Container(
-              color: Colors.grey[200],
-              child: const Center(
-                child: Icon(Icons.broken_image, size: 64, color: Colors.grey),
-              ),
-            ),
-          )
-        else
-          Container(
-            color: Colors.grey[200],
-            child: const Center(
-              child: Icon(Icons.location_city, size: 64, color: Colors.grey),
-            ),
-          ),
-        Container(
+    const colors = [_kGold, _kGoldLight, Colors.white];
+    for (final p in _particles) {
+      final phase = (t + p[2]) % 1.0;
+      final op = math.sin(phase * math.pi) * 0.28;
+      if (op <= 0) continue;
+      final px = p[0] * w;
+      final py = p[1] * h - phase * h * 0.22;
+      canvas.drawCircle(
+        Offset(px, py),
+        p[3],
+        Paint()
+          ..color = colors[p[4].toInt()].withOpacity(op)
+          ..maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, p[3] * 1.2),
+      );
+    }
+
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, w, h),
+      Paint()
+        ..shader = RadialGradient(
+          center: Alignment.center,
+          radius: 0.78,
+          colors: [Colors.transparent, Colors.black.withOpacity(0.72)],
+          stops: const [0.5, 1.0],
+        ).createShader(Rect.fromLTWH(0, 0, w, h)),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BgPainter o) => o.t != t;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PÍLDORA DE STAT EN EL HERO
+// ══════════════════════════════════════════════════════════════
+class _HeroStatPill extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  const _HeroStatPill({required this.icon, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-              colors: [Colors.black.withOpacity(0.7), Colors.transparent],
-            ),
+            color: Colors.black.withOpacity(0.40),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _kGold.withOpacity(0.30), width: 1),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoTab(Plazoleta plazoleta, List<ImagenBase>? imagenes) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        _onRefresh();
-        await Future.delayed(const Duration(seconds: 1));
-      },
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Descripción
-            if (plazoleta.descripcion != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Descripción',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    plazoleta.descripcion!,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[700],
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-
-            // Estadísticas
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Estadísticas',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: _kGold, size: 13),
+              const SizedBox(width: 5),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatCard(
-                      icon: Icons.store,
-                      value: plazoleta.totalTiendas.toString(),
-                      label: 'Tiendas',
-                    ),
-                    _buildStatCard(
-                      icon: Icons.people,
-                      value: plazoleta.totalVisitas.toString(),
-                      label: 'Visitas',
-                    ),
-                    if (plazoleta.capacidadMaxima != null)
-                      _buildStatCard(
-                        icon: Icons.space_bar,
-                        value:
-                            '${plazoleta.porcentajeOcupacion.toStringAsFixed(0)}%',
-                        label: 'Ocupación',
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-              ],
-            ),
-
-            // Información adicional
-            if (plazoleta.horarioAcceso != null || plazoleta.normasUso != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Información Adicional',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  if (plazoleta.horarioAcceso != null)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Horario de acceso:',
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        Text(plazoleta.horarioAcceso!),
-                        const SizedBox(height: 12),
-                      ],
-                    ),
-                  if (plazoleta.normasUso != null)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Normas de uso:',
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        Text(plazoleta.normasUso!),
-                      ],
-                    ),
-                ],
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildProductosTab(List<Producto>? productos) {
-    // Si no hay productos cargados, intentar cargarlos
-    if (productos == null && _currentTabIndex == 1) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadTabData(1);
-      });
-      return const LoadingState(message: 'Cargando productos...');
-    }
+// ══════════════════════════════════════════════════════════════
+//  FILA DE INFORMACIÓN CON ÍCONO DORADO
+// ══════════════════════════════════════════════════════════════
+class _GoldInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _GoldInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
-    // Si productos es null pero no estamos en la pestaña 1
-    if (productos == null) {
-      return const LoadingState(message: 'Productos no cargados...');
-    }
-
-    if (productos.isEmpty) {
-      return EmptyState(
-        message:
-            'No hay productos disponibles. Esta plazoleta no tiene productos listados',
-        icon: Icons.shopping_bag,
-        onActionPressed: () {
-          context.read<PlazoletaBloc>().add(
-            LoadProductosPlazoleta(plazoletaId: widget.plazoletaId),
-          );
-        },
-        actionText: 'Recargar',
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        context.read<PlazoletaBloc>().add(
-          LoadProductosPlazoleta(
-            plazoletaId: widget.plazoletaId,
-            forceRefresh: true,
-          ),
-        );
-        await Future.delayed(const Duration(seconds: 1));
-      },
-      child: GridView.builder(
-        padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 0.7,
-        ),
-        itemCount: productos.length,
-        itemBuilder: (context, index) {
-          final producto = productos[index];
-          return ProductoCard(
-            producto: _productoToMap(producto),
-            onTap: () => _onProductoTap(producto),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTiendasTab(List<Tienda>? tiendas) {
-    // Si no hay tiendas cargadas, intentar cargarlas
-    if (tiendas == null && _currentTabIndex == 2) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadTabData(2);
-      });
-      return const LoadingState(message: 'Cargando tiendas...');
-    }
-
-    // Si tiendas es null pero no estamos en la pestaña 2
-    if (tiendas == null) {
-      return const LoadingState(message: 'Tiendas no cargadas...');
-    }
-
-    if (tiendas.isEmpty) {
-      return EmptyState(
-        message:
-            'No hay tiendas disponibles. Esta plazoleta no tiene tiendas listadas',
-        icon: Icons.store,
-        onActionPressed: () {
-          context.read<PlazoletaBloc>().add(
-            LoadTiendasPlazoleta(plazoletaId: widget.plazoletaId),
-          );
-        },
-        actionText: 'Recargar',
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        context.read<PlazoletaBloc>().add(
-          LoadTiendasPlazoleta(
-            plazoletaId: widget.plazoletaId,
-            forceRefresh: true,
-          ),
-        );
-        await Future.delayed(const Duration(seconds: 1));
-      },
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: tiendas.length,
-        itemBuilder: (context, index) {
-          final tienda = tiendas[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: TiendaCard(
-              tienda: _tiendaToMap(tienda),
-              onTap: () => _onTiendaTap(tienda),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String value,
-    required String label,
-  }) {
-    return Column(
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 32, color: Colors.blue),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _kGold.withOpacity(0.08),
+          ),
+          child: Icon(icon, color: _kGold.withOpacity(0.80), size: 17),
         ),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: _kHint,
+                  fontSize: 11,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
 
-/// Delegado para la barra de pestañas persistente
-class _TabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabController tabController;
-  final Plazoleta plazoleta;
-
-  _TabBarDelegate({required this.tabController, required this.plazoleta});
-
+class _GoldDivider extends StatelessWidget {
   @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+  Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
-      child: TabBar(
-        controller: tabController,
-        labelColor: Colors.blue,
-        unselectedLabelColor: Colors.grey,
-        indicatorColor: Colors.blue,
-        tabs: const [
-          Tab(icon: Icon(Icons.info), text: 'Información'),
-          Tab(icon: Icon(Icons.shopping_bag), text: 'Productos'),
-          Tab(icon: Icon(Icons.store), text: 'Tiendas'),
-        ],
+      height: 1,
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.transparent, _kBorder, Colors.transparent],
+        ),
       ),
     );
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BOTÓN ÍCONO DORADO (reutilizable)
+// ══════════════════════════════════════════════════════════════
+class _GoldIconButton extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _GoldIconButton({required this.icon, required this.onTap});
 
   @override
-  double get maxExtent => 48;
+  State<_GoldIconButton> createState() => _GoldIconButtonState();
+}
+
+class _GoldIconButtonState extends State<_GoldIconButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
 
   @override
-  double get minExtent => 48;
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 110),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.88,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
 
   @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
-    return true;
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: AnimatedBuilder(
+        animation: _scale,
+        builder:
+            (_, __) => Transform.scale(
+              scale: _scale.value,
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _kGold.withOpacity(0.07),
+                  border: Border.all(color: _kGold.withOpacity(0.28), width: 1),
+                ),
+                child: Icon(widget.icon, color: _kGold, size: 18),
+              ),
+            ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BOTÓN OUTLINE DORADO (para reintentar / acciones vacías)
+// ══════════════════════════════════════════════════════════════
+class _GoldOutlineButton extends StatefulWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _GoldOutlineButton({required this.label, required this.onTap});
+
+  @override
+  State<_GoldOutlineButton> createState() => _GoldOutlineButtonState();
+}
+
+class _GoldOutlineButtonState extends State<_GoldOutlineButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 110),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.94,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: AnimatedBuilder(
+        animation: _scale,
+        builder:
+            (_, __) => Transform.scale(
+              scale: _scale.value,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 11,
+                ),
+                decoration: BoxDecoration(
+                  color: _kGold.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: _kGold.withOpacity(0.45), width: 1),
+                ),
+                child: Text(
+                  widget.label,
+                  style: const TextStyle(
+                    color: _kGold,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+            ),
+      ),
+    );
   }
 }

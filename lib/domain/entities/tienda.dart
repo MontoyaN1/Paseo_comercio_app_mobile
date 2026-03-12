@@ -13,6 +13,10 @@ class Tienda extends Equatable {
 
   final String? descripcion;
 
+  final String? logoUrl;
+
+  final dynamic imagenTienda;
+
   final Map<String, dynamic>? redesSociales;
 
   final int? organizacionId;
@@ -28,7 +32,6 @@ class Tienda extends Equatable {
   final int totalContactosWhatsapp;
 
   final DateTime? fechaUltimaVisita;
-
   final DateTime? updatedAt;
 
   const Tienda({
@@ -37,6 +40,8 @@ class Tienda extends Equatable {
     required this.idPropietario,
     required this.nombreTienda,
     this.descripcion,
+    this.logoUrl,
+    this.imagenTienda,
     this.redesSociales,
     this.organizacionId,
     this.emailContacto,
@@ -56,25 +61,43 @@ class Tienda extends Equatable {
               ? DateTime.parse(json['fecha_creacion'] as String)
               : DateTime.now(),
       idPropietario: (json['id_propietario'] as int?) ?? 0,
-      nombreTienda: (json['nombre_tienda'] as String?) ?? '',
+      nombreTienda:
+          ((json['nombre_tienda'] ?? json['nombre']) as String?) ?? '',
       descripcion: json['descripcion'] as String?,
+      logoUrl:
+          (json['logoUrl'] ?? json['logo_url'] ?? json['url_logo']) as String?,
       redesSociales:
-          json['redes_sociales'] != null
-              ? Map<String, dynamic>.from(json['redes_sociales'] as Map)
+          (json['redes_sociales'] ?? json['redesSociales']) != null
+              ? Map<String, dynamic>.from(
+                (json['redes_sociales'] ?? json['redesSociales']) as Map,
+              )
               : null,
-      organizacionId: json['organizacion_id'] as int?,
-      emailContacto: json['email_contacto'] as String?,
-      telefonoContacto: json['telefono_contacto'] as String?,
+      imagenTienda: json['imagen_tienda'],
+      organizacionId:
+          (json['organizacion_id'] ?? json['organizacionId']) as int?,
+      emailContacto:
+          (json['email_contacto'] ?? json['emailContacto']) as String?,
+      telefonoContacto:
+          (json['telefono_contacto'] ?? json['telefonoContacto']) as String?,
       direccion: json['direccion'] as String?,
-      totalVisitas: json['total_visitas'] as int? ?? 0,
-      totalContactosWhatsapp: json['total_contactos_whatsapp'] as int? ?? 0,
+      totalVisitas:
+          (json['total_visitas'] ?? json['totalVisitas']) as int? ?? 0,
+      totalContactosWhatsapp:
+          (json['total_contactos_whatsapp'] ?? json['totalContactosWhatsapp'])
+              as int? ??
+          0,
       fechaUltimaVisita:
-          json['fecha_ultima_visita'] != null
-              ? DateTime.parse(json['fecha_ultima_visita'] as String)
+          (json['fecha_ultima_visita'] ?? json['fechaUltimaVisita']) != null
+              ? DateTime.parse(
+                (json['fecha_ultima_visita'] ?? json['fechaUltimaVisita'])
+                    as String,
+              )
               : null,
       updatedAt:
-          json['updated_at'] != null
-              ? DateTime.parse(json['updated_at'] as String)
+          (json['updated_at'] ?? json['updatedAt']) != null
+              ? DateTime.parse(
+                (json['updated_at'] ?? json['updatedAt']) as String,
+              )
               : null,
     );
   }
@@ -86,6 +109,8 @@ class Tienda extends Equatable {
       'id_propietario': idPropietario,
       'nombre_tienda': nombreTienda,
       'descripcion': descripcion,
+      'logoUrl': logoUrl,
+      'imagen_tienda': imagenTienda,
       'redes_sociales': redesSociales,
       'organizacion_id': organizacionId,
       'email_contacto': emailContacto,
@@ -104,7 +129,9 @@ class Tienda extends Equatable {
     int? idPropietario,
     String? nombreTienda,
     String? descripcion,
+    String? logoUrl,
     Map<String, dynamic>? redesSociales,
+    dynamic imagenTienda,
     int? organizacionId,
     String? emailContacto,
     String? telefonoContacto,
@@ -120,7 +147,9 @@ class Tienda extends Equatable {
       idPropietario: idPropietario ?? this.idPropietario,
       nombreTienda: nombreTienda ?? this.nombreTienda,
       descripcion: descripcion ?? this.descripcion,
+      logoUrl: logoUrl ?? this.logoUrl,
       redesSociales: redesSociales ?? this.redesSociales,
+      imagenTienda: imagenTienda ?? this.imagenTienda,
       organizacionId: organizacionId ?? this.organizacionId,
       emailContacto: emailContacto ?? this.emailContacto,
       telefonoContacto: telefonoContacto ?? this.telefonoContacto,
@@ -140,6 +169,8 @@ class Tienda extends Equatable {
     idPropietario,
     nombreTienda,
     descripcion,
+    logoUrl,
+    imagenTienda,
     redesSociales,
     organizacionId,
     emailContacto,

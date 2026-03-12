@@ -1,13 +1,38 @@
 // lib/presentation/widgets/tienda/tienda_card.dart
+//
+// 🏛️  PLAZA UNIVERSE — Card de Tienda
+// ────────────────────────────────────────────────────────────
+//  DISEÑO (idéntico al sistema de diseño Plaza Universe):
+//  • Fondo: glassmorphism sobre _kSurfaceCard
+//  • Imagen: ocupa toda la card, info superpuesta con overlay
+//  • Borde: _kBorder con glow dorado en press
+//  • Badge de estado: píldoras glassmorphism coloreadas
+//  • Nombre/descripción: sobre degradado oscuro inferior
+//  • Rating y visitas: íconos dorados
+//  • Micro-animación de escala al presionar
+// ────────────────────────────────────────────────────────────
 
-import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
+
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
 
-import '../../../core/utils/image_service.dart';
+import '../../../core/app/app_config.dart';
 import '../../../di/service_locator.dart';
 
-/// Widget para mostrar una tarjeta de tienda
-class TiendaCard extends StatelessWidget {
+// ── Paleta (idéntica al sistema de diseño) ────────────────────
+const _kGold = Color(0xFFD4AF37);
+const _kGoldLight = Color(0xFFFFE082);
+const _kBg = Color(0xFF07070F);
+const _kSurface = Color(0xFF0F0F1E);
+const _kSurfaceCard = Color(0xFF12121F);
+const _kBorder = Color(0xFF1E1E3A);
+const _kHint = Color(0xFF6B6B8A);
+
+// ══════════════════════════════════════════════════════════════
+//  WIDGET PRINCIPAL
+// ══════════════════════════════════════════════════════════════
+class TiendaCard extends StatefulWidget {
   final Map<String, dynamic> tienda;
   final VoidCallback onTap;
   final bool showDetails;
@@ -25,434 +50,388 @@ class TiendaCard extends StatelessWidget {
     this.onFavoriteToggle,
   });
 
-  /// Obtener imagen principal de la tienda
-  String? _getTiendaImage() {
-    final imageService = getIt<ImageService>();
-    final imagenes = tienda['imagenes'] as List<dynamic>?;
+  @override
+  State<TiendaCard> createState() => _TiendaCardState();
+}
 
-    if (imagenes != null && imagenes.isNotEmpty) {
-      // Buscar imagen principal
-      final imagenPrincipal = imagenes.firstWhere(
-        (imagen) => imagen['es_principal'] == true,
-        orElse: () => imagenes.first,
-      );
+class _TiendaCardState extends State<TiendaCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  late final Animation<double> _glow;
 
-      final url = imagenPrincipal['url'] as String?;
-      if (url != null && url.isNotEmpty) {
-        return imageService.getImageUrl(
-          entityType: 'tienda',
-          entityId: tienda['id']?.toString() ?? '',
-          imageName: 'logo.jpg',
-          size: 300,
-        );
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.965,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    _glow = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  // ── Helpers de datos ──────────────────────────────────────
+  String? _getImage() {
+    final imagenes = widget.tienda['imagen_tienda'];
+    String? rawUrl;
+
+    if (imagenes != null) {
+      if (imagenes is List && imagenes.isNotEmpty) {
+        for (final imagen in imagenes) {
+          if (imagen is Map<String, dynamic> &&
+              imagen['tipo_imagen'] == 'logo') {
+            rawUrl = imagen['url_imagen'] as String?;
+            break;
+          }
+        }
+        if (rawUrl == null) {
+          final p = imagenes[0];
+          if (p is Map<String, dynamic>) rawUrl = p['url_imagen'] as String?;
+        }
+      } else if (imagenes is Map<String, dynamic>) {
+        rawUrl = imagenes['url_imagen'] as String?;
       }
     }
 
-    // Imagen por defecto
-    return null;
+    if (rawUrl == null || rawUrl.isEmpty) {
+      final alt =
+          widget.tienda['logoUrl'] ??
+          widget.tienda['logo_url'] ??
+          widget.tienda['url_logo'] ??
+          widget.tienda['logo'] ??
+          widget.tienda['imagen'];
+      if (alt is String && alt.isNotEmpty) rawUrl = alt;
+    }
+
+    if ((rawUrl == null || rawUrl.isEmpty) &&
+        widget.tienda['imagenes'] is List<dynamic>) {
+      final old = widget.tienda['imagenes'] as List<dynamic>;
+      if (old.isNotEmpty) {
+        final p = old.firstWhere(
+          (i) => i is Map<String, dynamic> && i['es_principal'] == true,
+          orElse: () => old.first,
+        );
+        if (p is Map<String, dynamic>) rawUrl = p['url'] as String?;
+      }
+    }
+
+    if (rawUrl == null || rawUrl.isEmpty) return null;
+    if (rawUrl.contains('user_')) return null;
+    if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
+      return null;
+    }
+    return _transformContaboUrlToR2(rawUrl);
   }
 
-  /// Obtener nombre de la tienda
-  String _getTiendaName() {
-    return tienda['nombre_tienda'] as String? ?? 'Tienda sin nombre';
+  String _getNombre() {
+    final n =
+        widget.tienda['nombre'] ??
+        widget.tienda['nombre_tienda'] ??
+        widget.tienda['titulo'] ??
+        'Tienda';
+    final s = n.toString();
+    if (s == 'Tienda' || s == 'Tienda sin nombre') {
+      final id = widget.tienda['id'] ?? widget.tienda['tienda_id'];
+      return id != null ? 'Tienda $id' : 'Tienda';
+    }
+    return s;
   }
 
-  /// Obtener descripción de la tienda
-  String _getTiendaDescription() {
-    return tienda['descripcion'] as String? ?? 'Sin descripción disponible';
-  }
+  String _getDescripcion() =>
+      widget.tienda['descripcion'] as String? ?? 'Sin descripción disponible';
 
-  /// Obtener categoría de la tienda
-  String? _getTiendaCategory() {
-    final categoria = tienda['categoria'] as Map<String, dynamic>?;
-    if (categoria != null) {
-      return categoria['nombre_categoria'] as String?;
+  String? _getCategoria() {
+    final obj = widget.tienda['categoria'];
+    if (obj is Map<String, dynamic>) {
+      final n = obj['nombre_categoria'] as String?;
+      if (n != null && n.isNotEmpty) return n;
+    }
+    final c =
+        widget.tienda['categoria_tienda'] ??
+        widget.tienda['tipo'] ??
+        widget.tienda['rubro'];
+    if (c is String && c.isNotEmpty) return c;
+    if (c is Map<String, dynamic>) {
+      final n = c['nombre'] ?? c['nombre_categoria'];
+      if (n is String && n.isNotEmpty) return n;
     }
     return null;
   }
 
-  /// Obtener valoración promedio
-  double _getAverageRating() {
-    final rating = tienda['promedio_valoracion'] as double?;
-    return rating ?? 0.0;
+  double _getRating() =>
+      (widget.tienda['promedio_valoracion'] as num?)?.toDouble() ?? 0.0;
+
+  int _getRatingCount() => (widget.tienda['total_valoraciones'] as int?) ?? 0;
+
+  int _getVisitas() => (widget.tienda['total_visitas'] as int?) ?? 0;
+
+  String? _getEstado() => widget.tienda['estado_tienda'] as String?;
+
+  bool _isActiva() {
+    final s = _getEstado();
+    return s == 'activa' || s == 'abierta';
   }
 
-  /// Obtener número de valoraciones
-  int _getRatingCount() {
-    final count = tienda['total_valoraciones'] as int?;
-    return count ?? 0;
+  String _transformContaboUrlToR2(String url) {
+    try {
+      if (!url.contains('contabostorage.com')) return url;
+      final appConfig = getIt<AppConfig>();
+      if (appConfig.cloudflareR2PublicUrl.isEmpty) return url;
+      final uri = Uri.parse(url);
+      final segs = uri.pathSegments;
+      final idx = segs.indexWhere((s) => s == 'paseocomercio');
+      if (idx == -1 || idx >= segs.length - 1) return url;
+      final rel = segs.sublist(idx + 1).join('/');
+      String base = appConfig.cloudflareR2PublicUrl.trim();
+      if (base.endsWith('/')) base = base.substring(0, base.length - 1);
+      return '$base/$rel';
+    } catch (_) {
+      return url;
+    }
   }
 
-  /// Obtener número de visitas
-  int _getVisitCount() {
-    final visits = tienda['total_visitas'] as int?;
-    return visits ?? 0;
-  }
-
-  /// Obtener estado de la tienda
-  String? _getTiendaStatus() {
-    return tienda['estado_tienda'] as String?;
-  }
-
-  /// Verificar si la tienda está abierta
-  bool _isTiendaOpen() {
-    final status = _getTiendaStatus();
-    return status == 'activa' || status == 'abierta';
-  }
-
-  /// Obtener icono según categoría
   IconData _getCategoryIcon() {
-    final categoria = _getTiendaCategory()?.toLowerCase() ?? '';
-
-    if (categoria.contains('ropa') || categoria.contains('moda')) {
-      return Icons.shopping_bag;
-    } else if (categoria.contains('comida') ||
-        categoria.contains('restaurante')) {
-      return Icons.restaurant;
-    } else if (categoria.contains('tecnología') ||
-        categoria.contains('electrónica')) {
-      return Icons.computer;
-    } else if (categoria.contains('belleza') || categoria.contains('salud')) {
-      return Icons.spa;
-    } else if (categoria.contains('hogar') ||
-        categoria.contains('decoración')) {
-      return Icons.home;
-    } else if (categoria.contains('deporte') || categoria.contains('fitness')) {
-      return Icons.sports;
-    } else if (categoria.contains('libro') || categoria.contains('papelería')) {
-      return Icons.menu_book;
-    } else if (categoria.contains('juguete') || categoria.contains('niño')) {
-      return Icons.toys;
-    } else if (categoria.contains('joyería') ||
-        categoria.contains('accesorio')) {
-      return Icons.diamond;
-    } else if (categoria.contains('zapato') || categoria.contains('calzado')) {
-      return Icons.shopping_cart;
-    }
-
-    return Icons.storefront;
+    final c = (_getCategoria() ?? '').toLowerCase();
+    if (c.contains('ropa') || c.contains('moda'))
+      return Icons.checkroom_rounded;
+    if (c.contains('comida') || c.contains('restaur'))
+      return Icons.restaurant_rounded;
+    if (c.contains('tecno') || c.contains('electr'))
+      return Icons.devices_rounded;
+    if (c.contains('belleza') || c.contains('salud')) return Icons.spa_rounded;
+    if (c.contains('hogar') || c.contains('decor')) return Icons.chair_rounded;
+    if (c.contains('deporte') || c.contains('fit')) return Icons.sports_rounded;
+    if (c.contains('libro') || c.contains('papel'))
+      return Icons.menu_book_rounded;
+    if (c.contains('jugu') || c.contains('niño')) return Icons.toys_rounded;
+    if (c.contains('joya') || c.contains('acceso'))
+      return Icons.diamond_rounded;
+    if (c.contains('zapato') || c.contains('calzado'))
+      return Icons.shopping_bag_rounded;
+    return Icons.storefront_rounded;
   }
 
-  /// Construir widget de valoración
-  Widget _buildRatingWidget() {
-    final rating = _getAverageRating();
-    final count = _getRatingCount();
-
-    if (rating == 0.0) {
-      return Row(
-        children: [
-          const Icon(Icons.star_border, size: 16, color: Colors.grey),
-          const SizedBox(width: 4),
-          Text(
-            'Sin valoraciones',
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-          ),
-        ],
+  // ── Estado badge data ─────────────────────────────────────
+  _BadgeData _getEstadoBadge() {
+    final s = _getEstado();
+    if (_isActiva()) {
+      return _BadgeData(
+        icon: Icons.check_circle_rounded,
+        label: 'Abierta',
+        color: const Color(0xFF22C55E),
       );
     }
-
-    return Row(
-      children: [
-        Icon(Icons.star, size: 16, color: Colors.amber),
-        const SizedBox(width: 4),
-        Text(
-          rating.toStringAsFixed(1),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          '($count)',
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
-      ],
-    );
-  }
-
-  /// Construir widget de estado
-  Widget _buildStatusWidget() {
-    final isOpen = _isTiendaOpen();
-    final status = _getTiendaStatus();
-
-    Color statusColor;
-    String statusText;
-    IconData statusIcon;
-
-    if (isOpen) {
-      statusColor = Colors.green;
-      statusText = 'Abierta';
-      statusIcon = Icons.check_circle;
-    } else if (status == 'cerrada') {
-      statusColor = Colors.red;
-      statusText = 'Cerrada';
-      statusIcon = Icons.cancel;
-    } else if (status == 'pendiente') {
-      statusColor = Colors.orange;
-      statusText = 'Pendiente';
-      statusIcon = Icons.pending;
-    } else {
-      statusColor = Colors.grey;
-      statusText = 'Desconocido';
-      statusIcon = Icons.help;
+    if (s == 'cerrada') {
+      return _BadgeData(
+        icon: Icons.block_rounded,
+        label: 'Cerrada',
+        color: const Color(0xFFEF4444),
+      );
     }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withOpacity(0.3), width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(statusIcon, size: 12, color: statusColor),
-          const SizedBox(width: 4),
-          Text(
-            statusText,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: statusColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Construir widget de visitas
-  Widget _buildVisitsWidget() {
-    final visits = _getVisitCount();
-
-    return Row(
-      children: [
-        Icon(Icons.remove_red_eye, size: 14, color: Colors.grey[600]),
-        const SizedBox(width: 4),
-        Text(
-          '$visits',
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
-      ],
+    if (s == 'pendiente') {
+      return _BadgeData(
+        icon: Icons.pending_rounded,
+        label: 'Pendiente',
+        color: const Color(0xFFF59E0B),
+      );
+    }
+    return _BadgeData(
+      icon: Icons.help_outline_rounded,
+      label: 'Sin estado',
+      color: _kHint,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = _getTiendaImage();
-    final tiendaName = _getTiendaName();
-    final tiendaDescription = _getTiendaDescription();
-    final categoria = _getTiendaCategory();
+    final imageUrl = _getImage();
+    final nombre = _getNombre();
+    final badge = _getEstadoBadge();
+    final categoria = _getCategoria();
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Imagen de la tienda
-            Stack(
-              children: [
-                Container(
-                  height: 160,
-                  color: Colors.grey[200],
-                  child:
-                      imageUrl != null
-                          ? CachedNetworkImage(
-                            imageUrl: imageUrl,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            placeholder:
-                                (context, url) => Container(
-                                  color: Colors.grey[300],
-                                  child: const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                ),
-                            errorWidget:
-                                (context, url, error) => Container(
-                                  color: Colors.grey[300],
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.storefront,
-                                      size: 64,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ),
-                          )
-                          : Center(
-                            child: Icon(
-                              _getCategoryIcon(),
-                              size: 64,
-                              color: Colors.grey,
-                            ),
-                          ),
-                ),
-                // Botón de favorito
-                if (showFavoriteButton)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: isFavorite ? Colors.red : Colors.grey,
-                          size: 20,
-                        ),
-                        onPressed: onFavoriteToggle,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 36,
-                          minHeight: 36,
-                        ),
-                      ),
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder:
+            (_, child) => Transform.scale(
+              scale: _scale.value,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _kGold.withOpacity(0.04 + _glow.value * 0.12),
+                      blurRadius: 18 + _glow.value * 14,
+                      spreadRadius: _glow.value * 2,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                // Estado de la tienda
-                Positioned(top: 8, left: 8, child: _buildStatusWidget()),
-              ],
-            ),
-
-            if (showDetails) ...[
-              // Contenido de la tarjeta
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Nombre y categoría
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                tiendaName,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  height: 1.2,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (categoria != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    categoria,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.50),
+                      blurRadius: 14,
+                      offset: const Offset(0, 3),
                     ),
-
-                    const SizedBox(height: 8),
-
-                    // Descripción
-                    Text(
-                      tiendaDescription,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[700],
-                        height: 1.4,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Estadísticas
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Valoración
-                        _buildRatingWidget(),
-
-                        // Visitas
-                        _buildVisitsWidget(),
-                      ],
-                    ),
-
-                    // Tags o etiquetas (si existen)
-                    if (tienda['etiquetas'] != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children:
-                              (tienda['etiquetas'] as List<dynamic>)
-                                  .take(3)
-                                  .map((tag) {
-                                    final tagName =
-                                        tag['nombre'] as String? ??
-                                        tag.toString();
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        tagName,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.blue[700],
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    );
-                                  })
-                                  .toList(),
-                        ),
-                      ),
                   ],
                 ),
+                child: child,
               ),
-            ] else ...[
-              // Versión compacta (solo nombre)
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
+            ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: Container(
+              decoration: BoxDecoration(
+                color: _kSurfaceCard.withOpacity(0.92),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: _kBorder, width: 1),
+              ),
+              child:
+                  widget.showDetails
+                      ? _buildFullCard(imageUrl, nombre, badge, categoria)
+                      : _buildCompactCard(imageUrl, nombre, badge),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Tarjeta completa ──────────────────────────────────────
+  Widget _buildFullCard(
+    String? imageUrl,
+    String nombre,
+    _BadgeData badge,
+    String? categoria,
+  ) {
+    final rating = _getRating();
+    final ratingCnt = _getRatingCount();
+    final visitas = _getVisitas();
+    final descripcion = _getDescripcion();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Zona de imagen ─────────────────────────────────
+        SizedBox(
+          height: 175,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Imagen / fallback
+              _buildImageSection(imageUrl, nombre),
+
+              // Overlay degradado inferior
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        _kBg.withOpacity(0.35),
+                        _kBg.withOpacity(0.80),
+                      ],
+                      stops: const [0.4, 0.72, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Badge estado (top-left)
+              Positioned(
+                top: 10,
+                left: 10,
+                child: _buildBadge(badge, small: true),
+              ),
+
+              // Favorito (top-right)
+              if (widget.showFavoriteButton)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: _FavButton(
+                    isFavorite: widget.isFavorite,
+                    onTap: widget.onFavoriteToggle,
+                  ),
+                ),
+
+              // Nombre encima del degradado inferior
+              Positioned(
+                left: 14,
+                right: 14,
+                bottom: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(_getCategoryIcon(), size: 20, color: Colors.grey[600]),
-                    const SizedBox(width: 8),
-                    Expanded(
+                    if (categoria != null && categoria.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _kGold.withOpacity(0.14),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: _kGold.withOpacity(0.38),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            categoria,
+                            style: const TextStyle(
+                              color: _kGold,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ShaderMask(
+                      shaderCallback:
+                          (b) => const LinearGradient(
+                            colors: [Colors.white, _kGoldLight],
+                            stops: [0.6, 1.0],
+                          ).createShader(b),
                       child: Text(
-                        tiendaName,
+                        nombre,
                         style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                          height: 1.2,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black54,
+                              blurRadius: 8,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -462,9 +441,429 @@ class TiendaCard extends StatelessWidget {
                 ),
               ),
             ],
-          ],
+          ),
+        ),
+
+        // ── Info inferior ──────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Descripción
+              Text(
+                descripcion,
+                style: const TextStyle(
+                  color: _kHint,
+                  fontSize: 12,
+                  height: 1.5,
+                  letterSpacing: 0.1,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              const SizedBox(height: 12),
+
+              // Separador dorado
+              Container(
+                height: 1,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.transparent, _kBorder, Colors.transparent],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Stats: rating + visitas + flecha
+              Row(
+                children: [
+                  // Rating
+                  _buildRatingMini(rating, ratingCnt),
+                  const SizedBox(width: 14),
+                  // Visitas
+                  _buildVisitasMini(visitas),
+                  const Spacer(),
+                  // Etiquetas si existen
+                  if (widget.tienda['etiquetas'] != null) ..._buildEtiquetas(),
+                  // Flecha
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: _kGold,
+                    size: 13,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Tarjeta compacta (fila horizontal) ────────────────────
+  Widget _buildCompactCard(String? imageUrl, String nombre, _BadgeData badge) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          // Logo pequeño
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: _kGold.withOpacity(0.07),
+              border: Border.all(color: _kGold.withOpacity(0.24), width: 1),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(11),
+              child:
+                  imageUrl != null
+                      ? CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.cover,
+                        placeholder:
+                            (_, __) => const Center(
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 1.5,
+                                  valueColor: AlwaysStoppedAnimation(_kGold),
+                                ),
+                              ),
+                            ),
+                        errorWidget:
+                            (_, __, ___) => Icon(
+                              _getCategoryIcon(),
+                              color: _kGold.withOpacity(0.55),
+                              size: 22,
+                            ),
+                      )
+                      : Icon(
+                        _getCategoryIcon(),
+                        color: _kGold.withOpacity(0.55),
+                        size: 22,
+                      ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  nombre,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                _buildBadge(badge, small: true),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.arrow_forward_ios_rounded, color: _kGold, size: 13),
+        ],
+      ),
+    );
+  }
+
+  // ── Imagen / fallback ─────────────────────────────────────
+  Widget _buildImageSection(String? imageUrl, String nombre) {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: imageUrl,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => _buildFallback(nombre, loading: true),
+        errorWidget: (_, __, ___) => _buildFallback(nombre),
+      );
+    }
+    return _buildFallback(nombre);
+  }
+
+  Widget _buildFallback(String nombre, {bool loading = false}) {
+    return Container(
+      color: _kSurface,
+      child: Center(
+        child:
+            loading
+                ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    valueColor: AlwaysStoppedAnimation(_kGold),
+                  ),
+                )
+                : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _kGold.withOpacity(0.08),
+                        border: Border.all(
+                          color: _kGold.withOpacity(0.30),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          _getCategoryIcon(),
+                          color: _kGold.withOpacity(0.65),
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      nombre.isNotEmpty ? nombre[0].toUpperCase() : 'T',
+                      style: TextStyle(
+                        color: _kGold.withOpacity(0.55),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+      ),
+    );
+  }
+
+  // ── Badge de estado ───────────────────────────────────────
+  Widget _buildBadge(_BadgeData data, {bool small = false}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: small ? 8 : 10,
+            vertical: small ? 3 : 5,
+          ),
+          decoration: BoxDecoration(
+            color: data.color.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: data.color.withOpacity(0.45), width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(data.icon, color: data.color, size: small ? 9 : 11),
+              const SizedBox(width: 4),
+              Text(
+                data.label,
+                style: TextStyle(
+                  color: data.color,
+                  fontSize: small ? 9 : 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+
+  // ── Rating mini ───────────────────────────────────────────
+  Widget _buildRatingMini(double rating, int count) {
+    if (rating == 0) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.star_border_rounded,
+            size: 13,
+            color: _kHint.withOpacity(0.7),
+          ),
+          const SizedBox(width: 3),
+          Text(
+            'Sin valorar',
+            style: TextStyle(fontSize: 10, color: _kHint.withOpacity(0.7)),
+          ),
+        ],
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.star_rounded, size: 13, color: _kGold),
+        const SizedBox(width: 3),
+        Text(
+          rating.toStringAsFixed(1),
+          style: const TextStyle(
+            color: _kGoldLight,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 3),
+        Text(
+          '($count)',
+          style: TextStyle(fontSize: 10, color: _kHint.withOpacity(0.8)),
+        ),
+      ],
+    );
+  }
+
+  // ── Visitas mini ──────────────────────────────────────────
+  Widget _buildVisitasMini(int visitas) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.visibility_rounded,
+          size: 12,
+          color: _kHint.withOpacity(0.8),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$visitas vistas',
+          style: TextStyle(fontSize: 10, color: _kHint.withOpacity(0.8)),
+        ),
+      ],
+    );
+  }
+
+  // ── Etiquetas ─────────────────────────────────────────────
+  List<Widget> _buildEtiquetas() {
+    final etiquetas = widget.tienda['etiquetas'] as List<dynamic>?;
+    if (etiquetas == null || etiquetas.isEmpty) return [];
+    return etiquetas.take(2).map((tag) {
+      final nombre = tag['nombre'] as String? ?? tag.toString();
+      return Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          decoration: BoxDecoration(
+            color: _kGold.withOpacity(0.07),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: _kGold.withOpacity(0.22), width: 1),
+          ),
+          child: Text(
+            nombre,
+            style: const TextStyle(
+              color: _kGold,
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BOTÓN FAVORITO
+// ══════════════════════════════════════════════════════════════
+class _FavButton extends StatefulWidget {
+  final bool isFavorite;
+  final VoidCallback? onTap;
+  const _FavButton({required this.isFavorite, this.onTap});
+
+  @override
+  State<_FavButton> createState() => _FavButtonState();
+}
+
+class _FavButtonState extends State<_FavButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.78,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap?.call();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: AnimatedBuilder(
+        animation: _scale,
+        builder:
+            (_, __) => Transform.scale(
+              scale: _scale.value,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.45),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color:
+                            widget.isFavorite
+                                ? const Color(0xFFEF4444).withOpacity(0.55)
+                                : _kBorder,
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      widget.isFavorite
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      size: 16,
+                      color:
+                          widget.isFavorite ? const Color(0xFFEF4444) : _kHint,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DATA CLASS PARA BADGE
+// ══════════════════════════════════════════════════════════════
+class _BadgeData {
+  final IconData icon;
+  final String label;
+  final Color color;
+  const _BadgeData({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
 }

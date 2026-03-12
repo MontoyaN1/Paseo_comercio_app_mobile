@@ -6,6 +6,7 @@ import 'package:equatable/equatable.dart';
 import '../../../../domain/usecases/get_tiendas_usecase.dart';
 import '../../../../domain/usecases/get_tienda_by_id_usecase.dart';
 import '../../../../domain/usecases/search_tiendas_usecase.dart';
+import '../../../../domain/usecases/get_productos_usecase.dart';
 
 part 'tienda_event.dart';
 part 'tienda_state.dart';
@@ -15,14 +16,17 @@ class TiendaBloc extends Bloc<TiendaEvent, TiendaState> {
   final GetTiendasUseCase _getTiendasUseCase;
   final GetTiendaByIdUseCase _getTiendaByIdUseCase;
   final SearchTiendasUseCase _searchTiendasUseCase;
+  final GetProductosUseCase _getProductosUseCase;
 
   TiendaBloc({
     required GetTiendasUseCase getTiendasUseCase,
     required GetTiendaByIdUseCase getTiendaByIdUseCase,
     required SearchTiendasUseCase searchTiendasUseCase,
+    required GetProductosUseCase getProductosUseCase,
   }) : _getTiendasUseCase = getTiendasUseCase,
        _getTiendaByIdUseCase = getTiendaByIdUseCase,
        _searchTiendasUseCase = searchTiendasUseCase,
+       _getProductosUseCase = getProductosUseCase,
        super(const TiendaInitial()) {
     on<TiendaLoadRequested>(_onTiendaLoadRequested);
     on<TiendaLoadByIdRequested>(_onTiendaLoadByIdRequested);
@@ -31,6 +35,8 @@ class TiendaBloc extends Bloc<TiendaEvent, TiendaState> {
     on<TiendaRefreshRequested>(_onTiendaRefreshRequested);
     on<TiendaClearSearch>(_onTiendaClearSearch);
     on<TiendaErrorCleared>(_onTiendaErrorCleared);
+    on<TiendaProductsRequested>(_onTiendaProductsRequested);
+    on<TiendaHorariosRequested>(_onTiendaHorariosRequested);
   }
 
   /// Manejar evento de carga de tiendas
@@ -295,6 +301,43 @@ class TiendaBloc extends Bloc<TiendaEvent, TiendaState> {
     if (state is TiendaError) {
       emit(const TiendaInitial());
     }
+  }
+
+  /// Manejar evento de cargar productos de tienda
+  Future<void> _onTiendaProductsRequested(
+    TiendaProductsRequested event,
+    Emitter<TiendaState> emit,
+  ) async {
+    try {
+      final productos = await _getProductosUseCase.execute(
+        GetProductosParams(
+          tiendaId: event.tiendaId,
+          page: event.page,
+          limit: event.limit,
+          estado: event.estado,
+        ),
+      );
+
+      emit(
+        TiendaProductsLoaded(
+          tiendaId: event.tiendaId,
+          productos: productos,
+          currentPage: event.page,
+          hasMore: productos.length >= event.limit,
+        ),
+      );
+    } catch (e) {
+      emit(TiendaError(message: 'Error al cargar productos: $e', error: e));
+    }
+  }
+
+  /// Manejar evento de cargar horarios de tienda
+  Future<void> _onTiendaHorariosRequested(
+    TiendaHorariosRequested event,
+    Emitter<TiendaState> emit,
+  ) async {
+    // Horarios todavía no implementado - emitir estado vacío
+    emit(TiendaHorariosLoaded(tiendaId: event.tiendaId, horarios: []));
   }
 
   /// Obtener tiendas actuales del estado

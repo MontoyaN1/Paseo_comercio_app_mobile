@@ -9,7 +9,7 @@ This file contains essential information for AI agents working on this Flutter p
 **Architecture:** Clean Architecture with 4 layers  
 **State Management:** BLoC Pattern  
 **Database:** Supabase PostgreSQL + Hive local cache  
-**Authentication:** Clerk + Supabase Auth  
+**Authentication:** Firebase Auth + Google Sign In  
 **Image Storage:** Multi-CDN (Cloudflare R2 → Contabo S3 → Supabase Storage)
 
 ## 🚀 Build & Development Commands
@@ -106,24 +106,67 @@ flutter pub run flutter_launcher_icons:main
 lib/
 ├── core/                    # Core functionality
 │   ├── app/                # App configuration
+│   ├── config/             # Configuration files
 │   ├── constants/          # App constants
 │   ├── errors/             # Error handling
+│   ├── localization/       # Localization support
 │   ├── routing/            # Navigation (GoRouter)
 │   └── utils/              # Shared utilities
 ├── domain/                 # Business logic layer
-│   ├── entities/           # Domain entities (19+)
+│   ├── entities/           # Domain entities (16+)
+│   ├── failures/           # Failure classes
 │   ├── repositories/       # Repository interfaces
 │   └── usecases/           # Use cases
 ├── data/                   # Data layer
 │   ├── datasources/        # Data sources (remote/local)
-│   ├── models/             # Data models
-│   └── repositories/       # Repository implementations
+│   │   ├── local/         # Local datasources (Hive)
+│   │   └── remote/        # Remote datasources (Supabase, S3)
+│   ├── models/            # Data models
+│   └── repositories/      # Repository implementations
 ├── presentation/           # UI layer
 │   ├── blocs/             # BLoC state management
+│   │   ├── auth/          # Authentication
+│   │   ├── image/         # Image handling
+│   │   ├── organizacion/  # Organizations
+│   │   ├── plazoleta/     # Plazoletas (plazas)
+│   │   ├── producto/     # Products
+│   │   └── tienda/       # Stores
 │   ├── pages/             # Screens/pages
 │   └── widgets/           # Reusable widgets
 └── di/                     # Dependency injection (GetIt)
 ```
+
+### Domain Entities (16+)
+- `Usuario` - System users
+- `Tienda` - Commercial stores
+- `Producto` - Products
+- `Plazoleta` - Plazas/locations
+- `Organizacion` - Organizations/collectives
+- `Categoria` - Categories
+- `Horario` - Business hours
+- `ValoracionProducto` - Product reviews
+- `EtiquetaTienda` - Store tags
+- `EtiquetaProducto` - Product tags
+- `Notificacion` - Notifications
+- `ImagenBase` - Base image model
+- And more...
+
+### BLoCs Implemented (6)
+- `AuthBloc` - Authentication state
+- `ImageBloc` - Image handling
+- `OrganizacionBloc` - Organizations
+- `PlazoletaBloc` - Plazas
+- `ProductoBloc` - Products
+- `TiendaBloc` - Stores
+
+### Pages Structure
+- `auth/` - Authentication pages
+- `organizaciones/` - Organization pages
+- `plazoletas/` - Plaza pages
+- `productos/` - Product pages
+- `profile/` - User profile
+- `splash/` - Splash screen
+- `tiendas/` - Store pages
 
 ## 📝 Code Style Guidelines
 
@@ -384,9 +427,16 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Clerk Authentication (mandatory)
-CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxx
-CLERK_SECRET_KEY=sk_test_xxxxxxxx
+# Firebase (mandatory)
+FIREBASE_API_KEY=your-api-key
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+FIREBASE_APP_ID=your-app-id
+FIREBASE_STORAGE_BUCKET=your-storage-bucket
+
+# Google Sign In (mandatory)
+GOOGLE_SIGN_IN_IOS_CLIENT_ID=your-ios-client-id
+GOOGLE_SIGN_IN_ANDROID_CLIENT_ID=your-android-client-id
 
 # Cloudflare R2 (optional - for image storage migration)
 CLOUDFLARE_ACCOUNT_ID=xxxxxxxx
@@ -402,6 +452,8 @@ CLOUDFLARE_R2_PUBLIC_URL=https://pub-xxxxxx.r2.dev
 - `analysis_options.yaml` - Dart analyzer configuration
 - `pubspec.yaml` - Dependencies and project metadata
 - `build.yaml` - Build configuration
+- `firebase.json` - Firebase configuration
+- `lib/firebase_options.dart` - Firebase options
 
 ## 🧪 Testing Guidelines
 
@@ -530,22 +582,63 @@ flutter pub run build_runner build
 - Ensure bucket has public read access
 - Check network connectivity
 
-### 4. Clerk Authentication Issues
-- Verify `CLERK_PUBLISHABLE_KEY` is correct
-- Check social logins are configured in Clerk dashboard
-- Ensure redirect URLs are properly configured
-- Check network connectivity to Clerk services
+### 4. Firebase Authentication Issues
+- Verify `FIREBASE_API_KEY` is correct
+- Check Google Sign In client IDs for iOS and Android
+- Ensure SHA-1 fingerprint is configured in Firebase Console
+- Check network connectivity to Firebase services
+
+### 5. Supabase Connection Issues
+- Verify `SUPABASE_URL` and `SUPABASE_ANON_KEY` are correct
+- Check that Supabase project is active
+- Verify network connectivity
+- Check table RLS policies
 
 ## 📚 Additional Resources
 
 - [Flutter Documentation](https://flutter.dev/docs)
 - [BLoC Library Documentation](https://bloclibrary.dev)
 - [Supabase Flutter Documentation](https://supabase.com/docs/guides/flutter)
-- [Clerk Flutter Documentation](https://clerk.com/docs/sdks/flutter)
+- [Firebase Flutter Documentation](https://firebase.google.com/docs/flutter/setup)
+- [Google Sign In Flutter](https://pub.dev/packages/google_sign_in)
 - [Clean Architecture for Flutter](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+
+## 📋 Key Dependencies
+
+```yaml
+# Authentication
+firebase_core: ^3.7.0
+firebase_auth: ^5.3.0
+google_sign_in: ^6.2.0
+
+# Database & Backend
+supabase_flutter: ^2.1.3
+cloud_firestore: ^5.3.0
+firebase_storage: ^12.3.0
+
+# State Management
+flutter_bloc: ^9.1.1
+equatable: ^2.0.5
+dartz: ^0.10.1
+
+# Local Storage
+hive: ^2.2.3
+hive_flutter: ^1.1.0
+flutter_secure_storage: ^10.0.0
+
+# Navigation
+go_router: ^17.1.0
+
+# Networking
+dio: ^5.4.0
+cached_network_image: ^3.3.0
+
+# DI
+get_it: ^9.2.0
+```
 
 ---
 
-**Last Updated:** March 8, 2026  
-**Project Status:** Phase 1 Completed (85%), MVP in development  
+**Last Updated:** June 2025  
+**Project Status:** Phase 1 Completed (92%), MVP in development  
 **Primary Contacts:** Development Team

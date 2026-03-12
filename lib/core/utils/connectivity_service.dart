@@ -2,7 +2,6 @@
 
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart';
 import '../errors/app_exceptions.dart';
 
 /// Estados de conectividad
@@ -156,16 +155,9 @@ class ConnectivityService {
         connected ? ConnectionStatus.connected : ConnectionStatus.disconnected,
       );
 
-      if (kDebugMode) {
-        print('ConnectivityService: Estado actual - ${_currentStatus.name}');
-        print(
-          'ConnectivityService: Tipo de conexión - ${_getConnectionTypeName(results)}',
-        );
-      }
+      // Estado actual actualizado
     } catch (error) {
-      if (kDebugMode) {
-        print('ConnectivityService: Error al verificar conectividad - $error');
-      }
+      // Error al verificar conectividad
       _updateStatus(ConnectionStatus.disconnected);
     }
   }
@@ -174,11 +166,7 @@ class ConnectivityService {
   Future<void> _handleConnectivityChange(
     List<ConnectivityResult> results,
   ) async {
-    if (kDebugMode) {
-      print(
-        'ConnectivityService: Cambio detectado - ${_getConnectionTypeName(results)}',
-      );
-    }
+    // Cambio de conectividad detectado
 
     // Verificar conectividad real (no solo el tipo de conexión)
     await _checkConnectivity();
@@ -190,9 +178,7 @@ class ConnectivityService {
       _currentStatus = newStatus;
       _statusController.add(newStatus);
 
-      if (kDebugMode) {
-        print('ConnectivityService: Estado cambiado a - ${newStatus.name}');
-      }
+      // Estado de conectividad cambiado
     }
   }
 

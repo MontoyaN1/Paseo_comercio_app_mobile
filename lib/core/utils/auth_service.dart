@@ -1,7 +1,6 @@
 // lib/core/utils/auth_service.dart
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
     hide
         AuthException,
@@ -44,9 +43,6 @@ class AuthService {
       // Configurar Clerk
       if (clerkPublishableKey.isNotEmpty) {
         _isClerkConfigured = true;
-        if (kDebugMode) {
-          print('AuthService: Clerk configurado');
-        }
       }
 
       // Configurar Supabase Auth como fallback
@@ -56,17 +52,10 @@ class AuthService {
           supabaseAnonKey.isNotEmpty) {
         await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
         _isSupabaseConfigured = true;
-        if (kDebugMode) {
-          print('AuthService: Supabase Auth configurado como fallback');
-        }
       }
 
       // Verificar estado inicial
       await _checkAuthState();
-
-      if (kDebugMode) {
-        print('AuthService: Inicializado en modo $_authMode');
-      }
     } catch (error) {
       throw ConfigurationException(
         message: 'Error al inicializar AuthService',
@@ -426,7 +415,7 @@ class AuthService {
       );
       result.fold(
         (_) {}, // éxito
-        (error) => print('Error saving auth state: $error'),
+        (error) => {}, // Error silencioso
       );
     } catch (_) {
       // Ignorar errores de caché

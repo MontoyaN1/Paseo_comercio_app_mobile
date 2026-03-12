@@ -22,8 +22,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../domain/entities/organizacion.dart';
 import '../../../../domain/entities/enums.dart';
 import '../../../../presentation/blocs/organizacion/organizacion_bloc.dart';
-import '../../../../core/app/app_config.dart';
+
 import '../../widgets/profile_floating_button.dart';
+import '../../widgets/tienda/tienda_card.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const _kGold = Color(0xFFD4AF37);
@@ -57,7 +58,7 @@ class _OrganizacionDetailPageState extends State<OrganizacionDetailPage>
   // ── Controllers ───────────────────────────────────────────
   late final TabController _tabController;
   final _scrollController = ScrollController();
-  final AppConfig _appConfig = AppConfig();
+
   bool _hasLoaded = false;
 
   // ── Animaciones ───────────────────────────────────────────
@@ -191,76 +192,6 @@ class _OrganizacionDetailPageState extends State<OrganizacionDetailPage>
     final tiendaId = tienda['id'];
     if (tiendaId != null) {
       context.push('/tiendas/$tiendaId');
-    }
-  }
-
-  String? _getTiendaLogoUrl(Map<String, dynamic> tienda) {
-    final imagenes = tienda['imagen_tienda'];
-    String? rawUrl;
-    if (imagenes != null) {
-      if (imagenes is List && imagenes.isNotEmpty) {
-        for (final imagen in imagenes) {
-          if (imagen is Map<String, dynamic> &&
-              imagen['tipo_imagen'] == 'logo') {
-            rawUrl = imagen['url_imagen'] as String?;
-            break;
-          }
-        }
-        if (rawUrl == null) {
-          final p = imagenes[0];
-          if (p is Map<String, dynamic>) rawUrl = p['url_imagen'] as String?;
-        }
-      } else if (imagenes is Map<String, dynamic>) {
-        rawUrl = imagenes['url_imagen'] as String?;
-      }
-    }
-    if (rawUrl == null || rawUrl.isEmpty) {
-      final logoUrl = tienda['logo_url'] ?? tienda['url_logo'];
-      if (logoUrl is String && logoUrl.isNotEmpty) rawUrl = logoUrl;
-    }
-    if (rawUrl == null || rawUrl.isEmpty) return null;
-    return _transformContaboUrlToR2(rawUrl);
-  }
-
-  String _getTiendaNombre(Map<String, dynamic> t) {
-    final n = t['nombre'] ?? t['nombre_tienda'] ?? t['titulo'] ?? 'Tienda';
-    if (n == 'Tienda' || n == 'Tienda sin nombre') {
-      final id = t['id'] ?? t['tienda_id'];
-      if (id != null) return 'Tienda $id';
-    }
-    return n;
-  }
-
-  String _getTiendaDescripcion(Map<String, dynamic> t) {
-    final d =
-        t['descripcion'] ??
-        t['descripcion_tienda'] ??
-        t['descripcion_corta'] ??
-        'Sin descripción disponible';
-    return d.length > 100 ? '${d.substring(0, 100)}...' : d;
-  }
-
-  String? _getTiendaCategoria(Map<String, dynamic> t) {
-    final c =
-        t['categoria'] ?? t['categoria_tienda'] ?? t['tipo'] ?? t['rubro'];
-    if (c is String && c.isNotEmpty) return c;
-    return null;
-  }
-
-  String _transformContaboUrlToR2(String url) {
-    try {
-      if (!url.contains('contabostorage.com')) return url;
-      if (_appConfig.cloudflareR2PublicUrl.isEmpty) return url;
-      final uri = Uri.parse(url);
-      final segs = uri.pathSegments;
-      final idx = segs.indexWhere((s) => s == 'paseocomercio');
-      if (idx == -1 || idx >= segs.length - 1) return url;
-      final rel = segs.sublist(idx + 1).join('/');
-      String base = _appConfig.cloudflareR2PublicUrl.trim();
-      if (base.endsWith('/')) base = base.substring(0, base.length - 1);
-      return '$base/$rel';
-    } catch (_) {
-      return url;
     }
   }
 
@@ -853,13 +784,11 @@ class _OrganizacionDetailPageState extends State<OrganizacionDetailPage>
                   child: child,
                 ),
               ),
-          child: _TiendaCard(
+          child: TiendaCard(
             tienda: tienda,
-            onTap: _onTiendaTap,
-            getLogoUrl: _getTiendaLogoUrl,
-            getNombre: _getTiendaNombre,
-            getDescripcion: _getTiendaDescripcion,
-            getCategoria: _getTiendaCategoria,
+            onTap: () => _onTiendaTap(tienda),
+            showDetails: true,
+            showFavoriteButton: false,
           ),
         );
       },
@@ -1211,249 +1140,6 @@ class _GoldDivider extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.transparent, _kBorder, Colors.transparent],
-        ),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  CARD DE TIENDA — glassmorphism + hover glow
-// ══════════════════════════════════════════════════════════════
-class _TiendaCard extends StatefulWidget {
-  final Map<String, dynamic> tienda;
-  final void Function(Map<String, dynamic>) onTap;
-  final String? Function(Map<String, dynamic>) getLogoUrl;
-  final String Function(Map<String, dynamic>) getNombre;
-  final String Function(Map<String, dynamic>) getDescripcion;
-  final String? Function(Map<String, dynamic>) getCategoria;
-
-  const _TiendaCard({
-    required this.tienda,
-    required this.onTap,
-    required this.getLogoUrl,
-    required this.getNombre,
-    required this.getDescripcion,
-    required this.getCategoria,
-  });
-
-  @override
-  State<_TiendaCard> createState() => _TiendaCardState();
-}
-
-class _TiendaCardState extends State<_TiendaCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _anim;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 160),
-    );
-    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final logoUrl = widget.getLogoUrl(widget.tienda);
-    final nombre = widget.getNombre(widget.tienda);
-    final descripcion = widget.getDescripcion(widget.tienda);
-    final categoria = widget.getCategoria(widget.tienda);
-    final tieneLogo = logoUrl != null && logoUrl.isNotEmpty;
-
-    return GestureDetector(
-      onTapDown: (_) => _ctrl.forward(),
-      onTapUp: (_) {
-        _ctrl.reverse();
-        widget.onTap(widget.tienda);
-      },
-      onTapCancel: () => _ctrl.reverse(),
-      child: AnimatedBuilder(
-        animation: _anim,
-        builder:
-            (_, child) => Transform.scale(
-              scale: 1.0 - (_anim.value * 0.015),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _kGold.withOpacity(0.04 + _anim.value * 0.10),
-                      blurRadius: 18 + _anim.value * 14,
-                      spreadRadius: _anim.value * 1.5,
-                      offset: const Offset(0, 4),
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.40),
-                      blurRadius: 14,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: child,
-              ),
-            ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-            child: Container(
-              decoration: BoxDecoration(
-                color: _kSurfaceCard.withOpacity(0.90),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _kBorder, width: 1),
-              ),
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  // Logo / Avatar
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: _kGold.withOpacity(0.06),
-                      border: Border.all(
-                        color: _kGold.withOpacity(0.22),
-                        width: 1,
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(11),
-                      child:
-                          tieneLogo
-                              ? Image.network(
-                                logoUrl,
-                                width: 58,
-                                height: 58,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (_, child, progress) {
-                                  if (progress == null) return child;
-                                  return const Center(
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 1.5,
-                                        valueColor: AlwaysStoppedAnimation(
-                                          _kGold,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                                errorBuilder:
-                                    (_, __, ___) => Icon(
-                                      Icons.store_rounded,
-                                      color: _kGold.withOpacity(0.70),
-                                      size: 26,
-                                    ),
-                              )
-                              : Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.store_rounded,
-                                      color: _kGold.withOpacity(0.70),
-                                      size: 22,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      nombre.isNotEmpty
-                                          ? nombre[0].toUpperCase()
-                                          : 'T',
-                                      style: TextStyle(
-                                        color: _kGold.withOpacity(0.80),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 14),
-
-                  // Info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          nombre,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.1,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          descripcion,
-                          style: const TextStyle(
-                            color: _kHint,
-                            fontSize: 12,
-                            height: 1.4,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (categoria != null && categoria.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 9,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _kGold.withOpacity(0.07),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: _kGold.withOpacity(0.25),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              categoria,
-                              style: const TextStyle(
-                                color: _kGold,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: _kGold,
-                    size: 14,
-                  ),
-                ],
-              ),
-            ),
-          ),
         ),
       ),
     );

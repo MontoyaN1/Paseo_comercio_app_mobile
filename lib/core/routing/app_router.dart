@@ -10,6 +10,7 @@ import '../../presentation/pages/splash/splash_page.dart';
 import '../../presentation/pages/auth/login_page.dart';
 import '../../presentation/pages/profile/profile_page.dart';
 import '../../presentation/pages/tiendas/tienda_list_page.dart';
+import '../../presentation/pages/tiendas/tienda_detail_page.dart';
 import '../../presentation/pages/productos/producto_list_page.dart';
 import '../../presentation/pages/plazoletas/plazoleta_list_page.dart';
 import '../../presentation/pages/plazoletas/plazoleta_detail_page.dart';
@@ -163,30 +164,15 @@ class AppRouter {
             ),
       ),
 
-      // Detalle de tienda (placeholder - por implementar)
+      // Detalle de tienda
       GoRoute(
         path: '/tiendas/:id',
         name: 'tienda_detail',
         pageBuilder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
           return MaterialPage<void>(
             key: state.pageKey,
-            child: Scaffold(
-              appBar: AppBar(title: Text('Tienda $id')),
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Detalle de Tienda $id'),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () => context.go('/tiendas'),
-                      child: const Text('Volver a Tiendas'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            child: TiendaDetailPage(tiendaId: id),
           );
         },
       ),

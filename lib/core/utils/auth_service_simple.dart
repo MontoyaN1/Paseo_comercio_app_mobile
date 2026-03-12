@@ -2,8 +2,6 @@
 // Versión simplificada temporal para resolver problemas de compilación
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
-
 import '../constants/app_constants.dart';
 import '../errors/app_exceptions.dart';
 import 'result.dart';
@@ -38,9 +36,6 @@ class AuthServiceSimple {
       // Configurar Clerk si hay clave
       if (clerkPublishableKey.isNotEmpty) {
         _isClerkConfigured = true;
-        if (kDebugMode) {
-          print('AuthServiceSimple: Clerk configurado');
-        }
       }
 
       // Configurar Supabase si hay credenciales
@@ -49,9 +44,6 @@ class AuthServiceSimple {
           supabaseAnonKey != null &&
           supabaseAnonKey.isNotEmpty) {
         _isSupabaseConfigured = true;
-        if (kDebugMode) {
-          print('AuthServiceSimple: Supabase configurado');
-        }
       }
 
       // Establecer estado inicial

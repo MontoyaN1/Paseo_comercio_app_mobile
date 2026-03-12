@@ -28,6 +28,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../di/service_locator.dart';
 import '../../../domain/entities/plazoleta.dart';
+import '../../../domain/entities/enums.dart';
 import '../../blocs/plazoleta/plazoleta_bloc.dart';
 import '../../blocs/plazoleta/plazoleta_event.dart';
 import '../../blocs/plazoleta/plazoleta_state.dart';
@@ -415,16 +416,6 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
     );
   }
 
-  // Función para convertir coordenadas del mundo a coordenadas de pantalla
-  // Esta es la inversa de _screenToWorld
-  Offset _worldToScreen(Offset world, Size size) {
-    if (size.isEmpty) return Offset.zero;
-    return Offset(
-      world.dx * _scale + size.width / 2 + _pan.dx,
-      world.dy * _scale + size.height / 2 + _pan.dy + _kOriginOffsetY,
-    );
-  }
-
   bool _hitTestPlaza(_Plaza p, Offset world) {
     final c = p.slot.col.toDouble();
     final r = p.slot.row.toDouble();
@@ -464,7 +455,7 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
     );
   }
 
-  void _goToDetail(int id) => context.go('/plazoletas/$id');
+  void _goToDetail(int id) => context.push('/plazoletas/$id');
 
   // ══════════════════════════════════════════════════════════
   @override
@@ -493,10 +484,30 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
             if (s is PlazoletaLoading ||
                 s is PlazoletasActivasLoading ||
                 s is PlazoletaLoadingMore ||
+                s is PlazoletaDetailLoading ||
+                s is PlazoletaImagenesLoading ||
+                s is PlazoletaProductosLoading ||
+                s is PlazoletaTiendasLoading ||
+                s is PlazoletaEstadisticasLoading ||
+                s is PlazoletasActivasError ||
+                s is PlazoletaDetailError ||
+                s is PlazoletaImagenesError ||
+                s is PlazoletaProductosError ||
+                s is PlazoletaTiendasError ||
                 _plazas.isEmpty)
               return _loading();
             if (s is PlazoletaErrorState) return _error(s);
-            return _mainView(s as PlazoletaLoaded);
+            if (s is PlazoletaLoaded) return _mainView(s);
+            // Para otros estados (PlazoletaInitial, PlazoletaSelected, etc.)
+            // mostrar loading si no hay plazas ya cargadas
+            if (_plazas.isNotEmpty) {
+              // Reutilizar la vista principal con los datos existentes
+              final currentState = getIt<PlazoletaBloc>().state;
+              if (currentState is PlazoletaLoaded) {
+                return _mainView(currentState);
+              }
+            }
+            return _loading();
           },
         ),
       ),
@@ -2385,7 +2396,7 @@ class _WorldPainter extends CustomPainter {
     _drawPathway(canvas, gN, gE, gS, gW, opacity, p.seed);
 
     // ─ Árboles / plantas ─
-    final hasFood = p.data?.tieneZonaComida ?? false;
+    final hasFood = p.data?.tipoUbicacion == TipoUbicacion.zonaComida;
     final numTrees = hasFood ? 1 : rng.nextInt(2) + 1;
     final treeOffsets = [
       [0.18 + rng.nextDouble() * 0.12, 0.18 + rng.nextDouble() * 0.08],
@@ -2441,7 +2452,7 @@ class _WorldPainter extends CustomPainter {
         opacity: opacity,
       );
     }
-    if (p.data?.tieneEstacionamiento ?? false) {
+    if (p.data?.tipoUbicacion == TipoUbicacion.estacionamiento) {
       _drawParkingSign(
         canvas,
         _tilePoint(gN, gE, gS, gW, 0.76, 0.74),
@@ -2974,7 +2985,7 @@ class _DetailPanel extends StatelessWidget {
         if (img.entidadRelacionadaId == d.id) return img.urlPreferida;
       }
     }
-    return d.icono;
+    return null;
   }
 
   @override
@@ -3116,44 +3127,45 @@ class _DetailPanel extends StatelessWidget {
                       children: [
                         _chipLabel('Plaza ${plaza.index + 1}', acc),
                         const SizedBox(width: 6),
-                        if (d.tieneZonaComida)
+                        if (d.tipoUbicacion == TipoUbicacion.zonaComida)
                           _iconBadge(Icons.restaurant_outlined, acc),
-                        if (d.tieneEstacionamiento) ...[
+                        if (d.tipoUbicacion ==
+                            TipoUbicacion.estacionamiento) ...[
                           const SizedBox(width: 4),
                           _iconBadge(Icons.local_parking, acc),
                         ],
                       ],
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 5),
                     Text(
                       d.nombre,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 17,
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        height: 1.2,
+                        height: 1.1,
                       ),
                     ),
-                    if (d.resumenUbicacion.isNotEmpty) ...[
-                      const SizedBox(height: 5),
+                    if ((d.descripcion ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 4),
                       Row(
                         children: [
                           Icon(
                             Icons.location_on_outlined,
-                            size: 11,
+                            size: 10,
                             color: acc.withOpacity(0.75),
                           ),
-                          const SizedBox(width: 3),
+                          const SizedBox(width: 2),
                           Expanded(
                             child: Text(
-                              d.resumenUbicacion,
+                              d.descripcion ?? '',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.48),
-                                fontSize: 11,
+                                fontSize: 10,
                               ),
                             ),
                           ),
@@ -3167,7 +3179,7 @@ class _DetailPanel extends StatelessWidget {
                 GestureDetector(
                   onTap: onEnter,
                   child: Container(
-                    height: 42,
+                    height: 38,
                     width: double.infinity,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(

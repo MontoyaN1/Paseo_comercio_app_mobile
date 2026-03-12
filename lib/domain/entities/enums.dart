@@ -186,7 +186,10 @@ enum TipoUbicacion {
   escalera('escalera'),
   ascensor('ascensor'),
   bano('baño'),
-  estacionamiento('estacionamiento');
+  estacionamiento('estacionamiento'),
+  zonaDescanso('zona_descanso'),
+  zonaComida('zona_comida'),
+  otro('otro');
 
   final String value;
   const TipoUbicacion(this.value);

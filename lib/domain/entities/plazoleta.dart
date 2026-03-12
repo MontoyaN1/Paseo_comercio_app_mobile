@@ -5,325 +5,200 @@ import 'package:equatable/equatable.dart';
 import 'enums.dart';
 
 /// Entidad de dominio para Plazoleta (zona/ubicación en el centro comercial)
+/// Corresponde a la tabla `plazoleta` en la base de datos
 class Plazoleta extends Equatable {
   final int id;
+  final DateTime fechaCreacion;
   final String nombre;
   final String? descripcion;
-  final String? ubicacion;
-  final int? capacidadMaxima;
-  final int? ordenVisual;
-  final bool activa;
-  final DateTime fechaCreacion;
-  final DateTime? fechaActualizacion;
-  final Map<String, dynamic>? metadata;
-  final int totalTiendas;
-  final int totalVisitas;
-  final double? latitud;
-  final double? longitud;
-  final String? piso;
-  final String? sector;
-  final String? icono;
-  final String? color;
   final TipoUbicacion tipoUbicacion;
-  final bool tieneAccesoDiscapacitados;
-  final bool tieneEstacionamiento;
-  final bool tieneZonaDescanso;
-  final bool tieneZonaComida;
-  final List<String>? serviciosDisponibles;
-  final String? horarioAcceso;
-  final String? normasUso;
+  final String slug;
+  final int? categoriaPrincipalId;
 
   const Plazoleta({
     required this.id,
+    required this.fechaCreacion,
     required this.nombre,
     this.descripcion,
-    this.ubicacion,
-    this.capacidadMaxima,
-    this.ordenVisual,
-    required this.activa,
-    required this.fechaCreacion,
-    this.fechaActualizacion,
-    this.metadata,
-    this.totalTiendas = 0,
-    this.totalVisitas = 0,
-    this.latitud,
-    this.longitud,
-    this.piso,
-    this.sector,
-    this.icono,
-    this.color,
-    this.tipoUbicacion = TipoUbicacion.plazoleta,
-    this.tieneAccesoDiscapacitados = false,
-    this.tieneEstacionamiento = false,
-    this.tieneZonaDescanso = false,
-    this.tieneZonaComida = false,
-    this.serviciosDisponibles,
-    this.horarioAcceso,
-    this.normasUso,
+    required this.tipoUbicacion,
+    required this.slug,
+    this.categoriaPrincipalId,
   });
 
-  /// Verificar si la plazoleta está llena (capacidad máxima alcanzada)
-  bool get estaLlena {
-    if (capacidadMaxima == null) return false;
-    return totalTiendas >= capacidadMaxima!;
+  /// Verificar si la plazoleta tiene categoría principal asociada
+  bool get tieneCategoriaPrincipal => categoriaPrincipalId != null;
+
+  /// Obtener slug formateado para URLs
+  String get slugFormateado => slug.toLowerCase().replaceAll(' ', '-');
+
+  /// Verificar si es una ubicación principal (tipo 'plazoleta')
+  bool get esPlazoletaPrincipal => tipoUbicacion == TipoUbicacion.plazoleta;
+
+  /// Verificar si es un pasillo o área secundaria
+  bool get esAreaSecundaria => tipoUbicacion == TipoUbicacion.pasillo;
+
+  /// Verificar si es una entrada/salida
+  bool get esEntradaSalida => tipoUbicacion == TipoUbicacion.entrada;
+
+  /// Obtener descripción breve (primeras palabras)
+  String get descripcionBreve {
+    if (descripcion == null || descripcion!.isEmpty) {
+      return 'Plazoleta sin descripción';
+    }
+    final palabras = descripcion!.split(' ');
+    return palabras.length > 10
+        ? '${palabras.sublist(0, 10).join(' ')}...'
+        : descripcion!;
   }
 
-  /// Verificar si la plazoleta está disponible (activa y no llena)
-  bool get disponible => activa && !estaLlena;
-
-  /// Verificar si tiene ubicación geográfica
-  bool get tieneUbicacionGeografica => latitud != null && longitud != null;
-
-  /// Verificar si tiene servicios específicos
-  bool tieneServicio(String servicio) {
-    return serviciosDisponibles?.contains(servicio) ?? false;
-  }
-
-  /// Obtener porcentaje de ocupación
-  double get porcentajeOcupacion {
-    if (capacidadMaxima == null || capacidadMaxima == 0) return 0.0;
-    return (totalTiendas / capacidadMaxima!) * 100;
-  }
-
-  /// Verificar si está en un piso específico
-  bool estaEnPiso(String pisoBuscado) {
-    return piso?.toLowerCase() == pisoBuscado.toLowerCase();
-  }
-
-  /// Verificar si está en un sector específico
-  bool estaEnSector(String sectorBuscado) {
-    return sector?.toLowerCase() == sectorBuscado.toLowerCase();
-  }
-
-  /// Verificar si es muy visitada
-  bool get esMuyVisitada => totalVisitas > 1000;
-
-  /// Verificar si es popular (muchas tiendas)
-  bool get esPopular => totalTiendas > 10;
+  /// Obtener inicial del nombre (para avatares/iconos)
+  String get inicialNombre => nombre.isNotEmpty ? nombre[0] : 'P';
 
   /// Copiar con nuevos valores
   Plazoleta copyWith({
     int? id,
+    DateTime? fechaCreacion,
     String? nombre,
     String? descripcion,
-    String? ubicacion,
-    int? capacidadMaxima,
-    int? ordenVisual,
-    bool? activa,
-    DateTime? fechaCreacion,
-    DateTime? fechaActualizacion,
-    Map<String, dynamic>? metadata,
-    int? totalTiendas,
-    int? totalVisitas,
-    double? latitud,
-    double? longitud,
-    String? piso,
-    String? sector,
-    String? icono,
-    String? color,
     TipoUbicacion? tipoUbicacion,
-    bool? tieneAccesoDiscapacitados,
-    bool? tieneEstacionamiento,
-    bool? tieneZonaDescanso,
-    bool? tieneZonaComida,
-    List<String>? serviciosDisponibles,
-    String? horarioAcceso,
-    String? normasUso,
+    String? slug,
+    int? categoriaPrincipalId,
   }) {
     return Plazoleta(
       id: id ?? this.id,
+      fechaCreacion: fechaCreacion ?? this.fechaCreacion,
       nombre: nombre ?? this.nombre,
       descripcion: descripcion ?? this.descripcion,
-      ubicacion: ubicacion ?? this.ubicacion,
-      capacidadMaxima: capacidadMaxima ?? this.capacidadMaxima,
-      ordenVisual: ordenVisual ?? this.ordenVisual,
-      activa: activa ?? this.activa,
-      fechaCreacion: fechaCreacion ?? this.fechaCreacion,
-      fechaActualizacion: fechaActualizacion ?? this.fechaActualizacion,
-      metadata: metadata ?? this.metadata,
-      totalTiendas: totalTiendas ?? this.totalTiendas,
-      totalVisitas: totalVisitas ?? this.totalVisitas,
-      latitud: latitud ?? this.latitud,
-      longitud: longitud ?? this.longitud,
-      piso: piso ?? this.piso,
-      sector: sector ?? this.sector,
-      icono: icono ?? this.icono,
-      color: color ?? this.color,
       tipoUbicacion: tipoUbicacion ?? this.tipoUbicacion,
-      tieneAccesoDiscapacitados:
-          tieneAccesoDiscapacitados ?? this.tieneAccesoDiscapacitados,
-      tieneEstacionamiento: tieneEstacionamiento ?? this.tieneEstacionamiento,
-      tieneZonaDescanso: tieneZonaDescanso ?? this.tieneZonaDescanso,
-      tieneZonaComida: tieneZonaComida ?? this.tieneZonaComida,
-      serviciosDisponibles: serviciosDisponibles ?? this.serviciosDisponibles,
-      horarioAcceso: horarioAcceso ?? this.horarioAcceso,
-      normasUso: normasUso ?? this.normasUso,
+      slug: slug ?? this.slug,
+      categoriaPrincipalId: categoriaPrincipalId ?? this.categoriaPrincipalId,
     );
   }
 
   @override
   List<Object?> get props => [
     id,
+    fechaCreacion,
     nombre,
     descripcion,
-    ubicacion,
-    capacidadMaxima,
-    ordenVisual,
-    activa,
-    fechaCreacion,
-    fechaActualizacion,
-    metadata,
-    totalTiendas,
-    totalVisitas,
-    latitud,
-    longitud,
-    piso,
-    sector,
-    icono,
-    color,
     tipoUbicacion,
-    tieneAccesoDiscapacitados,
-    tieneEstacionamiento,
-    tieneZonaDescanso,
-    tieneZonaComida,
-    serviciosDisponibles,
-    horarioAcceso,
-    normasUso,
+    slug,
+    categoriaPrincipalId,
   ];
 
   @override
   bool get stringify => true;
 
   /// Métodos de utilidad para UI
-  String get resumenUbicacion {
-    final partes = <String>[];
-    if (piso != null) partes.add('Piso $piso');
-    if (sector != null) partes.add('Sector $sector');
-    if (ubicacion != null) partes.add(ubicacion!);
-    return partes.join(' • ');
-  }
-
-  String get estadoDescripcion {
-    if (!activa) return 'Inactiva';
-    if (estaLlena) return 'Completa';
-    return 'Disponible';
-  }
-
-  List<String> get serviciosLista {
-    final servicios = <String>[];
-
-    if (tieneAccesoDiscapacitados) servicios.add('Acceso discapacitados');
-    if (tieneEstacionamiento) servicios.add('Estacionamiento');
-    if (tieneZonaDescanso) servicios.add('Zona de descanso');
-    if (tieneZonaComida) servicios.add('Zona de comida');
-
-    if (serviciosDisponibles != null) {
-      servicios.addAll(serviciosDisponibles!);
-    }
-
-    return servicios;
-  }
-
-  bool get tieneInformacionCompleta {
-    return descripcion != null &&
-        ubicacion != null &&
-        latitud != null &&
-        longitud != null;
-  }
-
-  /// Métodos de negocio
-  bool puedeAlbergarMasTiendas(int cantidadNuevas) {
-    if (capacidadMaxima == null) return true;
-    return totalTiendas + cantidadNuevas <= capacidadMaxima!;
-  }
-
-  bool esMejorQue(Plazoleta otra, {bool porVisitas = true}) {
-    if (porVisitas) {
-      return totalVisitas > otra.totalVisitas;
-    } else {
-      return totalTiendas > otra.totalTiendas;
+  String get tipoUbicacionTexto {
+    switch (tipoUbicacion) {
+      case TipoUbicacion.plazoleta:
+        return 'Plazoleta';
+      case TipoUbicacion.pasillo:
+        return 'Pasillo';
+      case TipoUbicacion.entrada:
+        return 'Entrada/Salida';
+      case TipoUbicacion.estacionamiento:
+        return 'Estacionamiento';
+      case TipoUbicacion.bano:
+        return 'Baño';
+      case TipoUbicacion.zonaDescanso:
+        return 'Zona de Descanso';
+      case TipoUbicacion.zonaComida:
+        return 'Zona de Comida';
+      case TipoUbicacion.ascensor:
+        return 'Ascensor';
+      case TipoUbicacion.escalera:
+        return 'Escalera';
+      case TipoUbicacion.otro:
+        return 'Otro';
     }
   }
 
-  String get nivelOcupacion {
-    final porcentaje = porcentajeOcupacion;
-    if (porcentaje >= 90) return 'Crítico';
-    if (porcentaje >= 70) return 'Alto';
-    if (porcentaje >= 40) return 'Moderado';
-    return 'Bajo';
+  String get fechaCreacionFormateada {
+    return '${fechaCreacion.day}/${fechaCreacion.month}/${fechaCreacion.year}';
   }
+
+  /// Verificar si la plazoleta es reciente (menos de 30 días)
+  bool get esReciente {
+    final ahora = DateTime.now();
+    final diferencia = ahora.difference(fechaCreacion);
+    return diferencia.inDays < 30;
+  }
+
+  /// Verificar si tiene información básica completa
+  bool get tieneInformacionCompleta =>
+      nombre.isNotEmpty && slug.isNotEmpty && descripcion != null;
 
   /// Convertir a Map para serialización JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'fechaCreacion': fechaCreacion.toIso8601String(),
       'nombre': nombre,
       'descripcion': descripcion,
-      'ubicacion': ubicacion,
-      'capacidadMaxima': capacidadMaxima,
-      'ordenVisual': ordenVisual,
-      'activa': activa,
-      'fechaCreacion': fechaCreacion.toIso8601String(),
-      'fechaActualizacion': fechaActualizacion?.toIso8601String(),
-      'metadata': metadata,
-      'totalTiendas': totalTiendas,
-      'totalVisitas': totalVisitas,
-      'latitud': latitud,
-      'longitud': longitud,
-      'piso': piso,
-      'sector': sector,
-      'icono': icono,
-      'color': color,
       'tipoUbicacion': tipoUbicacion.value,
-      'tieneAccesoDiscapacitados': tieneAccesoDiscapacitados,
-      'tieneEstacionamiento': tieneEstacionamiento,
-      'tieneZonaDescanso': tieneZonaDescanso,
-      'tieneZonaComida': tieneZonaComida,
-      'serviciosDisponibles': serviciosDisponibles,
-      'horarioAcceso': horarioAcceso,
-      'normasUso': normasUso,
+      'slug': slug,
+      'categoriaPrincipalId': categoriaPrincipalId,
     };
   }
 
   /// Crear instancia desde Map (deserialización JSON)
+  /// Compatible con ambos formatos: camelCase y snake_case
   factory Plazoleta.fromJson(Map<String, dynamic> json) {
+    // Helper para obtener valor en ambos formatos (camelCase o snake_case)
+    dynamic getValue(String camelKey, String snakeKey) {
+      if (json.containsKey(camelKey)) {
+        return json[camelKey];
+      }
+      return json[snakeKey];
+    }
+
+    // Helper para obtener string con fallback
+    String getString(
+      String camelKey,
+      String snakeKey, [
+      String defaultValue = '',
+    ]) {
+      final value = getValue(camelKey, snakeKey);
+      if (value == null) return defaultValue;
+      return value.toString();
+    }
+
+    // Helper para obtener int con fallback
+    int? getInt(String camelKey, String snakeKey) {
+      final value = getValue(camelKey, snakeKey);
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return int.tryParse(value.toString());
+    }
+
     return Plazoleta(
-      id: json['id'] as int,
-      nombre: json['nombre'] as String,
-      descripcion: json['descripcion'] as String?,
-      ubicacion: json['ubicacion'] as String?,
-      capacidadMaxima: json['capacidadMaxima'] as int?,
-      ordenVisual: json['ordenVisual'] as int?,
-      activa: json['activa'] as bool,
-      fechaCreacion: DateTime.parse(json['fechaCreacion'] as String),
-      fechaActualizacion:
-          json['fechaActualizacion'] != null
-              ? DateTime.parse(json['fechaActualizacion'] as String)
-              : null,
-      metadata:
-          json['metadata'] != null
-              ? Map<String, dynamic>.from(json['metadata'] as Map)
-              : null,
-      totalTiendas: json['totalTiendas'] as int? ?? 0,
-      totalVisitas: json['totalVisitas'] as int? ?? 0,
-      latitud: json['latitud'] as double?,
-      longitud: json['longitud'] as double?,
-      piso: json['piso'] as String?,
-      sector: json['sector'] as String?,
-      icono: json['icono'] as String?,
-      color: json['color'] as String?,
-      tipoUbicacion: TipoUbicacion.fromString(json['tipoUbicacion'] as String),
-      tieneAccesoDiscapacitados:
-          json['tieneAccesoDiscapacitados'] as bool? ?? false,
-      tieneEstacionamiento: json['tieneEstacionamiento'] as bool? ?? false,
-      tieneZonaDescanso: json['tieneZonaDescanso'] as bool? ?? false,
-      tieneZonaComida: json['tieneZonaComida'] as bool? ?? false,
-      serviciosDisponibles:
-          json['serviciosDisponibles'] != null
-              ? List<String>.from(json['serviciosDisponibles'] as List)
-              : null,
-      horarioAcceso: json['horarioAcceso'] as String?,
-      normasUso: json['normasUso'] as String?,
+      id: getInt('id', 'id') ?? 0,
+      fechaCreacion: DateTime.parse(
+        getString(
+          'fechaCreacion',
+          'fecha_creacion',
+          DateTime.now().toIso8601String(),
+        ),
+      ),
+      nombre: getString('nombre', 'nombre', 'Sin nombre'),
+      descripcion: getString('descripcion', 'descripcion'),
+      tipoUbicacion: TipoUbicacion.fromString(
+        getString('tipoUbicacion', 'tipo_ubicacion', 'plazoleta'),
+      ),
+      slug: getString('slug', 'slug', ''),
+      categoriaPrincipalId: getInt(
+        'categoriaPrincipalId',
+        'categoria_principal_id',
+      ),
     );
+  }
+
+  /// Crear instancia desde respuesta de Supabase (nombres de columna snake_case)
+  /// Mantenido para compatibilidad con código existente
+  factory Plazoleta.fromSupabaseJson(Map<String, dynamic> json) {
+    return Plazoleta.fromJson(json);
   }
 }

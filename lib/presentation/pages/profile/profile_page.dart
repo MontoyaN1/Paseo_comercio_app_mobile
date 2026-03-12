@@ -1315,23 +1315,17 @@ class _ProfilePageState extends State<ProfilePage>
       if (context.mounted) {
         try {
           Navigator.of(context, rootNavigator: true).pop();
-          print('_updateProfile: Diálogo de carga cerrado exitosamente');
         } catch (e) {
-          print('_updateProfile: Error al cerrar diálogo de carga: $e');
+          // Error al cerrar diálogo de carga
         }
       } else {
-        print(
-          '_updateProfile: Contexto no montado, no se puede cerrar diálogo',
-        );
+        // Contexto no montado, no se puede cerrar diálogo
       }
 
       // Manejar el resultado con fold para obtener error específico
       result.fold(
         (_) {
           // Éxito
-          print(
-            '_updateProfile: Operación exitosa, verificando contexto: ${context.mounted}',
-          );
           if (context.mounted) {
             try {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -1348,28 +1342,22 @@ class _ProfilePageState extends State<ProfilePage>
                   ),
                 ),
               );
-              print('_updateProfile: SnackBar de éxito mostrado');
             } catch (e) {
-              print('_updateProfile: Error al mostrar snackbar de éxito: $e');
+              // Error al mostrar snackbar de éxito
             }
 
             // Recargar la página inmediatamente
             try {
               setState(() {});
-              print('_updateProfile: Página recargada exitosamente');
             } catch (e) {
-              print('_updateProfile: Error al recargar página: $e');
+              // Error al recargar página
             }
           } else {
-            print(
-              '_updateProfile: Contexto no montado después de éxito, no se puede mostrar feedback',
-            );
+            // Contexto no montado después de éxito, no se puede mostrar feedback
           }
         },
         (error) {
           // Error
-          print('_updateProfile: Error recibido: $error');
-          print('_updateProfile: StackTrace: ${error.toString()}');
           String errorMessage = 'Error al actualizar $field';
           if (error is AuthException) {
             errorMessage = error.message;
@@ -1380,40 +1368,24 @@ class _ProfilePageState extends State<ProfilePage>
           } else if (error.toString().isNotEmpty) {
             errorMessage = 'Error: ${error.toString()}';
           }
-          print(
-            '_updateProfile: Mostrando mensaje: $errorMessage, contexto montado: ${context.mounted}',
-          );
           if (context.mounted) {
             try {
               _showErrorSnackBar(context, errorMessage);
-              print('_updateProfile: SnackBar de error mostrado');
             } catch (e) {
-              print('_updateProfile: Error al mostrar snackbar de error: $e');
+              // Error al mostrar snackbar de error
             }
           } else {
-            print(
-              '_updateProfile: Contexto no montado, no se puede mostrar error al usuario',
-            );
+            // Contexto no montado, no se puede mostrar error al usuario
           }
         },
       );
     } catch (error) {
-      print('_updateProfile: Excepción no manejada: $error');
-      print('_updateProfile: StackTrace: ${StackTrace.current}');
-      print(
-        '_updateProfile: Verificando contexto después de excepción: ${context.mounted}',
-      );
       // Intentar cerrar el diálogo de carga si existe
       if (context.mounted) {
         try {
           Navigator.of(context, rootNavigator: true).pop();
-          print(
-            '_updateProfile: Diálogo de carga cerrado después de excepción',
-          );
         } catch (e) {
-          print(
-            '_updateProfile: Error al cerrar diálogo después de excepción: $e',
-          );
+          // Error al cerrar diálogo después de excepción
         }
       }
       // Mostrar error usando el contexto de la página
@@ -1423,16 +1395,11 @@ class _ProfilePageState extends State<ProfilePage>
             context,
             'Error al actualizar $field: ${error.toString()}',
           );
-          print('_updateProfile: Error mostrado después de excepción');
         } catch (e) {
-          print(
-            '_updateProfile: Error al mostrar error después de excepción: $e',
-          );
+          // Error al mostrar error después de excepción
         }
       } else {
-        print(
-          '_updateProfile: Contexto no montado después de excepción, no se puede mostrar error',
-        );
+        // Contexto no montado después de excepción, no se puede mostrar error
       }
     }
   }

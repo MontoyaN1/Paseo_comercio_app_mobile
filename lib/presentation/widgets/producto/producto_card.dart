@@ -1,13 +1,35 @@
 // lib/presentation/widgets/producto/producto_card.dart
+//
+// 🏛️  PLAZA UNIVERSE — Card de Producto
+// ────────────────────────────────────────────────────────────
+//  DISEÑO (idéntico al sistema de diseño Plaza Universe):
+//  • Fondo: glassmorphism sobre _kSurfaceCard
+//  • Borde: _kBorder con glow dorado en hover/press
+//  • Imagen: con overlay degradado inferior
+//  • Badge de stock: píldoras doradas/verdes/rojas
+//  • Precio: ShaderMask dorado animado
+//  • Valoración: íconos dorados
+//  • Micro-animación de escala al presionar
+// ────────────────────────────────────────────────────────────
 
-import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
+
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
 
-import '../../../core/utils/image_service.dart';
-import '../../../di/service_locator.dart';
+// ── Paleta (idéntica al sistema de diseño) ────────────────────
+const _kGold = Color(0xFFD4AF37);
+const _kGoldLight = Color(0xFFFFE082);
+const _kBg = Color(0xFF07070F);
+const _kSurface = Color(0xFF0F0F1E);
+const _kSurfaceCard = Color(0xFF12121F);
+const _kBorder = Color(0xFF1E1E3A);
+const _kHint = Color(0xFF6B6B8A);
 
-/// Widget para mostrar una tarjeta de producto
-class ProductoCard extends StatelessWidget {
+// ══════════════════════════════════════════════════════════════
+//  WIDGET PRINCIPAL
+// ══════════════════════════════════════════════════════════════
+class ProductoCard extends StatefulWidget {
   final Map<String, dynamic> producto;
   final VoidCallback onTap;
   final bool showDetails;
@@ -29,704 +51,720 @@ class ProductoCard extends StatelessWidget {
     this.onAddToCart,
   });
 
-  /// Obtener imagen principal del producto
-  String? _getProductoImage() {
-    final imageService = getIt<ImageService>();
-    final imagenes = producto['imagenes'] as List<dynamic>?;
+  @override
+  State<ProductoCard> createState() => _ProductoCardState();
+}
 
-    if (imagenes != null && imagenes.isNotEmpty) {
-      // Buscar imagen principal
-      final imagenPrincipal = imagenes.firstWhere(
-        (imagen) => imagen['es_principal'] == true,
-        orElse: () => imagenes.first,
-      );
+class _ProductoCardState extends State<ProductoCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  late final Animation<double> _glow;
 
-      final url = imagenPrincipal['url'] as String?;
-      if (url != null && url.isNotEmpty) {
-        return imageService.getImageUrl(
-          entityType: 'producto',
-          entityId: producto['id']?.toString() ?? '',
-          imageName: 'imagen.jpg',
-          size: 300,
-        );
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.965,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    _glow = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  // ── Helpers de datos ──────────────────────────────────────
+  String? _getImage() {
+    final imagenes = widget.producto['imagenes'] as List<dynamic>?;
+    if (imagenes == null || imagenes.isEmpty) {
+      final alt = widget.producto['imagen_productos'] as List<dynamic>?;
+      if (alt != null && alt.isNotEmpty) {
+        final f = alt.first;
+        if (f is Map<String, dynamic>) return f['url_imagen'] as String?;
+      }
+      return null;
+    }
+    Map<String, dynamic>? principal;
+    for (final img in imagenes) {
+      if (img is Map<String, dynamic> && img['tipo_imagen'] == 'principal') {
+        principal = img;
+        break;
       }
     }
-
-    // Imagen por defecto
-    return null;
+    principal ??=
+        imagenes.firstWhere(
+              (i) => i is Map<String, dynamic> && i['es_principal'] == true,
+              orElse: () => imagenes.first,
+            )
+            as Map<String, dynamic>?;
+    if (principal == null) return null;
+    final url = principal['url_imagen'] ?? principal['url'];
+    return (url is String && url.isNotEmpty) ? url : null;
   }
 
-  /// Obtener nombre del producto
-  String _getProductoName() {
-    return producto['nombre_producto'] as String? ?? 'Producto sin nombre';
-  }
-
-  /// Obtener descripción del producto
-  String _getProductoDescription() {
-    return producto['descripcion'] as String? ?? 'Sin descripción disponible';
-  }
-
-  /// Obtener categoría del producto
-  String? _getProductoCategory() {
-    final categoria = producto['categoria'] as Map<String, dynamic>?;
-    if (categoria != null) {
-      return categoria['nombre_categoria'] as String?;
+  String _getNombre() {
+    final n =
+        widget.producto['nombre'] ??
+        widget.producto['nombre_producto'] ??
+        'Producto';
+    final s = n.toString();
+    if (s.isEmpty || s == 'Producto' || s == 'Producto sin nombre') {
+      final id = widget.producto['id'] ?? widget.producto['producto_id'];
+      return id != null ? 'Producto $id' : 'Producto';
     }
-    return null;
+    return s;
   }
 
-  /// Obtener tienda del producto
-  String? _getTiendaName() {
-    final tienda = producto['tienda'] as Map<String, dynamic>?;
-    if (tienda != null) {
-      return tienda['nombre_tienda'] as String?;
-    }
-    return null;
+  double _getPrecio() {
+    final p = widget.producto['precio'] ?? widget.producto['precio_base'];
+    return (p as num?)?.toDouble() ?? 0.0;
   }
 
-  /// Obtener precio del producto
-  double _getProductoPrice() {
-    final precio = producto['precio'] as double?;
-    return precio ?? 0.0;
+  double _getRating() {
+    return (widget.producto['calificacion_promedio'] as num?)?.toDouble() ??
+        0.0;
   }
 
-  /// Obtener precio anterior (si hay descuento)
-  double? _getOldPrice() {
-    final precioAnterior = producto['precio_anterior'] as double?;
-    return precioAnterior;
-  }
-
-  /// Calcular porcentaje de descuento
-  double? _getDiscountPercentage() {
-    final precioActual = _getProductoPrice();
-    final precioAnterior = _getOldPrice();
-
-    if (precioAnterior != null &&
-        precioAnterior > 0 &&
-        precioActual < precioAnterior) {
-      return ((precioAnterior - precioActual) / precioAnterior) * 100;
-    }
-    return null;
-  }
-
-  /// Obtener valoración promedio
-  double _getAverageRating() {
-    final rating = producto['promedio_valoracion'] as double?;
-    return rating ?? 0.0;
-  }
-
-  /// Obtener número de valoraciones
   int _getRatingCount() {
-    final count = producto['total_valoraciones'] as int?;
-    return count ?? 0;
+    return (widget.producto['total_valoracion'] as int?) ?? 0;
   }
 
-  /// Obtener número de ventas
-  int _getSalesCount() {
-    final sales = producto['total_ventas'] as int?;
-    return sales ?? 0;
+  int _getStock() {
+    return (widget.producto['stock_disponible'] as int?) ??
+        (widget.producto['cantidad'] as int?) ??
+        0;
   }
 
-  /// Obtener stock disponible
-  int _getStockAvailable() {
-    final stock = producto['stock_disponible'] as int?;
-    return stock ?? 0;
+  bool _isDisponible() =>
+      (widget.producto['estado_producto'] as String?) == 'publicado';
+
+  String? _getCategoria() {
+    final cat = widget.producto['categoria'];
+    if (cat is Map<String, dynamic>) return cat['nombre_categoria'] as String?;
+    return null;
   }
 
-  /// Verificar si el producto está en stock
-  bool _isInStock() {
-    return _getStockAvailable() > 0;
-  }
-
-  /// Obtener estado del producto
-  String? _getProductoStatus() {
-    return producto['estado_producto'] as String?;
-  }
-
-  /// Verificar si el producto está disponible
-  bool _isProductoAvailable() {
-    final status = _getProductoStatus();
-    return status == 'activo' || status == 'disponible';
-  }
-
-  /// Obtener icono según categoría
   IconData _getCategoryIcon() {
-    final categoria = _getProductoCategory()?.toLowerCase() ?? '';
-
-    if (categoria.contains('ropa') || categoria.contains('moda')) {
-      return Icons.shopping_bag;
-    } else if (categoria.contains('comida') || categoria.contains('alimento')) {
-      return Icons.restaurant;
-    } else if (categoria.contains('tecnología') ||
-        categoria.contains('electrónica')) {
-      return Icons.computer;
-    } else if (categoria.contains('belleza') || categoria.contains('salud')) {
-      return Icons.spa;
-    } else if (categoria.contains('hogar') ||
-        categoria.contains('decoración')) {
-      return Icons.home;
-    } else if (categoria.contains('deporte') || categoria.contains('fitness')) {
-      return Icons.sports;
-    } else if (categoria.contains('libro') || categoria.contains('papelería')) {
-      return Icons.menu_book;
-    } else if (categoria.contains('juguete') || categoria.contains('niño')) {
-      return Icons.toys;
-    } else if (categoria.contains('joyería') ||
-        categoria.contains('accesorio')) {
-      return Icons.diamond;
-    } else if (categoria.contains('zapato') || categoria.contains('calzado')) {
-      return Icons.shopping_cart;
-    } else if (categoria.contains('mueble') ||
-        categoria.contains('mobiliario')) {
-      return Icons.chair;
-    } else if (categoria.contains('herramienta') ||
-        categoria.contains('bricolaje')) {
-      return Icons.build;
-    }
-
-    return Icons.shopping_basket;
+    final c = (_getCategoria() ?? '').toLowerCase();
+    if (c.contains('ropa') || c.contains('moda'))
+      return Icons.checkroom_rounded;
+    if (c.contains('comida') || c.contains('alimento'))
+      return Icons.restaurant_rounded;
+    if (c.contains('tecno') || c.contains('electr'))
+      return Icons.devices_rounded;
+    if (c.contains('belleza') || c.contains('salud')) return Icons.spa_rounded;
+    if (c.contains('hogar') || c.contains('decor')) return Icons.chair_rounded;
+    if (c.contains('deporte') || c.contains('fit')) return Icons.sports_rounded;
+    if (c.contains('libro') || c.contains('papel'))
+      return Icons.menu_book_rounded;
+    if (c.contains('jugu') || c.contains('niño')) return Icons.toys_rounded;
+    if (c.contains('joya') || c.contains('acceso'))
+      return Icons.diamond_rounded;
+    if (c.contains('zapato') || c.contains('calzado'))
+      return Icons.shopping_bag_rounded;
+    return Icons.shopping_basket_rounded;
   }
 
-  /// Construir widget de valoración
-  Widget _buildRatingWidget() {
-    final rating = _getAverageRating();
-    final count = _getRatingCount();
-
-    if (rating == 0.0) {
-      return Row(
-        children: [
-          const Icon(Icons.star_border, size: 16, color: Colors.grey),
-          const SizedBox(width: 4),
-          Text(
-            'Sin valoraciones',
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-          ),
-        ],
+  // ── Stock badge ───────────────────────────────────────────
+  _StockBadgeData _getStockBadge() {
+    if (!_isDisponible()) {
+      return _StockBadgeData(
+        icon: Icons.block_rounded,
+        label: 'No disponible',
+        color: const Color(0xFFEF4444),
       );
     }
-
-    return Row(
-      children: [
-        Icon(Icons.star, size: 16, color: Colors.amber),
-        const SizedBox(width: 4),
-        Text(
-          rating.toStringAsFixed(1),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          '($count)',
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
-      ],
-    );
-  }
-
-  /// Construir widget de precio
-  Widget _buildPriceWidget() {
-    final precio = _getProductoPrice();
-    final precioAnterior = _getOldPrice();
-    final descuento = _getDiscountPercentage();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (descuento != null && precioAnterior != null)
-          Row(
-            children: [
-              Text(
-                '\$${precioAnterior.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  decoration: TextDecoration.lineThrough,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: Colors.red.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  '-${descuento.toStringAsFixed(0)}%',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        const SizedBox(height: 4),
-        Text(
-          '\$${precio.toStringAsFixed(2)}',
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.green,
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Construir widget de stock
-  Widget _buildStockWidget() {
-    final stock = _getStockAvailable();
-    final isAvailable = _isProductoAvailable();
-
-    if (!isAvailable) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.red.withOpacity(0.3), width: 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.cancel, size: 12, color: Colors.red),
-            const SizedBox(width: 4),
-            Text(
-              'No disponible',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Colors.red,
-              ),
-            ),
-          ],
-        ),
+    final s = _getStock();
+    if (s <= 0) {
+      return _StockBadgeData(
+        icon: Icons.inventory_2_rounded,
+        label: 'Agotado',
+        color: const Color(0xFFF97316),
       );
     }
-
-    if (stock <= 0) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.warning, size: 12, color: Colors.orange),
-            const SizedBox(width: 4),
-            Text(
-              'Agotado',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Colors.orange,
-              ),
-            ),
-          ],
-        ),
+    if (s <= 5) {
+      return _StockBadgeData(
+        icon: Icons.timer_rounded,
+        label: 'Últimas $s uds.',
+        color: const Color(0xFFF59E0B),
       );
     }
-
-    if (stock <= 5) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.timer, size: 12, color: Colors.orange),
-            const SizedBox(width: 4),
-            Text(
-              'Últimas $stock unidades',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Colors.orange,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.withOpacity(0.3), width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.check_circle, size: 12, color: Colors.green),
-          const SizedBox(width: 4),
-          Text(
-            'En stock',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Colors.green,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Construir widget de ventas
-  Widget _buildSalesWidget() {
-    final sales = _getSalesCount();
-
-    return Row(
-      children: [
-        Icon(Icons.shopping_cart, size: 14, color: Colors.grey[600]),
-        const SizedBox(width: 4),
-        Text(
-          '$sales vendidos',
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
-      ],
+    return _StockBadgeData(
+      icon: Icons.check_circle_rounded,
+      label: 'En stock',
+      color: const Color(0xFF22C55E),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = _getProductoImage();
-    final productoName = _getProductoName();
-    final productoDescription = _getProductoDescription();
-    final categoria = _getProductoCategory();
-    final tienda = _getTiendaName();
-    final isAvailable = _isProductoAvailable();
-    final isInStock = _isInStock();
+    final imageUrl = _getImage();
+    final nombre = _getNombre();
+    final precio = _getPrecio();
+    final rating = _getRating();
+    final ratingCnt = _getRatingCount();
+    final badge = _getStockBadge();
+    final categoria = _getCategoria();
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Imagen del producto
-            Stack(
-              children: [
-                Container(
-                  height: 180,
-                  color: Colors.grey[200],
-                  child:
-                      imageUrl != null
-                          ? CachedNetworkImage(
-                            imageUrl: imageUrl,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            placeholder:
-                                (context, url) => Container(
-                                  color: Colors.grey[300],
-                                  child: const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                ),
-                            errorWidget:
-                                (context, url, error) => Container(
-                                  color: Colors.grey[300],
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.shopping_basket,
-                                      size: 64,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ),
-                          )
-                          : Center(
-                            child: Icon(
-                              _getCategoryIcon(),
-                              size: 64,
-                              color: Colors.grey,
-                            ),
-                          ),
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder:
+            (_, child) => Transform.scale(
+              scale: _scale.value,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _kGold.withOpacity(0.04 + _glow.value * 0.12),
+                      blurRadius: 18 + _glow.value * 14,
+                      spreadRadius: _glow.value * 2,
+                      offset: const Offset(0, 4),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.45),
+                      blurRadius: 12,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                // Botón de favorito
-                if (showFavoriteButton)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: isFavorite ? Colors.red : Colors.grey,
-                          size: 20,
-                        ),
-                        onPressed: onFavoriteToggle,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 36,
-                          minHeight: 36,
-                        ),
-                      ),
-                    ),
-                  ),
-                // Estado del producto (stock/disponibilidad)
-                Positioned(top: 8, left: 8, child: _buildStockWidget()),
-                // Descuento (si aplica)
-                if (_getDiscountPercentage() != null)
-                  Positioned(
-                    top: 8,
-                    right: showFavoriteButton ? 48 : 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(8),
-                          bottomLeft: Radius.circular(8),
-                        ),
-                      ),
-                      child: Text(
-                        '-${_getDiscountPercentage()!.toStringAsFixed(0)}%',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+                child: child,
+              ),
             ),
-
-            if (showDetails) ...[
-              // Contenido de la tarjeta
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Nombre y categoría
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          productoName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            height: 1.2,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (categoria != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              categoria,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        if (tienda != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.store,
-                                  size: 12,
-                                  color: Colors.grey[500],
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  tienda,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[600],
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Descripción
-                    Text(
-                      productoDescription,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[700],
-                        height: 1.4,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Precio y valoración
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Precio
-                        Expanded(child: _buildPriceWidget()),
-
-                        // Valoración
-                        _buildRatingWidget(),
-                      ],
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Estadísticas y botones
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Ventas
-                        _buildSalesWidget(),
-
-                        // Botón de añadir al carrito
-                        if (showAddToCartButton && isAvailable && isInStock)
-                          ElevatedButton.icon(
-                            onPressed: onAddToCart,
-                            icon: const Icon(Icons.add_shopping_cart, size: 16),
-                            label: const Text('Añadir'),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ),
-                      ],
-                    ),
-
-                    // Tags o etiquetas (si existen)
-                    if (producto['etiquetas'] != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children:
-                              (producto['etiquetas'] as List<dynamic>)
-                                  .take(3)
-                                  .map((tag) {
-                                    final tagName =
-                                        tag['nombre'] as String? ??
-                                        tag.toString();
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        tagName,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.blue[700],
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    );
-                                  })
-                                  .toList(),
-                        ),
-                      ),
-                  ],
-                ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: Container(
+              decoration: BoxDecoration(
+                color: _kSurfaceCard.withOpacity(0.92),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: _kBorder, width: 1),
               ),
-            ] else ...[
-              // Versión compacta (solo nombre y precio)
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Icon(_getCategoryIcon(), size: 20, color: Colors.grey[600]),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            productoName,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '\$${_getProductoPrice().toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (showAddToCartButton && isAvailable && isInStock)
-                      IconButton(
-                        icon: const Icon(Icons.add_shopping_cart, size: 20),
-                        onPressed: onAddToCart,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 36,
-                          minHeight: 36,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ],
+              child:
+                  widget.showDetails
+                      ? _buildFullCard(
+                        imageUrl,
+                        nombre,
+                        precio,
+                        rating,
+                        ratingCnt,
+                        badge,
+                        categoria,
+                      )
+                      : _buildCompactCard(nombre, precio, badge),
+            ),
+          ),
         ),
       ),
     );
   }
+
+  // ── Tarjeta completa ──────────────────────────────────────
+  // La imagen ocupa toda la tarjeta; la info flota sobre el
+  // degradado inferior en glassmorphism.
+  Widget _buildFullCard(
+    String? imageUrl,
+    String nombre,
+    double precio,
+    double rating,
+    int ratingCnt,
+    _StockBadgeData badge,
+    String? categoria,
+  ) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // ── Imagen a pantalla completa ──────────────────────
+        _buildImageSection(imageUrl),
+
+        // ── Overlay degradado fuerte en la parte inferior ───
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.transparent,
+                  _kBg.withOpacity(0.55),
+                  _kBg.withOpacity(0.92),
+                ],
+                stops: const [0.0, 0.42, 0.68, 1.0],
+              ),
+            ),
+          ),
+        ),
+
+        // ── Badge stock (top-left) ──────────────────────────
+        Positioned(
+          top: 8,
+          left: 8,
+          child: _buildStockBadge(badge, small: true),
+        ),
+
+        // ── Botón favorito (top-right) ──────────────────────
+        if (widget.showFavoriteButton)
+          Positioned(
+            top: 6,
+            right: 6,
+            child: _FavButton(
+              isFavorite: widget.isFavorite,
+              onTap: widget.onFavoriteToggle,
+            ),
+          ),
+
+        // ── Panel de info inferior superpuesto ──────────────
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Nombre
+                Text(
+                  nombre,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                    letterSpacing: 0.1,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black54,
+                        blurRadius: 6,
+                        offset: Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 5),
+
+                // Precio + Rating en fila
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Precio con ShaderMask dorado
+                    Flexible(
+                      child: ShaderMask(
+                        shaderCallback:
+                            (b) => const LinearGradient(
+                              colors: [_kGold, _kGoldLight],
+                            ).createShader(b),
+                        child: Text(
+                          '\$${precio.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+
+                    // Rating
+                    _buildRatingMini(rating, ratingCnt),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Tarjeta compacta (fila) ───────────────────────────────
+  Widget _buildCompactCard(
+    String nombre,
+    double precio,
+    _StockBadgeData badge,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          // Ícono de categoría en círculo dorado
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _kGold.withOpacity(0.08),
+              border: Border.all(color: _kGold.withOpacity(0.26), width: 1),
+            ),
+            child: Icon(_getCategoryIcon(), color: _kGold, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  nombre,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                ShaderMask(
+                  shaderCallback:
+                      (b) => const LinearGradient(
+                        colors: [_kGold, _kGoldLight],
+                      ).createShader(b),
+                  child: Text(
+                    '\$${precio.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (widget.showAddToCartButton && _isDisponible() && _getStock() > 0)
+            _AddCartButton(onTap: widget.onAddToCart),
+          const SizedBox(width: 4),
+          const Icon(Icons.arrow_forward_ios_rounded, color: _kGold, size: 13),
+        ],
+      ),
+    );
+  }
+
+  // ── Sección de imagen ─────────────────────────────────────
+  Widget _buildImageSection(String? imageUrl) {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: imageUrl,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => _buildImageFallback(loading: true),
+        errorWidget: (_, __, ___) => _buildImageFallback(),
+      );
+    }
+    return _buildImageFallback();
+  }
+
+  Widget _buildImageFallback({bool loading = false}) {
+    return Container(
+      color: _kSurface,
+      child: Center(
+        child:
+            loading
+                ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    valueColor: AlwaysStoppedAnimation(_kGold),
+                  ),
+                )
+                : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _getCategoryIcon(),
+                      color: _kGold.withOpacity(0.45),
+                      size: 28,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _getNombre().isNotEmpty
+                          ? _getNombre()[0].toUpperCase()
+                          : 'P',
+                      style: TextStyle(
+                        color: _kGold.withOpacity(0.55),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+      ),
+    );
+  }
+
+  // ── Badge de stock ────────────────────────────────────────
+  Widget _buildStockBadge(_StockBadgeData data, {bool small = false}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: small ? 7 : 10,
+            vertical: small ? 3 : 5,
+          ),
+          decoration: BoxDecoration(
+            color: data.color.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: data.color.withOpacity(0.45), width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(data.icon, color: data.color, size: small ? 9 : 11),
+              const SizedBox(width: 4),
+              Text(
+                data.label,
+                style: TextStyle(
+                  color: data.color,
+                  fontSize: small ? 9 : 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Rating mini ───────────────────────────────────────────
+  Widget _buildRatingMini(double rating, int count) {
+    if (rating == 0) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.star_border_rounded,
+            size: 11,
+            color: _kHint.withOpacity(0.7),
+          ),
+          const SizedBox(width: 2),
+          Text(
+            'S/V',
+            style: TextStyle(fontSize: 9, color: _kHint.withOpacity(0.7)),
+          ),
+        ],
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.star_rounded, size: 11, color: _kGold),
+        const SizedBox(width: 2),
+        Text(
+          rating.toStringAsFixed(1),
+          style: const TextStyle(
+            color: _kGoldLight,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 2),
+        Text(
+          '($count)',
+          style: TextStyle(color: _kHint.withOpacity(0.8), fontSize: 9),
+        ),
+      ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BOTÓN FAVORITO
+// ══════════════════════════════════════════════════════════════
+class _FavButton extends StatefulWidget {
+  final bool isFavorite;
+  final VoidCallback? onTap;
+  const _FavButton({required this.isFavorite, this.onTap});
+
+  @override
+  State<_FavButton> createState() => _FavButtonState();
+}
+
+class _FavButtonState extends State<_FavButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.80,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap?.call();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: AnimatedBuilder(
+        animation: _scale,
+        builder:
+            (_, __) => Transform.scale(
+              scale: _scale.value,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.45),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color:
+                            widget.isFavorite
+                                ? const Color(0xFFEF4444).withOpacity(0.55)
+                                : _kBorder,
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      widget.isFavorite
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      size: 15,
+                      color:
+                          widget.isFavorite ? const Color(0xFFEF4444) : _kHint,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BOTÓN AGREGAR AL CARRITO
+// ══════════════════════════════════════════════════════════════
+class _AddCartButton extends StatefulWidget {
+  final VoidCallback? onTap;
+  const _AddCartButton({this.onTap});
+
+  @override
+  State<_AddCartButton> createState() => _AddCartButtonState();
+}
+
+class _AddCartButtonState extends State<_AddCartButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.85,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap?.call();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: AnimatedBuilder(
+        animation: _scale,
+        builder:
+            (_, __) => Transform.scale(
+              scale: _scale.value,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _kGold.withOpacity(0.12),
+                  border: Border.all(color: _kGold.withOpacity(0.40), width: 1),
+                ),
+                child: const Icon(
+                  Icons.add_shopping_cart_rounded,
+                  color: _kGold,
+                  size: 15,
+                ),
+              ),
+            ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DATA CLASS PARA BADGE DE STOCK
+// ══════════════════════════════════════════════════════════════
+class _StockBadgeData {
+  final IconData icon;
+  final String label;
+  final Color color;
+  const _StockBadgeData({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
 }

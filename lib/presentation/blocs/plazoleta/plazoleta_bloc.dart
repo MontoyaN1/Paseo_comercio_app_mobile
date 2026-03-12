@@ -6,7 +6,10 @@ import 'package:logger/logger.dart';
 
 import '../../../domain/repositories/plazoleta_repository_interface.dart';
 import '../../../domain/entities/plazoleta.dart';
+import '../../../domain/entities/enums.dart';
 import '../../../domain/entities/imagen_base.dart';
+import '../../../domain/entities/producto.dart';
+import '../../../domain/entities/tienda.dart';
 
 import 'plazoleta_event.dart';
 import 'plazoleta_state.dart';
@@ -214,12 +217,60 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
       try {
         final plazoleta = await _plazoletaRepository.getPlazoletaById(event.id);
 
+        // Cargar imágenes de la plazoleta
+        List<ImagenBase> imagenes = [];
+        try {
+          imagenes = await _plazoletaRepository.getImagenesPlazoleta(event.id);
+        } catch (e) {
+          _logger.w(
+            'Error al cargar imágenes de la plazoleta, continuando sin imágenes: $e',
+          );
+          // Continuamos sin imágenes si hay error
+        }
+
+        // Cargar productos de la plazoleta
+        List<Producto> productos = [];
+        try {
+          productos = await _plazoletaRepository.getProductosPorPlazoleta(
+            event.id,
+          );
+        } catch (e) {
+          _logger.w(
+            'Error al cargar productos de la plazoleta, continuando sin productos: $e',
+          );
+          // Continuamos sin productos si hay error
+        }
+
+        // Cargar tiendas de la plazoleta
+        List<Tienda> tiendas = [];
+        try {
+          tiendas = await _plazoletaRepository.getTiendasPlazoleta(event.id);
+        } catch (e) {
+          _logger.w(
+            'Error al cargar tiendas de la plazoleta, continuando sin tiendas: $e',
+          );
+          // Continuamos sin tiendas si hay error
+        }
+
         if (state is PlazoletaLoaded) {
           final currentState = state as PlazoletaLoaded;
-          emit(currentState.copyWith(plazoletaSeleccionada: plazoleta));
+          emit(
+            currentState.copyWith(
+              plazoletaSeleccionada: plazoleta,
+              imagenesPlazoleta: imagenes,
+              productosPlazoleta: productos,
+              tiendasPlazoleta: tiendas,
+            ),
+          );
         } else {
           emit(
-            PlazoletaLoaded(plazoletas: [], plazoletaSeleccionada: plazoleta),
+            PlazoletaLoaded(
+              plazoletas: [],
+              plazoletaSeleccionada: plazoleta,
+              imagenesPlazoleta: imagenes,
+              productosPlazoleta: productos,
+              tiendasPlazoleta: tiendas,
+            ),
           );
         }
       } catch (e) {
@@ -490,35 +541,43 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
     LoadProductosPlazoleta event,
     Emitter<PlazoletaState> emit,
   ) async {
-    try {
+    final previousState = state;
+
+    // Si ya tenemos un estado cargado, mantenerlo durante la carga
+    if (previousState is PlazoletaLoaded) {
+      // Emitir el estado actual (sin cambios) para mantener la UI
+      // La pestaña de productos mostrará loading porque productosPlazoleta es null
+      // o mostrará datos anteriores mientras se cargan nuevos
+      emit(previousState);
+    } else {
+      // Si no hay estado cargado, mostrar loading general
       emit(
         PlazoletaProductosLoading(
           plazoletaId: event.plazoletaId,
           isRefreshing: event.forceRefresh,
         ),
       );
+    }
 
-      try {
-        final productos = await _plazoletaRepository.getProductosPorPlazoleta(
-          event.plazoletaId,
-          page: event.page,
-          limit: event.limit,
-          search: event.search,
-          precioMin: event.precioMin,
-          precioMax: event.precioMax,
-          soloDisponibles: event.soloDisponibles,
-        );
+    try {
+      final productos = await _plazoletaRepository.getProductosPorPlazoleta(
+        event.plazoletaId,
+        page: event.page,
+        limit: event.limit,
+        search: event.search,
+        precioMin: event.precioMin,
+        precioMax: event.precioMax,
+        soloDisponibles: event.soloDisponibles,
+      );
 
-        if (state is PlazoletaLoaded) {
-          final currentState = state as PlazoletaLoaded;
-          emit(currentState.copyWith(productosPlazoleta: productos));
-        }
-      } catch (e) {
+      if (previousState is PlazoletaLoaded) {
+        emit(previousState.copyWith(productosPlazoleta: productos));
+      } else {
         emit(
-          PlazoletaProductosError(
-            plazoletaId: event.plazoletaId,
-            message: 'Error al cargar productos: $e',
-            isRefreshing: event.forceRefresh,
+          PlazoletaLoaded(
+            plazoletas: [],
+            plazoletaSeleccionada: null,
+            productosPlazoleta: productos,
           ),
         );
       }
@@ -573,33 +632,41 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
     LoadTiendasPlazoleta event,
     Emitter<PlazoletaState> emit,
   ) async {
-    try {
+    final previousState = state;
+
+    // Si ya tenemos un estado cargado, mantenerlo durante la carga
+    if (previousState is PlazoletaLoaded) {
+      // Emitir el estado actual (sin cambios) para mantener la UI
+      // La pestaña de tiendas mostrará loading porque tiendasPlazoleta es null
+      // o mostrará datos anteriores mientras se cargan nuevos
+      emit(previousState);
+    } else {
+      // Si no hay estado cargado, mostrar loading general
       emit(
         PlazoletaTiendasLoading(
           plazoletaId: event.plazoletaId,
           isRefreshing: event.forceRefresh,
         ),
       );
+    }
 
-      try {
-        final tiendas = await _plazoletaRepository.getTiendasPlazoleta(
-          event.plazoletaId,
-          page: event.page,
-          limit: event.limit,
-          search: event.search,
-          soloAbiertas: event.soloAbiertas,
-        );
+    try {
+      final tiendas = await _plazoletaRepository.getTiendasPlazoleta(
+        event.plazoletaId,
+        page: event.page,
+        limit: event.limit,
+        search: event.search,
+        soloAbiertas: event.soloAbiertas,
+      );
 
-        if (state is PlazoletaLoaded) {
-          final currentState = state as PlazoletaLoaded;
-          emit(currentState.copyWith(tiendasPlazoleta: tiendas));
-        }
-      } catch (e) {
+      if (previousState is PlazoletaLoaded) {
+        emit(previousState.copyWith(tiendasPlazoleta: tiendas));
+      } else {
         emit(
-          PlazoletaTiendasError(
-            plazoletaId: event.plazoletaId,
-            message: 'Error al cargar tiendas: $e',
-            isRefreshing: event.forceRefresh,
+          PlazoletaLoaded(
+            plazoletas: [],
+            plazoletaSeleccionada: null,
+            tiendasPlazoleta: tiendas,
           ),
         );
       }
@@ -625,6 +692,7 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
     LoadTiendasDestacadasPlazoleta event,
     Emitter<PlazoletaState> emit,
   ) async {
+    final previousState = state;
     try {
       try {
         final tiendas = await _plazoletaRepository
@@ -633,9 +701,16 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
               limit: event.limit,
             );
 
-        if (state is PlazoletaLoaded) {
-          final currentState = state as PlazoletaLoaded;
-          emit(currentState.copyWith(tiendasPlazoleta: tiendas));
+        if (previousState is PlazoletaLoaded) {
+          emit(previousState.copyWith(tiendasPlazoleta: tiendas));
+        } else {
+          emit(
+            PlazoletaLoaded(
+              plazoletas: [],
+              plazoletaSeleccionada: null,
+              tiendasPlazoleta: tiendas,
+            ),
+          );
         }
       } catch (e) {
         _logger.w('No se pudieron cargar tiendas destacadas: $e');
@@ -662,9 +737,8 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
 
       // Incrementar contador de visitas (esto sería una llamada a la API en producción)
       // Por ahora, solo actualizamos localmente
-      final updatedPlazoleta = plazoleta.copyWith(
-        totalVisitas: plazoleta.totalVisitas + 1,
-      );
+      // Nota: El campo totalVisitas no existe en el esquema actual
+      final updatedPlazoleta = plazoleta;
 
       // Actualizar el estado si estamos en un estado cargado
       if (state is PlazoletaLoaded) {
@@ -945,7 +1019,8 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
           plazoleta: Plazoleta(
             id: 0,
             nombre: '',
-            activa: true,
+            tipoUbicacion: TipoUbicacion.plazoleta,
+            slug: 'temp-slug',
             fechaCreacion: DateTime.now(),
           ),
         ),

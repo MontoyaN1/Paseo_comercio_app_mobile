@@ -23,57 +23,28 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    print('🚀 Iniciando aplicación Paseo del Comercio...');
-
     // Cargar variables de entorno
-    print('📁 Cargando variables de entorno...');
     await dotenv.load(fileName: '.env');
-    print('✅ Variables de entorno cargadas');
 
     // Inicializar configuración de la aplicación
-    print('⚙️ Inicializando configuración de la aplicación...');
     final appConfig = AppConfig();
     await appConfig.initializeFromEnv(dotenv.env);
-    print('✅ Configuración de aplicación inicializada');
-    print('📊 Estado configuración:');
-    print('   - Supabase: ${appConfig.isSupabaseConfigured ? "✅" : "❌"}');
-    print('   - Firebase: ${appConfig.isFirebaseConfigured ? "✅" : "❌"}');
-    print('   - R2: ${appConfig.isR2Configured ? "✅" : "❌"}');
-    print('   - S3: ${appConfig.isS3Configured ? "✅" : "❌"}');
 
     // Inicializar Firebase desde variables de entorno
-    print('🔥 Inicializando Firebase...');
     try {
       final firebaseOptions = FirebaseConfigLoader.loadFromEnv(dotenv.env);
-      print('✅ Configuración de Firebase cargada desde variables de entorno');
-      print('   - Project ID: ${firebaseOptions.projectId}');
-      print(
-        '   - API Key presente: ${firebaseOptions.apiKey.isNotEmpty ? "✅" : "❌"}',
-      );
-      print(
-        '   - App ID presente: ${firebaseOptions.appId.isNotEmpty ? "✅" : "❌"}',
-      );
-
       await Firebase.initializeApp(options: firebaseOptions);
-      print('✅ Firebase inicializado correctamente');
     } catch (firebaseError) {
-      print('❌ Error al inicializar Firebase: $firebaseError');
       rethrow;
     }
 
     // Inicializar inyección de dependencias
-    print('💉 Inicializando inyección de dependencias...');
     await setupServiceLocator(appConfig);
-    print('✅ Inyección de dependencias configurada');
 
     // Ejecutar aplicación
-    print('🎬 Ejecutando aplicación...');
     runApp(const PaseoDelComercioApp());
-    print('✅ Aplicación en ejecución');
   } catch (e) {
     // Manejar errores de inicialización
-    print('❌ ERROR CRÍTICO durante la inicialización: $e');
-    print('📋 Stack trace: ${e.toString()}');
     runApp(
       MaterialApp(
         home: Scaffold(
@@ -118,14 +89,10 @@ class PaseoDelComercioApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('🏗️ Construyendo widget PaseoDelComercioApp...');
-
     // Verificar estado de Firebase
     try {
       Firebase.app(); // Esto lanzará excepción si Firebase no está inicializado
-      print('✅ Firebase está inicializado en la aplicación');
     } catch (e) {
-      print('❌ Firebase NO está inicializado: $e');
       return MaterialApp(
         home: Scaffold(
           body: Center(
@@ -168,7 +135,7 @@ class PaseoDelComercioApp extends StatelessWidget {
         BlocProvider<OrganizacionBloc>.value(value: getIt<OrganizacionBloc>()),
       ],
       child: MaterialApp.router(
-        debugShowCheckedModeBanner: AppConfig().debugMode,
+        debugShowCheckedModeBanner: false,
         title: AppConfig().appName,
 
         // Localización

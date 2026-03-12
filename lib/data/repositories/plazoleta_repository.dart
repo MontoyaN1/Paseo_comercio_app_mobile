@@ -118,82 +118,20 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         }
       }
 
-      // Convertir respuesta a objetos Plazoleta
+      // Convertir respuesta a objetos Plazoleta usando fromSupabaseJson
       final plazoletas =
           paginatedResponse.map<Plazoleta>((data) {
             try {
-              // Parsear servicios disponibles si existe
-              List<String>? serviciosDisponibles;
-              final serviciosData = data['servicios_disponibles'];
-              if (serviciosData != null) {
-                if (serviciosData is List) {
-                  serviciosDisponibles = serviciosData.cast<String>();
-                } else if (serviciosData is String) {
-                  serviciosDisponibles = [serviciosData];
-                }
-              }
-
-              // Parsear metadata si existe
-              Map<String, dynamic>? metadata;
-              final metadataData = data['metadata'];
-              if (metadataData != null && metadataData is Map) {
-                metadata = Map<String, dynamic>.from(metadataData);
-              }
-
-              return Plazoleta(
-                id: (data['id'] as num?)?.toInt() ?? 0,
-                nombre: data['nombre'] as String? ?? 'Sin nombre',
-                descripcion: data['descripcion'] as String?,
-                ubicacion: data['ubicacion'] as String?,
-                capacidadMaxima: (data['capacidad_maxima'] as num?)?.toInt(),
-                ordenVisual: (data['orden_visual'] as num?)?.toInt(),
-                activa: (data['activa'] as bool?) ?? true,
-                fechaCreacion: DateTime.parse(
-                  data['fecha_creacion'] as String? ??
-                      DateTime.now().toString(),
-                ),
-                fechaActualizacion:
-                    data['fecha_actualizacion'] != null
-                        ? DateTime.parse(data['fecha_actualizacion'] as String)
-                        : null,
-                metadata: metadata,
-                totalTiendas: (data['total_tiendas'] as num?)?.toInt() ?? 0,
-                totalVisitas: (data['total_visitas'] as num?)?.toInt() ?? 0,
-                latitud: (data['latitud'] as num?)?.toDouble(),
-                longitud: (data['longitud'] as num?)?.toDouble(),
-                piso: data['piso'] as String?,
-                sector: data['sector'] as String?,
-                icono: data['icono'] as String?,
-                color: data['color'] as String?,
-                tipoUbicacion: TipoUbicacion.fromString(
-                  data['tipo_ubicacion'] as String? ?? 'plazoleta',
-                ),
-                tieneAccesoDiscapacitados:
-                    (data['tiene_acceso_discapacitados'] as bool?) ?? false,
-                tieneEstacionamiento:
-                    (data['tiene_estacionamiento'] as bool?) ?? false,
-                tieneZonaDescanso:
-                    (data['tiene_zona_descanso'] as bool?) ?? false,
-                tieneZonaComida: (data['tiene_zona_comida'] as bool?) ?? false,
-                serviciosDisponibles: serviciosDisponibles,
-                horarioAcceso: data['horario_acceso'] as String?,
-                normasUso: data['normas_uso'] as String?,
-              );
+              return Plazoleta.fromSupabaseJson(data);
             } catch (e) {
               _logger.e('Error al convertir plazoleta ${data['id']}: $e');
               return Plazoleta(
                 id: 0,
+                fechaCreacion: DateTime.now(),
                 nombre: 'Error en datos',
                 descripcion: 'No se pudo cargar la información',
-                activa: false,
-                fechaCreacion: DateTime.now(),
-                totalTiendas: 0,
-                totalVisitas: 0,
                 tipoUbicacion: TipoUbicacion.plazoleta,
-                tieneAccesoDiscapacitados: false,
-                tieneEstacionamiento: false,
-                tieneZonaDescanso: false,
-                tieneZonaComida: false,
+                slug: 'error',
               );
             }
           }).toList();
@@ -268,62 +206,12 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
               .eq('id', id)
               .single();
 
-      // Convertir respuesta a objeto Plazoleta
-      // Parsear servicios disponibles si existe
-      List<String>? serviciosDisponibles;
-      final serviciosData = response['servicios_disponibles'];
-      if (serviciosData != null) {
-        if (serviciosData is List) {
-          serviciosDisponibles = serviciosData.cast<String>();
-        } else if (serviciosData is String) {
-          serviciosDisponibles = [serviciosData];
-        }
-      }
+      // Convertir respuesta a objeto Plazoleta usando fromSupabaseJson
+      final plazoleta = Plazoleta.fromSupabaseJson(response);
 
-      // Parsear metadata si existe
-      Map<String, dynamic>? metadata;
-      final metadataData = response['metadata'];
-      if (metadataData != null && metadataData is Map) {
-        metadata = Map<String, dynamic>.from(metadataData);
-      }
-
-      final plazoleta = Plazoleta(
-        id: response['id'] as int,
-        nombre: response['nombre'] as String? ?? '',
-        descripcion: response['descripcion'] as String?,
-        ubicacion: response['ubicacion'] as String?,
-        capacidadMaxima: (response['capacidad_maxima'] as num?)?.toInt(),
-        ordenVisual: (response['orden_visual'] as num?)?.toInt(),
-        activa: (response['activa'] as bool?) ?? true,
-        fechaCreacion: DateTime.parse(response['fecha_creacion'] as String),
-        fechaActualizacion:
-            response['fecha_actualizacion'] != null
-                ? DateTime.parse(response['fecha_actualizacion'] as String)
-                : null,
-        metadata: metadata,
-        totalTiendas: (response['total_tiendas'] as num?)?.toInt() ?? 0,
-        totalVisitas: (response['total_visitas'] as num?)?.toInt() ?? 0,
-        latitud: (response['latitud'] as num?)?.toDouble(),
-        longitud: (response['longitud'] as num?)?.toDouble(),
-        piso: response['piso'] as String?,
-        sector: response['sector'] as String?,
-        icono: response['icono'] as String?,
-        color: response['color'] as String?,
-        tipoUbicacion: TipoUbicacion.fromString(
-          response['tipo_ubicacion'] as String? ?? 'plazoleta',
-        ),
-        tieneAccesoDiscapacitados:
-            (response['tiene_acceso_discapacitados'] as bool?) ?? false,
-        tieneEstacionamiento:
-            (response['tiene_estacionamiento'] as bool?) ?? false,
-        tieneZonaDescanso: (response['tiene_zona_descanso'] as bool?) ?? false,
-        tieneZonaComida: (response['tiene_zona_comida'] as bool?) ?? false,
-        serviciosDisponibles: serviciosDisponibles,
-        horarioAcceso: response['horario_acceso'] as String?,
-        normasUso: response['normas_uso'] as String?,
+      _logger.i(
+        'Plazoleta encontrada: ${plazoleta.nombre}, ID Categoría Principal: ${plazoleta.categoriaPrincipalId}',
       );
-
-      _logger.i('Plazoleta encontrada: ${plazoleta.nombre}');
 
       // Guardar en caché - serializar primero
       await _cacheService.set('plazoleta_$id', plazoleta.toJson());
@@ -397,21 +285,16 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
       final plazoletas =
           response.map<Plazoleta>((data) {
             try {
-              return Plazoleta(
-                id: data['id'] as int,
-                nombre: data['nombre'] as String? ?? '',
-                descripcion: data['descripcion'] as String? ?? '',
-                activa: true,
-                fechaCreacion: DateTime.parse(data['fecha_creacion'] as String),
-              );
+              return Plazoleta.fromSupabaseJson(data);
             } catch (e) {
               _logger.e('Error al convertir plazoleta ${data['id']}: $e');
               return Plazoleta(
                 id: 0,
+                fechaCreacion: DateTime.now(),
                 nombre: 'Error en datos',
                 descripcion: 'No se pudo cargar la información',
-                activa: false,
-                fechaCreacion: DateTime.now(),
+                tipoUbicacion: TipoUbicacion.plazoleta,
+                slug: 'error',
               );
             }
           }).toList();
@@ -466,13 +349,12 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
       // Obtener plazoletas activas
       final plazoletas = await getPlazoletasActivas(page: page, limit: limit);
 
-      // Filtrar solo las activas
-      final disponibles = plazoletas.where((p) => p.activa).toList();
-
+      // Todas las plazoletas son consideradas disponibles
+      // (En el esquema actual no hay campo 'activa')
       _logger.i('=== FIN getPlazoletasDisponibles ===');
-      _logger.i('Se encontraron ${disponibles.length} plazoletas disponibles');
+      _logger.i('Se encontraron ${plazoletas.length} plazoletas disponibles');
 
-      return disponibles;
+      return plazoletas;
     } catch (e, stackTrace) {
       _logger.e('=== ERROR en getPlazoletasDisponibles ===');
       _logger.e('Error: $e', error: e, stackTrace: stackTrace);
@@ -1012,49 +894,80 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         });
       }
 
-      // Nueva lógica: obtener productos por nombre de categoría que coincide con nombre de plazoleta
+      // Lógica: obtener productos por categoría asociada a la plazoleta
       try {
-        // 1. Obtener nombre de la plazoleta
+        // 1. Obtener la plazoleta con su categoria_principal_id
         final plazoletaResponse =
             await _supabaseClient.plazoletas
-                .select('nombre')
+                .select('nombre, categoria_principal_id')
                 .eq('id', plazoletaId)
                 .single();
 
         final plazoletaNombre = plazoletaResponse['nombre'] as String;
-        _logger.i('Plazoleta ID $plazoletaId -> Nombre: "$plazoletaNombre"');
-
-        // 2. Buscar categorías con nombre que coincida parcialmente (case-insensitive)
-        final categoriasResponse = await _supabaseClient.categorias
-            .select('id')
-            .ilike('nombre', '%' + plazoletaNombre + '%')
-            .eq('activa', true);
+        final categoriaPrincipalId =
+            plazoletaResponse['categoria_principal_id'] as int?;
 
         _logger.i(
-          'Categorías encontradas con nombre similar a "$plazoletaNombre": ${categoriasResponse.length}',
+          'Plazoleta ID $plazoletaId -> Nombre: "$plazoletaNombre", Categoría Principal ID: $categoriaPrincipalId',
+        );
+        _logger.i('Plazoleta response completa: $plazoletaResponse');
+
+        List<int> categoriaIds = [];
+
+        if (categoriaPrincipalId != null) {
+          _logger.i('Usando categoría principal ID: $categoriaPrincipalId');
+          categoriaIds.add(categoriaPrincipalId);
+        } else {
+          // Fallback: buscar categorías cuyo nombre coincida con el nombre de la plazoleta
+          _logger.i(
+            'Buscando categorías con nombre similar a "$plazoletaNombre"',
+          );
+          final categoriasResponse = await _supabaseClient.categorias
+              .select('id')
+              .ilike('nombre', '%' + plazoletaNombre + '%')
+              .eq('activa', true);
+
+          if (categoriasResponse.isNotEmpty) {
+            categoriaIds.addAll(
+              categoriasResponse.map((c) => c['id'] as int).toList(),
+            );
+            _logger.i(
+              'Categorías encontradas con nombre similar: ${categoriaIds.length}',
+            );
+          } else {
+            _logger.i(
+              'No se encontraron categorías con nombre similar a "$plazoletaNombre"',
+            );
+          }
+        }
+
+        _logger.i('Categorías finales a filtrar: $categoriaIds');
+        _logger.i(
+          'Procediendo a filtrar productos usando ${categoriaIds.length} categorías',
         );
 
-        var query;
-        if (categoriasResponse.isEmpty) {
+        if (categoriaIds.isEmpty) {
           _logger.i(
-            'No hay categorías con nombre similar a "$plazoletaNombre", obteniendo productos generales',
+            'No hay categorías asociadas a la plazoleta "$plazoletaNombre", devolviendo lista vacía',
           );
-          query = _supabaseClient.productos.select();
-        } else {
-          final categoriaIds =
-              categoriasResponse.map((c) => c['id'] as int).toList();
-          _logger.i('Filtrando productos por categoria_ids: $categoriaIds');
-          query = _supabaseClient.productos.select().inFilter(
-            'categoria_id',
-            categoriaIds,
-          );
+          // Guardar lista vacía en caché
+          await _cacheService.set('productos_plazoleta_\$plazoletaId', []);
+          return [];
         }
+
+        _logger.i('Filtrando productos por categoria_ids: $categoriaIds');
+        var query = _supabaseClient.productos
+            .select('''
+              *,
+              imagen_productos!left(*)
+            ''')
+            .inFilter('categoria_id', categoriaIds);
 
         if (search != null && search.isNotEmpty) {
           query = query.ilike('nombre_producto', '%' + search + '%');
         }
         if (soloDisponibles == true) {
-          query = query.eq('estado_producto', 'disponible');
+          query = query.eq('estado_producto', 'publicado');
         }
         if (precioMin != null) {
           query = query.gte('precio', precioMin);
@@ -1062,6 +975,11 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         if (precioMax != null) {
           query = query.lte('precio', precioMax);
         }
+
+        // Log de filtros aplicados
+        _logger.i(
+          'Filtros aplicados: search="$search", soloDisponibles=$soloDisponibles, precioMin=$precioMin, precioMax=$precioMax',
+        );
 
         final pageNum = page ?? 1;
         final limitNum = limit ?? 20;
@@ -1075,13 +993,37 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         _logger.i('Productos response count: ${response.length}');
         if (response.isNotEmpty) {
           _logger.i(
-            'Sample producto ID: ${response.first['id']}, categoria_id: ${response.first['categoria_id']}',
+            'Sample producto ID: ${response.first['id']}, categoria_id: ${response.first['categoria_id']}, nombre: ${response.first['nombre_producto']}',
           );
+          if (response.length > 1) {
+            _logger.i(
+              'Segundo producto: ID: ${response[1]['id']}, nombre: ${response[1]['nombre_producto']}',
+            );
+          }
+        } else {
+          _logger.w('La consulta de productos retornó una lista vacía');
+          _logger.w('Query ejecutada: $query');
         }
         final productos =
             response
                 .map((json) {
                   try {
+                    // Transformar URLs de imágenes de Contabo a Cloudflare R2
+                    final imagenes = json['imagen_productos'] as List<dynamic>?;
+                    if (imagenes != null && imagenes.isNotEmpty) {
+                      for (final imagen in imagenes) {
+                        if (imagen is Map<String, dynamic>) {
+                          final urlOriginal = imagen['url_imagen'] as String?;
+                          if (urlOriginal != null && urlOriginal.isNotEmpty) {
+                            if (urlOriginal.contains('contabostorage.com')) {
+                              imagen['url_imagen'] = _transformContaboUrlToR2(
+                                urlOriginal,
+                              );
+                            }
+                          }
+                        }
+                      }
+                    }
                     return Producto.fromJson(json);
                   } catch (e, stackTrace) {
                     _logger.e(
@@ -1097,8 +1039,21 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
                 .cast<Producto>()
                 .toList();
 
+        _logger.i(
+          'Productos parseados exitosamente: ${productos.length} de ${response.length}',
+        );
+        if (productos.isNotEmpty) {
+          _logger.i(
+            'Primer producto parseado: ${productos.first.id} - ${productos.first.nombreProducto}',
+          );
+        }
+
         // Guardar en caché
+        _logger.i(
+          'Guardando ${productos.length} productos en caché para plazoleta ID: $plazoletaId',
+        );
         await _cacheService.set('productos_plazoleta_\$plazoletaId', productos);
+        _logger.i('=== FIN getProductosPorPlazoleta EXITOSO ===');
         return productos;
       } catch (e, stackTrace) {
         _logger.e(
@@ -1216,43 +1171,67 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         });
       }
 
-      // Nueva lógica: obtener tiendas que tienen productos con categoría que coincide con nombre de plazoleta
+      // Nueva lógica: obtener tiendas que tienen productos con la categoría principal de la plazoleta
       try {
-        // 1. Obtener nombre de la plazoleta
+        // 1. Obtener la plazoleta con su categoria_principal_id
         final plazoletaResponse =
             await _supabaseClient.plazoletas
-                .select('nombre')
+                .select('nombre, categoria_principal_id')
                 .eq('id', plazoletaId)
                 .single();
 
         final plazoletaNombre = plazoletaResponse['nombre'] as String;
-        _logger.i('Plazoleta ID $plazoletaId -> Nombre: "$plazoletaNombre"');
-
-        // 2. Buscar categorías con nombre que coincida parcialmente (case-insensitive)
-        final categoriasResponse = await _supabaseClient.categorias
-            .select('id')
-            .ilike('nombre', '%' + plazoletaNombre + '%')
-            .eq('activa', true);
+        final categoriaPrincipalId =
+            plazoletaResponse['categoria_principal_id'] as int?;
 
         _logger.i(
-          'Categorías encontradas con nombre similar a "$plazoletaNombre": ${categoriasResponse.length}',
+          'Plazoleta ID $plazoletaId -> Nombre: "$plazoletaNombre", Categoría Principal ID: $categoriaPrincipalId',
         );
+        _logger.i('Plazoleta response completa: $plazoletaResponse');
 
+        List<int> categoriaIds = [];
         List<int> tiendaIds = [];
 
-        if (categoriasResponse.isNotEmpty) {
-          final categoriaIds =
-              categoriasResponse.map((c) => c['id'] as int).toList();
-          _logger.i('Categoria IDs: $categoriaIds');
+        if (categoriaPrincipalId != null) {
+          _logger.i('Usando categoría principal ID: $categoriaPrincipalId');
+          categoriaIds.add(categoriaPrincipalId);
+        } else {
+          // Fallback: buscar categorías cuyo nombre coincida con el nombre de la plazoleta
+          _logger.i(
+            'Buscando categorías con nombre similar a "$plazoletaNombre"',
+          );
+          final categoriasResponse = await _supabaseClient.categorias
+              .select('id')
+              .ilike('nombre', '%' + plazoletaNombre + '%')
+              .eq('activa', true);
 
-          // 3. Obtener productos con categoria_id en esas categorías
+          if (categoriasResponse.isNotEmpty) {
+            categoriaIds.addAll(
+              categoriasResponse.map((c) => c['id'] as int).toList(),
+            );
+            _logger.i(
+              'Categorías encontradas con nombre similar: ${categoriaIds.length}',
+            );
+          } else {
+            _logger.i(
+              'No se encontraron categorías con nombre similar a "$plazoletaNombre"',
+            );
+          }
+        }
+
+        _logger.i('Categorías finales a filtrar: $categoriaIds');
+
+        if (categoriaIds.isNotEmpty) {
+          _logger.i('Buscando productos por categoria_ids: $categoriaIds');
+
+          // Obtener productos con categoria_id en las categorías encontradas
           final productosResponse = await _supabaseClient.productos
               .select('tienda_id')
               .inFilter('categoria_id', categoriaIds)
-              .eq('estado_producto', 'disponible');
+              .eq('estado_producto', 'publicado');
 
           if (productosResponse.isNotEmpty) {
-            // 4. Extraer tienda_id únicos
+            // Extraer tienda_id únicos
             tiendaIds =
                 productosResponse
                     .map((p) => p['tienda_id'] as int)
@@ -1262,16 +1241,25 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
           }
         }
 
-        var query;
         if (tiendaIds.isEmpty) {
           _logger.i(
-            'No hay productos con categorías similares a "$plazoletaNombre", obteniendo tiendas generales',
+            'La plazoleta "$plazoletaNombre" no tiene categorías asociadas o no hay productos con esas categorías, devolviendo lista vacía',
           );
-          query = _supabaseClient.tiendas.select();
-        } else {
-          _logger.i('Filtrando tiendas por IDs: $tiendaIds');
-          query = _supabaseClient.tiendas.select().inFilter('id', tiendaIds);
+          // Guardar lista vacía en caché
+          await _cacheService.set(
+            'tiendas_plazoleta_' + plazoletaId.toString(),
+            [],
+          );
+          return [];
         }
+
+        _logger.i('Filtrando tiendas por IDs: $tiendaIds');
+        var query = _supabaseClient.tiendas
+            .select('''
+          *,
+          imagen_tienda!left(*)
+        ''')
+            .inFilter('id', tiendaIds);
 
         if (search != null && search.isNotEmpty) {
           query = query.ilike('nombre_tienda', '%' + search + '%');
@@ -1530,9 +1518,10 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
       // Aplicar filtros (implementación simplificada)
       var filtered = plazoletas;
 
-      if (soloDisponibles == true) {
-        filtered = filtered.where((p) => p.activa).toList();
-      }
+      // El campo 'activa' no existe en el esquema actual de plazoleta
+      // if (soloDisponibles == true) {
+      //   filtered = filtered.where((p) => p.activa).toList();
+      // }
 
       // TODO: Implementar filtros reales basados en datos
 

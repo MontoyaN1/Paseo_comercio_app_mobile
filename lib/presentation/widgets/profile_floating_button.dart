@@ -707,7 +707,7 @@ class _ProfileSheet extends StatelessWidget {
           ),
         );
       }
-      debugPrint('Error in _performLogout: $error');
+      // Error en _performLogout
     }
   }
 }

@@ -96,7 +96,7 @@ class _TiendaListPageState extends State<TiendaListPage> {
 
   void _onTiendaTap(Map<String, dynamic> tienda) {
     final tiendaId = tienda['id'] as int;
-    context.go('/tiendas/$tiendaId');
+    context.push('/tiendas/$tiendaId');
   }
 
   Widget _buildSearchBar() {

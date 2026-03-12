@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'package:logger/logger.dart';
 
+import '../../core/app/app_config.dart';
 import '../datasources/remote/supabase_client.dart';
 import '../datasources/local/local_database.dart';
 import '../../domain/repositories/tienda_repository_interface.dart';
@@ -12,6 +13,7 @@ class TiendaRepository implements TiendaRepositoryInterface {
   final SupabaseClientService _supabaseClient;
   final LocalCacheService _localCache;
   final Logger _logger;
+  final AppConfig _appConfig = AppConfig();
 
   // Stream para notificar cambios en las tiendas
   final StreamController<List<Map<String, dynamic>>> _tiendasController =
@@ -112,7 +114,10 @@ class TiendaRepository implements TiendaRepositoryInterface {
       _logger.d('Obteniendo tienda $tiendaId desde Supabase...');
 
       final response = await _supabaseClient.tiendas
-          .select()
+          .select('''
+            *,
+            imagen_tienda!left(*)
+          ''')
           .eq('id', tiendaId)
           .limit(1);
 
@@ -124,6 +129,9 @@ class TiendaRepository implements TiendaRepositoryInterface {
       final tienda = response.first as Map<String, dynamic>?;
 
       if (tienda != null) {
+        // Transformar URLs de Contabo a Cloudflare R2 para imágenes de tienda
+        _transformTiendaUrlsToR2(tienda);
+
         // Guardar en caché
         await _localCache.cacheTienda(tienda);
         _logger.i('Tienda obtenida: $tiendaId');
@@ -452,5 +460,131 @@ class TiendaRepository implements TiendaRepositoryInterface {
   void dispose() {
     _tiendasController.close();
     _logger.i('TiendaRepository disposed');
+  }
+
+  /// Transformar URLs de Contabo a Cloudflare R2 en los datos de la tienda
+  void _transformTiendaUrlsToR2(Map<String, dynamic> tienda) {
+    // Transformar imagen_tienda (array de imágenes)
+    final imagenTienda = tienda['imagen_tienda'];
+    if (imagenTienda is List) {
+      final nuevasImagenes = <Map<String, dynamic>>[];
+      for (final img in imagenTienda) {
+        if (img is Map<String, dynamic>) {
+          final nuevaImagen = Map<String, dynamic>.from(img);
+          // Transformar url_imagen
+          final urlImagen = nuevaImagen['url_imagen'] as String?;
+          if (urlImagen != null && urlImagen.contains('contabostorage.com')) {
+            nuevaImagen['url_imagen'] = _transformContaboUrlToR2(urlImagen);
+          }
+          // Transformar url_original si existe
+          final urlOriginal = nuevaImagen['url_original'] as String?;
+          if (urlOriginal != null &&
+              urlOriginal.contains('contabostorage.com')) {
+            nuevaImagen['url_original'] = _transformContaboUrlToR2(urlOriginal);
+          }
+          nuevasImagenes.add(nuevaImagen);
+        }
+      }
+      tienda['imagen_tienda'] = nuevasImagenes;
+    } else if (imagenTienda is String &&
+        imagenTienda.contains('contabostorage.com')) {
+      // Es una URL directa
+      tienda['imagen_tienda'] = _transformContaboUrlToR2(imagenTienda);
+    }
+
+    // Transformar logoUrl
+    final logoUrl = tienda['logoUrl'] as String?;
+    if (logoUrl != null && logoUrl.contains('contabostorage.com')) {
+      tienda['logoUrl'] = _transformContaboUrlToR2(logoUrl);
+    }
+
+    // Transformar logo_url
+    final logoUrlAlt = tienda['logo_url'] as String?;
+    if (logoUrlAlt != null && logoUrlAlt.contains('contabostorage.com')) {
+      tienda['logo_url'] = _transformContaboUrlToR2(logoUrlAlt);
+    }
+
+    // Transformar url_logo
+    final urlLogo = tienda['url_logo'] as String?;
+    if (urlLogo != null && urlLogo.contains('contabostorage.com')) {
+      tienda['url_logo'] = _transformContaboUrlToR2(urlLogo);
+    }
+
+    // Transformar imagen (campo genérico)
+    final imagen = tienda['imagen'] as String?;
+    if (imagen != null && imagen.contains('contabostorage.com')) {
+      tienda['imagen'] = _transformContaboUrlToR2(imagen);
+    }
+
+    // Transformar imágenes generales (array)
+    final imagenes = tienda['imagenes'];
+    if (imagenes is List) {
+      final nuevasImagenes = <Map<String, dynamic>>[];
+      for (final img in imagenes) {
+        if (img is Map<String, dynamic>) {
+          final nuevaImagen = Map<String, dynamic>.from(img);
+          final urlImagen = nuevaImagen['url'] as String?;
+          if (urlImagen != null && urlImagen.contains('contabostorage.com')) {
+            nuevaImagen['url'] = _transformContaboUrlToR2(urlImagen);
+          }
+          final urlImagenAlt = nuevaImagen['url_imagen'] as String?;
+          if (urlImagenAlt != null &&
+              urlImagenAlt.contains('contabostorage.com')) {
+            nuevaImagen['url_imagen'] = _transformContaboUrlToR2(urlImagenAlt);
+          }
+          nuevasImagenes.add(nuevaImagen);
+        }
+      }
+      tienda['imagenes'] = nuevasImagenes;
+    }
+  }
+
+  /// Transformar URL de Contabo a Cloudflare R2
+  /// Ejemplo: https://usc1.contabostorage.com/paseocomercio/tiendas/1771270906396-92260709-large.png
+  ///          → https://[cloudflareR2PublicUrl]/tiendas/1771270906396-92260709-large.png
+  String _transformContaboUrlToR2(String contaboUrl) {
+    try {
+      if (_appConfig.cloudflareR2PublicUrl.isEmpty) {
+        _logger.w('Cloudflare R2 no configurado, manteniendo URL original');
+        return contaboUrl;
+      }
+
+      final uri = Uri.parse(contaboUrl);
+      final pathSegments = uri.pathSegments;
+
+      // Buscar el índice de 'paseocomercio' en la ruta
+      final paseocomercioIndex = pathSegments.indexWhere(
+        (segment) => segment == 'paseocomercio',
+      );
+      if (paseocomercioIndex == -1 ||
+          paseocomercioIndex >= pathSegments.length - 1) {
+        _logger.w('URL de Contabo no tiene formato esperado: $contaboUrl');
+        return contaboUrl;
+      }
+
+      // Construir ruta relativa después de 'paseocomercio'
+      final relativePath = pathSegments
+          .sublist(paseocomercioIndex + 1)
+          .join('/');
+
+      // Normalizar URL base eliminando barra final si existe
+      String baseUrl = _appConfig.cloudflareR2PublicUrl.trim();
+      if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+      }
+
+      // Construir URL de R2
+      final r2Url = '$baseUrl/$relativePath';
+
+      _logger.d('URL transformada de Contabo a R2: $contaboUrl → $r2Url');
+      return r2Url;
+    } catch (e, stackTrace) {
+      _logger.e(
+        'Error transformando URL de Contabo a R2: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return contaboUrl;
+    }
   }
 }

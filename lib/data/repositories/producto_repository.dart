@@ -2,24 +2,42 @@
 
 import 'dart:async';
 
+import 'package:logger/logger.dart';
+
 import '../../domain/repositories/producto_repository_interface.dart';
 import '../datasources/remote/supabase_client.dart';
 import '../datasources/local/local_database.dart';
 import '../../core/utils/connectivity_service.dart';
 import '../../core/utils/cache_service.dart';
+import '../../core/app/app_config.dart';
 
-/// Implementación dummy del repositorio de Productos para pruebas
+/// Repositorio de Productos con datos reales de Supabase
 class ProductoRepository implements ProductoRepositoryInterface {
   final StreamController<List<Map<String, dynamic>>>
   _productosStreamController =
       StreamController<List<Map<String, dynamic>>>.broadcast();
+
+  final SupabaseClientService _supabaseClient;
+  final ConnectivityService _connectivityService;
+  final Logger _logger = Logger(
+    printer: PrettyPrinter(
+      methodCount: 0,
+      errorMethodCount: 3,
+      lineLength: 50,
+      colors: true,
+      printEmojis: true,
+      printTime: false,
+    ),
+  );
+  final AppConfig _appConfig = AppConfig();
 
   ProductoRepository({
     required SupabaseClientService supabaseClient,
     required LocalCacheService localCache,
     required ConnectivityService connectivityService,
     required CacheService cacheService,
-  });
+  }) : _supabaseClient = supabaseClient,
+       _connectivityService = connectivityService;
 
   @override
   Future<List<Map<String, dynamic>>> getProductos({
@@ -30,51 +48,127 @@ class ProductoRepository implements ProductoRepositoryInterface {
     String? estado = 'publicado',
     bool forceRefresh = false,
   }) async {
-    // Retornar datos dummy para pruebas
-    return [
-      {
-        'id': 1,
-        'nombre_producto': 'Producto de Prueba 1',
-        'descripcion': 'Descripción del producto de prueba 1',
-        'precio': 29.99,
-        'precio_descuento': null,
-        'moneda': 'USD',
-        'tienda_id': 1,
-        'categoria_id': 1,
-        'estado_producto': 'publicado',
-        'fecha_creacion': DateTime.now().toIso8601String(),
-        'total_visitas': 100,
-        'total_valoraciones': 5,
-        'promedio_valoracion': 4.5,
-        'tiendas': {
-          'id': 1,
-          'nombre_tienda': 'Tienda de Prueba',
-          'descripcion': 'Descripción de tienda de prueba',
-        },
-        'categorias': {'id': 1, 'nombre_categoria': 'Categoría de Prueba'},
-      },
-      {
-        'id': 2,
-        'nombre_producto': 'Producto de Prueba 2',
-        'descripcion': 'Descripción del producto de prueba 2',
-        'precio': 49.99,
-        'precio_descuento': 39.99,
-        'moneda': 'USD',
-        'tienda_id': 1,
-        'categoria_id': 1,
-        'estado_producto': 'publicado',
-        'fecha_creacion': DateTime.now().toIso8601String(),
-        'total_visitas': 150,
-        'total_valoraciones': 8,
-        'promedio_valoracion': 4.8,
-        'tiendas': {
-          'id': 1,
-          'nombre_tienda': 'Tienda de Prueba',
-          'descripcion': 'Descripción de tienda de prueba',
-        },
-        'categorias': {'id': 1, 'nombre_categoria': 'Categoría de Prueba'},
-      },
-    ];
+    try {
+      // Verificar conectividad
+      final hasConnection = await _connectivityService.hasConnection();
+      if (!hasConnection) {
+        _logger.w('Sin conexión a internet');
+        return [];
+      }
+
+      // Construir consulta base con join para obtener imágenes de productos
+      var query = _supabaseClient.productos.select('''
+          *,
+          imagen_productos!left(*)
+        ''');
+
+      // Aplicar filtros
+      if (tiendaId != null) {
+        query = query.eq('tienda_id', tiendaId);
+      }
+      if (categoriaId != null) {
+        query = query.eq('categoria_id', categoriaId);
+      }
+      if (estado != null && estado.isNotEmpty) {
+        query = query.eq('estado_producto', estado);
+      }
+
+      // Aplicar paginación y orden
+      final response = await query
+          .order('fecha_creacion', ascending: false)
+          .range((page - 1) * limit, page * limit - 1);
+
+      _logger.d('Productos obtenidos: ${response.length}');
+
+      // Transformar URLs de Contabo a Cloudflare R2
+      final productosTransformados =
+          response.map((producto) {
+            return _transformProductoUrlsToR2(producto);
+          }).toList();
+
+      return productosTransformados;
+    } catch (e, stackTrace) {
+      _logger.e(
+        'Error obteniendo productos: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return [];
+    }
+  }
+
+  /// Transformar URLs de Contabo a Cloudflare R2 en los datos del producto
+  Map<String, dynamic> _transformProductoUrlsToR2(
+    Map<String, dynamic> producto,
+  ) {
+    final productoTransformado = Map<String, dynamic>.from(producto);
+
+    // Transformar imagen_productos (array de imágenes)
+    final imagenesProducto = productoTransformado['imagen_productos'];
+    if (imagenesProducto is List) {
+      final nuevasImagenes = <Map<String, dynamic>>[];
+      for (final img in imagenesProducto) {
+        if (img is Map<String, dynamic>) {
+          final nuevaImagen = Map<String, dynamic>.from(img);
+          // Transformar url_imagen
+          final urlImagen = nuevaImagen['url_imagen'] as String?;
+          if (urlImagen != null && urlImagen.contains('contabostorage.com')) {
+            nuevaImagen['url_imagen'] = _transformContaboUrlToR2(urlImagen);
+          }
+          // Transformar url_original si existe
+          final urlOriginal = nuevaImagen['url_original'] as String?;
+          if (urlOriginal != null &&
+              urlOriginal.contains('contabostorage.com')) {
+            nuevaImagen['url_original'] = _transformContaboUrlToR2(urlOriginal);
+          }
+          nuevasImagenes.add(nuevaImagen);
+        }
+      }
+      productoTransformado['imagen_productos'] = nuevasImagenes;
+    }
+
+    return productoTransformado;
+  }
+
+  /// Transformar URL de Contabo a Cloudflare R2
+  String _transformContaboUrlToR2(String contaboUrl) {
+    try {
+      if (_appConfig.cloudflareR2PublicUrl.isEmpty) {
+        return contaboUrl;
+      }
+
+      final uri = Uri.parse(contaboUrl);
+      final pathSegments = uri.pathSegments;
+
+      // Buscar el índice de 'paseocomercio' en la ruta
+      final paseocomercioIndex = pathSegments.indexWhere(
+        (segment) => segment == 'paseocomercio',
+      );
+      if (paseocomercioIndex == -1 ||
+          paseocomercioIndex >= pathSegments.length - 1) {
+        return contaboUrl;
+      }
+
+      // Construir ruta relativa después de 'paseocomercio'
+      final relativePath = pathSegments
+          .sublist(paseocomercioIndex + 1)
+          .join('/');
+
+      // Normalizar URL base eliminando barra final si existe
+      String baseUrl = _appConfig.cloudflareR2PublicUrl.trim();
+      if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+      }
+
+      // Construir URL de R2
+      final r2Url = '$baseUrl/$relativePath';
+
+      _logger.d('URL producto transformada: $contaboUrl → $r2Url');
+      return r2Url;
+    } catch (e) {
+      _logger.e('Error transformando URL: $e');
+      return contaboUrl;
+    }
   }
 
   @override

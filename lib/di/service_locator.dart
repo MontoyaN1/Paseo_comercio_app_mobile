@@ -206,6 +206,7 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
       getTiendasUseCase: getIt<GetTiendasUseCase>(),
       getTiendaByIdUseCase: getIt<GetTiendaByIdUseCase>(),
       searchTiendasUseCase: getIt<SearchTiendasUseCase>(),
+      getProductosUseCase: getIt<GetProductosUseCase>(),
     ),
   );
 

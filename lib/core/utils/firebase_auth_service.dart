@@ -46,9 +46,7 @@ class FirebaseAuthService {
       try {
         Firebase.app(); // Esto lanzará excepción si Firebase no está inicializado
       } catch (e) {
-        if (kDebugMode) {
-          print('Firebase no está inicializado: $e');
-        }
+        // Firebase no está inicializado
         // No lanzamos excepción, solo registramos el error
         // Firebase se inicializará automáticamente cuando se use
       }
@@ -58,27 +56,15 @@ class FirebaseAuthService {
 
       // Escuchar cambios en el estado de autenticación
       _auth.authStateChanges().listen((User? user) async {
-        if (kDebugMode) {
-          print(
-            'FirebaseAuthService: authStateChanges recibido - usuario: ${user?.email ?? "null"}',
-          );
-        }
+        // authStateChanges recibido
 
         if (user != null) {
-          if (kDebugMode) {
-            print(
-              'FirebaseAuthService: Usuario autenticado: ${user.email} (${user.uid})',
-            );
-          }
+          // Usuario autenticado
           _currentUser = user;
           await _loadUserProfile(user.uid);
           await _updateAuthState(AuthState.authenticated);
         } else {
-          if (kDebugMode) {
-            print(
-              'FirebaseAuthService: Usuario no autenticado, limpiando estado',
-            );
-          }
+          // Usuario no autenticado, limpiando estado
           _currentUser = null;
           _userProfile = null;
           await _updateAuthState(AuthState.unauthenticated);
@@ -96,14 +82,9 @@ class FirebaseAuthService {
       // Verificar estado inicial
       await _checkAuthState();
 
-      if (kDebugMode) {
-        print('FirebaseAuthService: Inicializado correctamente');
-        print('Usuario actual: ${_currentUser?.email ?? "No autenticado"}');
-      }
+      // FirebaseAuthService inicializado correctamente
     } catch (error) {
-      if (kDebugMode) {
-        print('Error al inicializar FirebaseAuthService: $error');
-      }
+      // Error al inicializar FirebaseAuthService
       // No lanzamos excepción para no bloquear la app
       // La autenticación fallará silenciosamente
     }
@@ -137,11 +118,7 @@ class FirebaseAuthService {
   String? get currentUserName {
     final displayName = _currentUser?.displayName;
     final nombreCompleto = _userProfile?['nombre_completo'];
-    if (kDebugMode) {
-      print(
-        'FirebaseAuthService.currentUserName: displayName=$displayName, nombreCompleto=$nombreCompleto',
-      );
-    }
+    // Obtener nombre del usuario actual
     return displayName ?? nombreCompleto;
   }
 
@@ -153,11 +130,7 @@ class FirebaseAuthService {
   String? get currentUserPhoneNumber {
     final telefono = _userProfile?['telefono'];
     final phoneNumber = _currentUser?.phoneNumber;
-    if (kDebugMode) {
-      print(
-        'FirebaseAuthService.currentUserPhoneNumber: telefono=$telefono, phoneNumber=$phoneNumber',
-      );
-    }
+    // Obtener número de teléfono del usuario actual
     return telefono ?? phoneNumber;
   }
 
@@ -200,12 +173,7 @@ class FirebaseAuthService {
       final env = dotenv.env;
       final androidClientId = env['FIREBASE_ANDROID_CLIENT_ID'] ?? '';
 
-      if (kDebugMode) {
-        print('FirebaseAuthService: Configurando GoogleSignIn...');
-        print(
-          'FirebaseAuthService: Android Client ID presente: ${androidClientId.isNotEmpty ? "✅" : "❌"}',
-        );
-      }
+      // Configurando GoogleSignIn
 
       // Configurar GoogleSignIn según la plataforma
       if (defaultTargetPlatform == TargetPlatform.android) {
@@ -216,55 +184,25 @@ class FirebaseAuthService {
             scopes: ['email', 'profile'],
             clientId: androidClientId,
           );
-          if (kDebugMode) {
-            print(
-              'FirebaseAuthService: GoogleSignIn configurado con clientId específico',
-            );
-          }
+          // GoogleSignIn configurado con clientId específico
         } else {
           // Si no hay clientId, usar configuración automática
           _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
-          if (kDebugMode) {
-            print(
-              'FirebaseAuthService: GoogleSignIn configurado con configuración automática',
-            );
-            print(
-              'FirebaseAuthService: NOTA: Para evitar errores API 10, asegúrate de:',
-            );
-            print(
-              'FirebaseAuthService: 1. Configurar SHA-1 en Firebase Console',
-            );
-            print(
-              'FirebaseAuthService: 2. Package name: com.paseodelcomercio.app',
-            );
-            print(
-              'FirebaseAuthService: 3. Habilitar Google Sign-In en Firebase Auth',
-            );
-          }
+          // GoogleSignIn configurado con configuración automática
         }
       } else if (defaultTargetPlatform == TargetPlatform.iOS) {
         // Para iOS, usar configuración automática
         _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
-        if (kDebugMode) {
-          print('FirebaseAuthService: GoogleSignIn configurado para iOS');
-        }
+        // GoogleSignIn configurado para iOS
       } else {
         // Para otras plataformas
         _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
-        if (kDebugMode) {
-          print(
-            'FirebaseAuthService: GoogleSignIn configurado para $defaultTargetPlatform',
-          );
-        }
+        // GoogleSignIn configurado para $defaultTargetPlatform
       }
 
-      if (kDebugMode) {
-        print('FirebaseAuthService: GoogleSignIn configurado correctamente');
-      }
+      // GoogleSignIn configurado correctamente
     } catch (error) {
-      if (kDebugMode) {
-        print('FirebaseAuthService: Error al configurar GoogleSignIn: $error');
-      }
+      // Error al configurar GoogleSignIn
       // Fallback a configuración básica
       _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
     }
@@ -314,26 +252,16 @@ class FirebaseAuthService {
   /// Iniciar sesión con Google
   Future<Result<void, Exception>> signInWithGoogle() async {
     try {
-      if (kDebugMode) {
-        print('FirebaseAuthService: Iniciando autenticación con Google...');
-        print('FirebaseAuthService: Plataforma: $defaultTargetPlatform');
-      }
+      // Iniciando autenticación con Google
 
       // Iniciar flujo de autenticación de Google
-      if (kDebugMode) {
-        print('FirebaseAuthService: Llamando a GoogleSignIn.signIn()...');
-      }
+      // Llamando a GoogleSignIn.signIn()
 
       GoogleSignInAccount? googleUser;
       try {
         googleUser = await _googleSignIn.signIn();
       } catch (signInError) {
-        if (kDebugMode) {
-          print(
-            'FirebaseAuthService: Error en GoogleSignIn.signIn(): $signInError',
-          );
-          print('FirebaseAuthService: StackTrace: ${signInError.toString()}');
-        }
+        // Error en GoogleSignIn.signIn()
 
         // Manejar errores específicos de API 10 (DEVELOPER_ERROR)
         if (signInError.toString().contains('ApiException: 10') ||
@@ -359,11 +287,7 @@ class FirebaseAuthService {
       }
 
       if (googleUser == null) {
-        if (kDebugMode) {
-          print(
-            'FirebaseAuthService: Usuario canceló el flujo de Google Sign-In',
-          );
-        }
+        // Usuario canceló el flujo de Google Sign-In
         // El usuario canceló la operación, no es un error
         return Result.success(null);
       }
@@ -371,9 +295,7 @@ class FirebaseAuthService {
       // Verificar que el usuario de Google tenga email (requerido)
       final email = googleUser.email;
       if (email.isEmpty) {
-        if (kDebugMode) {
-          print('FirebaseAuthService: Error - usuario de Google sin email');
-        }
+        // Error - usuario de Google sin email
         return Result.error(
           AuthException(
             message: 'El usuario de Google no tiene un email válido',
@@ -382,26 +304,15 @@ class FirebaseAuthService {
         );
       }
 
-      if (kDebugMode) {
-        print(
-          'FirebaseAuthService: Usuario de Google obtenido: ${googleUser.email}',
-        );
-        print('FirebaseAuthService: ID: ${googleUser.id}');
-      }
+      // Usuario de Google obtenido
 
       // Obtener credenciales de autenticación
-      if (kDebugMode) {
-        print('FirebaseAuthService: Obteniendo autenticación de Google...');
-      }
+      // Obteniendo autenticación de Google
       final GoogleSignInAuthentication googleAuth;
       try {
         googleAuth = await googleUser.authentication;
       } catch (authError) {
-        if (kDebugMode) {
-          print(
-            'FirebaseAuthService: Error al obtener autenticación de Google: $authError',
-          );
-        }
+        // Error al obtener autenticación de Google
         return Result.error(
           AuthException(
             message: 'Error al obtener credenciales de Google',
@@ -410,21 +321,11 @@ class FirebaseAuthService {
         );
       }
 
-      if (kDebugMode) {
-        print('FirebaseAuthService: Creando credencial de Firebase...');
-        print(
-          'FirebaseAuthService: AccessToken presente: ${googleAuth.accessToken != null}',
-        );
-        print(
-          'FirebaseAuthService: IdToken presente: ${googleAuth.idToken != null}',
-        );
-      }
+      // Creando credencial de Firebase
 
       // Verificar que al menos un token esté disponible
       if (googleAuth.accessToken == null && googleAuth.idToken == null) {
-        if (kDebugMode) {
-          print('FirebaseAuthService: Error - ambos tokens son nulos');
-        }
+        // Error - ambos tokens son nulos
         return Result.error(
           AuthException(
             message: 'No se pudieron obtener tokens de autenticación de Google',

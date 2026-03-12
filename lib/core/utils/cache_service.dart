@@ -562,14 +562,10 @@ class CacheService {
           // Log the error but don't throw to allow app to continue
           // The error is already captured in save() and returned as Result
           // We just log it here for debugging
-          print(
-            'CacheService.set: Error saving to cache for key: $key - $error',
-          );
         },
       );
     } catch (e) {
       // Catch any unexpected errors and log them
-      print('CacheService.set: Unexpected error for key: $key - $e');
     }
   }
 }

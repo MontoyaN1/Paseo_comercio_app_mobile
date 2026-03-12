@@ -34,11 +34,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        if (kDebugMode) {
-          print(
-            'CustomAppBar: authStateChanges snapshot - connectionState: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, data: ${snapshot.data?.email ?? "null"}',
-          );
-        }
+        // authStateChanges snapshot recibido
         final authService = getIt<FirebaseAuthService>();
         final isAuthenticated = snapshot.hasData && snapshot.data != null;
         final currentUser = snapshot.data;
@@ -54,23 +50,12 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                     onPressed:
                         onBackPressed ??
                         () {
-                          if (kDebugMode) {
-                            print('CustomAppBar: Botón de volver presionado');
-                            print(
-                              'CustomAppBar: canPop(): ${context.canPop()}',
-                            );
-                          }
+                          // Botón de volver presionado
                           if (context.canPop()) {
-                            if (kDebugMode) {
-                              print('CustomAppBar: Haciendo pop...');
-                            }
+                            // Haciendo pop...
                             context.pop();
                           } else {
-                            if (kDebugMode) {
-                              print(
-                                'CustomAppBar: No hay nada que hacer pop, redirigiendo a /plazoletas',
-                              );
-                            }
+                            // No hay nada que hacer pop, redirigiendo a /plazoletas
                             // Si no hay historial de navegación, ir a la página principal
                             context.go('/plazoletas');
                           }

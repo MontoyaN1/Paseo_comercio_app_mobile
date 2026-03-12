@@ -392,7 +392,7 @@ class TiendaProductsRequested extends TiendaEvent {
   const TiendaProductsRequested({
     required this.tiendaId,
     this.page = 1,
-    this.limit = 20,
+    this.limit = 6,
     this.estado = 'publicado',
   });
 
