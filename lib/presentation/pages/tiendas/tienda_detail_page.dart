@@ -12,6 +12,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:paseo_del_comercio/core/app/app_config.dart';
+import 'package:paseo_del_comercio/data/datasources/remote/supabase_client.dart';
+import 'package:paseo_del_comercio/di/service_locator.dart';
 import 'package:paseo_del_comercio/domain/entities/tienda.dart';
 
 import 'package:paseo_del_comercio/presentation/blocs/tienda/tienda_bloc.dart';
@@ -242,6 +244,33 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
     }
   }
 
+  /// Registrar visita a la tienda
+  Future<void> _registrarVisitaTienda() async {
+    try {
+      final supabase = getIt<SupabaseClientService>();
+      final tienda =
+          await supabase.tiendas
+              .select('total_visitas')
+              .eq('id', widget.tiendaId)
+              .maybeSingle();
+
+      if (tienda != null) {
+        final totalVisitas = (tienda['total_visitas'] as int? ?? 0) + 1;
+        await supabase.tiendas
+            .update({
+              'total_visitas': totalVisitas,
+              'fecha_ultima_visita': DateTime.now().toIso8601String(),
+            })
+            .eq('id', widget.tiendaId);
+        debugPrint(
+          'Visita registrada para tienda ${widget.tiendaId}: $totalVisitas',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error registrando visita a la tienda: $e');
+    }
+  }
+
   void _loadTienda() {
     try {
       final bloc = context.read<TiendaBloc>();
@@ -300,6 +329,9 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
           ),
         );
         bloc.add(TiendaHorariosRequested(tiendaId: widget.tienda!.id));
+
+        // Registrar visita a la tienda
+        _registrarVisitaTienda();
       } else {
         // Cargar tienda por ID desde el router
         debugPrint(
@@ -311,6 +343,9 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
             forceRefresh: true,
           ),
         );
+
+        // Registrar visita a la tienda
+        _registrarVisitaTienda();
       }
     } catch (e) {
       debugPrint('❌ _loadTienda error: $e');
@@ -418,7 +453,10 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
   void _onProductoTap(Map<String, dynamic> producto) {
     final productoId = producto['id'];
     if (productoId != null) {
-      context.push('/productos/$productoId');
+      context.push(
+        '/productos/$productoId',
+        extra: {...producto, 'tienda': _tiendaData},
+      );
     }
   }
 
@@ -1230,14 +1268,6 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
             icon: Icons.visibility_rounded,
             value: tienda['total_visitas'] ?? 0,
             label: 'Visitas',
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _GoldStatCard(
-            icon: Icons.chat_rounded,
-            value: tienda['total_contactos_whatsapp'] ?? 0,
-            label: 'Contactos',
           ),
         ),
       ],

@@ -9,9 +9,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../presentation/pages/splash/splash_page.dart';
 import '../../presentation/pages/auth/login_page.dart';
 import '../../presentation/pages/profile/profile_page.dart';
-import '../../presentation/pages/tiendas/tienda_list_page.dart';
 import '../../presentation/pages/tiendas/tienda_detail_page.dart';
-import '../../presentation/pages/productos/producto_list_page.dart';
+import '../../presentation/pages/productos/producto_detail_page.dart';
 import '../../presentation/pages/plazoletas/plazoleta_list_page.dart';
 import '../../presentation/pages/plazoletas/plazoleta_detail_page.dart';
 import '../../presentation/pages/organizaciones/organizacion_list_page.dart';
@@ -141,29 +140,6 @@ class AppRouter {
         },
       ),
 
-      // Tiendas (protegida)
-      GoRoute(
-        path: '/tiendas',
-        name: 'tiendas',
-        redirect: (context, state) {
-          final auth = FirebaseAuth.instance;
-          final user = auth.currentUser;
-
-          // Si el usuario no está autenticado, redirigir a login
-          if (user == null) {
-            return '/login';
-          }
-
-          // Permitir acceso a tiendas
-          return null;
-        },
-        pageBuilder:
-            (context, state) => MaterialPage<void>(
-              key: state.pageKey,
-              child: const TiendaListPage(),
-            ),
-      ),
-
       // Detalle de tienda
       GoRoute(
         path: '/tiendas/:id',
@@ -175,30 +151,6 @@ class AppRouter {
             child: TiendaDetailPage(tiendaId: id),
           );
         },
-      ),
-
-      // Productos (protegida)
-      // Lista de productos
-      GoRoute(
-        path: '/productos',
-        name: 'productos',
-        redirect: (context, state) {
-          final auth = FirebaseAuth.instance;
-          final user = auth.currentUser;
-
-          // Si el usuario no está autenticado, redirigir a login
-          if (user == null) {
-            return '/login';
-          }
-
-          // Permitir acceso a productos
-          return null;
-        },
-        pageBuilder:
-            (context, state) => MaterialPage<void>(
-              key: state.pageKey,
-              child: const ProductoListPage(),
-            ),
       ),
 
       // Lista de organizaciones
@@ -257,29 +209,19 @@ class AppRouter {
         },
       ),
 
-      // Detalle de producto (placeholder - por implementar)
+      // Detalle de producto
       GoRoute(
         path: '/productos/:id',
         name: 'producto_detail',
         pageBuilder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
+          final productoId = int.tryParse(id) ?? 0;
+          final producto = state.extra as Map<String, dynamic>?;
           return MaterialPage<void>(
             key: state.pageKey,
-            child: Scaffold(
-              appBar: AppBar(title: Text('Producto $id')),
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Detalle de Producto $id'),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () => context.go('/productos'),
-                      child: const Text('Volver a Productos'),
-                    ),
-                  ],
-                ),
-              ),
+            child: ProductoDetailPage(
+              productoId: productoId,
+              producto: producto,
             ),
           );
         },

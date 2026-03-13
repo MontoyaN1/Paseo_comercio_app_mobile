@@ -176,28 +176,153 @@ class ProductoRepository implements ProductoRepositoryInterface {
     int productoId, {
     bool forceRefresh = false,
   }) async {
-    // Retornar producto dummy
-    return {
-      'id': productoId,
-      'nombre_producto': 'Producto de Prueba $productoId',
-      'descripcion': 'Descripción del producto de prueba $productoId',
-      'precio': 99.99,
-      'precio_descuento': 79.99,
-      'moneda': 'USD',
-      'tienda_id': 1,
-      'categoria_id': 1,
-      'estado_producto': 'publicado',
-      'fecha_creacion': DateTime.now().toIso8601String(),
-      'total_visitas': 200,
-      'total_valoraciones': 10,
-      'promedio_valoracion': 4.7,
-      'tiendas': {
-        'id': 1,
-        'nombre_tienda': 'Tienda de Prueba',
-        'descripcion': 'Descripción de tienda de prueba',
-      },
-      'categorias': {'id': 1, 'nombre_categoria': 'Categoría de Prueba'},
-    };
+    try {
+      // Verificar conectividad
+      final hasConnection = await _connectivityService.hasConnection();
+      if (!hasConnection) {
+        _logger.w('Sin conexión a internet');
+        return null;
+      }
+
+      // Primero intentar sin relaciones para ver la estructura
+      var basicResponse =
+          await _supabaseClient.productos
+              .select()
+              .eq('id', productoId)
+              .maybeSingle();
+
+      if (basicResponse == null) {
+        _logger.w('Producto no encontrado: $productoId');
+        return null;
+      }
+
+      _logger.d('REPO: Keys basicas: ${basicResponse.keys.toList()}');
+      _logger.d('REPO: tienda_id=${basicResponse['tienda_id']}');
+
+      // Ahora construir respuesta con datos enriquecidos
+      Map<String, dynamic> productoFinal = Map<String, dynamic>.from(
+        basicResponse,
+      );
+
+      // Obtener imágenes del producto
+      try {
+        print("REPO: Consultando imagenes_producto");
+        final imagenesResponse = await _supabaseClient.imagenesProducto
+            .select()
+            .eq('id_producto', productoId);
+        if (imagenesResponse.isNotEmpty) {
+          productoFinal['imagen_productos'] = imagenesResponse;
+          _logger.d(
+            'REPO: imagen_productos obtained: ${imagenesResponse.length}',
+          );
+        }
+      } catch (e) {
+        _logger.w('Error obteniendo imágenes: $e');
+      }
+
+      // Obtener datos de la tienda si tenemos tienda_id
+      if (basicResponse['tienda_id'] != null) {
+        try {
+          final tiendaId = basicResponse['tienda_id'] as int;
+          print("REPO: Consultando tienda $tiendaId");
+          final tiendaResponse =
+              await _supabaseClient.tiendas
+                  .select('''
+                *,
+                imagen_tienda!left(*)
+              ''')
+                  .eq('id', tiendaId)
+                  .maybeSingle();
+
+          if (tiendaResponse != null) {
+            productoFinal['tienda'] = tiendaResponse;
+            _logger.d('REPO: tienda obtained for id=$tiendaId');
+          }
+        } catch (e) {
+          _logger.w('Error obteniendo tienda: $e');
+        }
+      }
+
+      // Obtener categoría si tenemos categoria_id
+      if (basicResponse['categoria_id'] != null) {
+        try {
+          final categoriaId = basicResponse['categoria_id'] as int;
+          final categoriaResponse =
+              await _supabaseClient.categorias
+                  .select()
+                  .eq('id', categoriaId)
+                  .maybeSingle();
+
+          if (categoriaResponse != null) {
+            productoFinal['categoria'] = categoriaResponse;
+            _logger.d('REPO: categoria obtained for id=$categoriaId');
+          }
+        } catch (e) {
+          _logger.w('Error obteniendo categoría: $e');
+        }
+      }
+
+      _logger.d('Producto obtenido: ${productoFinal['id']}');
+
+      // Transformar URLs de Contabo a Cloudflare R2
+      final productoTransformado = _transformProductoUrlsToR2(productoFinal);
+
+      // Transformar datos de la tienda si existe
+      if (productoTransformado['tienda'] != null) {
+        _logger.d('REPO: Transformando tienda...');
+        productoTransformado['tienda'] = _transformTiendaDataToR2(
+          productoTransformado['tienda'] as Map<String, dynamic>,
+        );
+      }
+
+      return productoTransformado;
+    } catch (e, stackTrace) {
+      _logger.e(
+        'Error obteniendo producto por ID: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+  }
+
+  /// Transformar URLs de Contabo a Cloudflare R2 en los datos de la tienda
+  Map<String, dynamic> _transformTiendaDataToR2(Map<String, dynamic> tienda) {
+    final tiendaTransformada = Map<String, dynamic>.from(tienda);
+
+    // Transformar logo
+    final logoUrl =
+        tiendaTransformada['logo_url'] ??
+        tiendaTransformada['url_logo'] ??
+        tiendaTransformada['logo'];
+    if (logoUrl != null && logoUrl is String && logoUrl.isNotEmpty) {
+      final logoTransformado = _transformContaboUrlToR2(logoUrl);
+      tiendaTransformada['logoUrl'] = logoTransformado;
+      tiendaTransformada['logo_url'] = logoTransformado;
+    }
+
+    // Transformar imagen_tienda (array de imágenes)
+    final imagenesTienda = tiendaTransformada['imagen_tienda'];
+    if (imagenesTienda is List) {
+      final nuevasImagenes = <Map<String, dynamic>>[];
+      for (final img in imagenesTienda) {
+        if (img is Map<String, dynamic>) {
+          final nuevaImagen = Map<String, dynamic>.from(img);
+          final urlImagen = nuevaImagen['url_imagen'] as String?;
+          if (urlImagen != null) {
+            nuevaImagen['url_imagen'] = _transformContaboUrlToR2(urlImagen);
+          }
+          final urlOriginal = nuevaImagen['url_original'] as String?;
+          if (urlOriginal != null) {
+            nuevaImagen['url_original'] = _transformContaboUrlToR2(urlOriginal);
+          }
+          nuevasImagenes.add(nuevaImagen);
+        }
+      }
+      tiendaTransformada['imagen_tienda'] = nuevasImagenes;
+    }
+
+    return tiendaTransformada;
   }
 
   @override
@@ -350,8 +475,38 @@ class ProductoRepository implements ProductoRepositoryInterface {
 
   @override
   Future<bool> registrarVistaProducto(int productoId) async {
-    // Simular registro de vista
-    return true;
+    try {
+      _logger.d('Registrando vista a producto $productoId');
+
+      // Obtener producto actual
+      final producto = await getProductoById(productoId);
+      if (producto == null) {
+        _logger.w('Producto $productoId no encontrado');
+        return false;
+      }
+
+      final totalVisualizaciones =
+          (producto['total_visualizaciones'] as int? ?? 0) + 1;
+
+      final response = await _supabaseClient.productos
+          .update({
+            'total_visualizaciones': totalVisualizaciones,
+            'fecha_ultima_interaccion': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', productoId);
+
+      if (response == null) {
+        _logger.e('Error registrando vista: response is null');
+        return false;
+      }
+
+      _logger.i('Vista registrada a producto $productoId');
+      return true;
+    } catch (e) {
+      _logger.e('Error registrando vista a producto $productoId: $e');
+      return false;
+    }
   }
 
   @override

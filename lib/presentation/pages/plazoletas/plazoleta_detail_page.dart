@@ -189,7 +189,7 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
   }
 
   void _onProductoTap(Producto producto) =>
-      context.push('/productos/${producto.id}');
+      context.push('/productos/${producto.id}', extra: producto.toJson());
   void _onTiendaTap(Tienda tienda) => context.push('/tiendas/${tienda.id}');
 
   // ── Cuánto ha colapsado el hero (0..1) ────────────────────
