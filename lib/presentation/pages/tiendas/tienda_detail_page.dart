@@ -3,6 +3,7 @@
 // 🏛️  PLAZA UNIVERSE — Detalle de Tienda
 // ────────────────────────────────────────────────────────────
 
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -10,6 +11,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:paseo_del_comercio/core/app/app_config.dart';
 import 'package:paseo_del_comercio/data/datasources/remote/supabase_client.dart';
@@ -456,60 +458,6 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
       context.push(
         '/productos/$productoId',
         extra: {...producto, 'tienda': _tiendaData},
-      );
-    }
-  }
-
-  void _llamarTienda() {
-    final telefono =
-        _tiendaData?['telefono_contacto'] ?? _tiendaData?['telefono'];
-    if (telefono != null && telefono.toString().isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: _kSurface,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: _kBorder),
-          ),
-          content: Row(
-            children: [
-              Icon(Icons.phone_rounded, color: _kGold, size: 18),
-              const SizedBox(width: 10),
-              Text(
-                'Llamando a $telefono...',
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-  }
-
-  void _enviarWhatsapp() {
-    final telefono =
-        _tiendaData?['telefono_contacto'] ?? _tiendaData?['telefono'];
-    if (telefono != null && telefono.toString().isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFF25D366),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: _kBorder),
-          ),
-          content: Row(
-            children: [
-              const Icon(Icons.chat_rounded, color: Colors.white, size: 18),
-              const SizedBox(width: 10),
-              const Text(
-                'Abriendo WhatsApp...',
-                style: TextStyle(color: Colors.white, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
       );
     }
   }
@@ -1179,7 +1127,6 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
                     ),
                     _GoldDivider(),
                   ],
-                  _buildAccionesContacto(),
                 ],
               ),
             ),
@@ -1229,34 +1176,26 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
               const SizedBox(height: 16),
             ],
 
+            // ── Redes Sociales ─────────────────────────────
+            if (tienda['redes_sociales'] != null &&
+                (tienda['redes_sociales'] as Map).isNotEmpty) ...[
+              _buildSection(
+                title: 'Redes sociales',
+                icon: Icons.share_rounded,
+                child: Column(
+                  children: _buildRedesSocialesButtons(
+                    tienda['redes_sociales'] as Map<String, dynamic>,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // ── Stats ─────────────────────────────────────
             _buildStatsRow(tienda),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildAccionesContacto() {
-    return Row(
-      children: [
-        Expanded(
-          child: _AccionButton(
-            icon: Icons.phone_rounded,
-            label: 'Llamar',
-            onTap: _llamarTienda,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _AccionButton(
-            icon: Icons.chat_rounded,
-            label: 'WhatsApp',
-            onTap: _enviarWhatsapp,
-            color: const Color(0xFF25D366),
-          ),
-        ),
-      ],
     );
   }
 
@@ -1272,6 +1211,165 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
         ),
       ],
     );
+  }
+
+  /// Construir botones de redes sociales
+  List<Widget> _buildRedesSocialesButtons(Map<String, dynamic> redesSociales) {
+    final buttons = <Widget>[];
+
+    // Mapeo de redes sociales a sus iconos y colores
+    final socialConfig = {
+      'facebook': {
+        'icon': Icons.facebook_rounded,
+        'color': const Color(0xFF1877F2),
+      },
+      'instagram': {
+        'icon': Icons.camera_alt_rounded,
+        'color': const Color(0xFFE4405F),
+      },
+      'twitter': {
+        'icon': Icons.alternate_email_rounded,
+        'color': const Color(0xFF1DA1F2),
+      },
+      'x': {
+        'icon': Icons.alternate_email_rounded,
+        'color': const Color(0xFF000000),
+      },
+      'tiktok': {
+        'icon': Icons.music_note_rounded,
+        'color': const Color(0xFF25F4EE),
+      },
+      'youtube': {
+        'icon': Icons.play_circle_rounded,
+        'color': const Color(0xFFFF0000),
+      },
+      'linkedin': {
+        'icon': Icons.work_rounded,
+        'color': const Color(0xFF0A66C2),
+      },
+      'whatsapp': {
+        'icon': Icons.chat_rounded,
+        'color': const Color(0xFF25D366),
+      },
+      'web': {'icon': Icons.language_rounded, 'color': _kGold},
+    };
+
+    for (final entry in redesSociales.entries) {
+      final red = entry.key.toLowerCase();
+      dynamic valor = entry.value;
+
+      // Extraer URL correctamente dependiendo del tipo de valor
+      String? url;
+      if (valor is String) {
+        // Si es un string que contiene JSON (tiene {), parsearlo
+        if (valor.contains('{')) {
+          try {
+            final parsed = jsonDecode(valor);
+            if (parsed is Map) {
+              url = parsed['url'] as String?;
+            }
+          } catch (e) {
+            // Si no se puede parsear, usar como URL directa
+            url = valor;
+          }
+        } else {
+          url = valor;
+        }
+      } else if (valor is Map) {
+        url = valor['url'] as String?;
+      }
+
+      if (url == null || url.isEmpty) continue;
+
+      final config = socialConfig[red];
+      if (config == null) continue;
+
+      buttons.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _abrirUrl(url!),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: (config['color'] as Color).withAlpha(
+                  (0.15 * 255).toInt(),
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: (config['color'] as Color).withAlpha(
+                    (0.3 * 255).toInt(),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    config['icon'] as IconData,
+                    color: config['color'] as Color,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _formatearNombreRed(red),
+                      style: TextStyle(
+                        color: (config['color'] as Color),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.open_in_new_rounded,
+                    color: (config['color'] as Color).withAlpha(
+                      (0.7 * 255).toInt(),
+                    ),
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return buttons;
+  }
+
+  /// Formatear nombre de red social para mostrar
+  String _formatearNombreRed(String red) {
+    final nombres = {
+      'facebook': 'Facebook',
+      'instagram': 'Instagram',
+      'twitter': 'Twitter',
+      'x': 'X (Twitter)',
+      'tiktok': 'TikTok',
+      'youtube': 'YouTube',
+      'linkedin': 'LinkedIn',
+      'whatsapp': 'WhatsApp',
+      'web': 'Sitio web',
+    };
+    return nombres[red.toLowerCase()] ?? red;
+  }
+
+  /// Abrir URL en navegador
+  Future<void> _abrirUrl(String url) async {
+    try {
+      // Añadir https si no tiene protocolo
+      String urlFinal = url;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        urlFinal = 'https://$url';
+      }
+      final uri = Uri.parse(urlFinal);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Error al abrir URL: $e');
+    }
   }
 
   Widget _buildSection({

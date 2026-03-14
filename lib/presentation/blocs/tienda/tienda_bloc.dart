@@ -1,8 +1,12 @@
 // lib/presentation/blocs/tienda/tienda_bloc.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
+import '../../../../data/datasources/remote/supabase_client.dart';
+import '../../../../di/service_locator.dart';
+import '../../../../domain/entities/horario.dart';
 import '../../../../domain/usecases/get_tiendas_usecase.dart';
 import '../../../../domain/usecases/get_tienda_by_id_usecase.dart';
 import '../../../../domain/usecases/search_tiendas_usecase.dart';
@@ -336,8 +340,121 @@ class TiendaBloc extends Bloc<TiendaEvent, TiendaState> {
     TiendaHorariosRequested event,
     Emitter<TiendaState> emit,
   ) async {
-    // Horarios todavía no implementado - emitir estado vacío
-    emit(TiendaHorariosLoaded(tiendaId: event.tiendaId, horarios: []));
+    try {
+      // Obtener el servicio de Supabase
+      final supabase = getIt<SupabaseClientService>();
+
+      // Consultar horarios de la tienda - usando nombres de columna de la DB
+      final response = await supabase.horarios.select().eq(
+        'tienda_id',
+        event.tiendaId,
+      );
+
+      debugPrint('========================================');
+      debugPrint('🔍 HORARIOS - Tienda ID: ${event.tiendaId}');
+      debugPrint('🔍 Raw response count: ${response.length}');
+      debugPrint('🔍 Raw response: $response');
+      for (var i = 0; i < response.length; i++) {
+        debugPrint('🔍 Horario[$i]: ${response[i]}');
+        debugPrint('🔍 Keys: ${response[i].keys.toList()}');
+      }
+      debugPrint('========================================');
+
+      // Transformar los datos al formato esperado por la UI
+      final horariosTransformados =
+          response.map((h) => _transformarHorario(h)).toList();
+
+      // Ordenar explícitamente por dia_semana (0 = Lunes, 6 = Domingo)
+      horariosTransformados.sort((a, b) {
+        final diaA = a['dia_semana'] as int? ?? 0;
+        final diaB = b['dia_semana'] as int? ?? 0;
+        return diaA.compareTo(diaB);
+      });
+
+      debugPrint('🔍 Horarios ordenados: $horariosTransformados');
+
+      emit(
+        TiendaHorariosLoaded(
+          tiendaId: event.tiendaId,
+          horarios: horariosTransformados,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error al cargar horarios: $e');
+      emit(TiendaHorariosLoaded(tiendaId: event.tiendaId, horarios: []));
+    }
+  }
+
+  /// Transformar horario de la DB al formato esperado por la UI
+  Map<String, dynamic> _transformarHorario(Map<String, dynamic> horario) {
+    // El esquema DB usa: 1=Lunes, 2=Martes, ..., 6=Sábado, 7=Domingo
+    // Normalizar restando 1 para usar como índice de array (0-6)
+    final diaSemana = horario['dia_semana'] as int? ?? 1;
+
+    // Normalizar: restar 1 para convertir 1-7 a 0-6
+    // Si es 7 (Domingo), queda 6
+    final diaNormalizado = (diaSemana - 1).clamp(0, 6);
+
+    final dias = [
+      'Lunes',
+      'Martes',
+      'Miércoles',
+      'Jueves',
+      'Viernes',
+      'Sábado',
+      'Domingo',
+    ];
+
+    final diaNombre =
+        (diaNormalizado >= 0 && diaNormalizado < dias.length)
+            ? dias[diaNormalizado]
+            : 'Día $diaSemana';
+
+    // Extraer hora de apertura y cierre (manejar diferentes formatos)
+    String? apertura;
+    String? cierre;
+
+    if (horario['apertura'] != null) {
+      final aperturaStr = horario['apertura'].toString();
+      // Formato puede ser: "14:00:00", "14:00:00+00", "14:00:00-05:00"
+      // Extraer solo HH:MM
+      if (aperturaStr.contains(':')) {
+        final partes = aperturaStr.split(':');
+        if (partes.length >= 2) {
+          apertura = '${partes[0]}:${partes[1]}';
+        }
+      } else {
+        apertura = aperturaStr;
+      }
+    }
+
+    if (horario['cierre'] != null) {
+      final cierreStr = horario['cierre'].toString();
+      if (cierreStr.contains(':')) {
+        final partes = cierreStr.split(':');
+        if (partes.length >= 2) {
+          cierre = '${partes[0]}:${partes[1]}';
+        }
+      } else {
+        cierre = cierreStr;
+      }
+    }
+
+    // Verificar si está cerrado
+    // Si hay horarios de apertura y cierre definidos, ignorar el campo "cerrado"
+    final cerrado = horario['cerrado'] as bool? ?? false;
+    final tieneHorarioDefinido = apertura != null && cierre != null;
+    final mostrarComoCerrado = cerrado && !tieneHorarioDefinido;
+
+    return {
+      'dia': diaNombre,
+      'dia_semana': diaNormalizado, // Usar el día normalizado para ordenamiento
+      'hora_apertura': mostrarComoCerrado ? null : apertura,
+      'hora_cierre': mostrarComoCerrado ? null : cierre,
+      'cerrado': mostrarComoCerrado,
+      'fecha_especifica': horario['fecha_especifica'],
+      'tipo_horario': horario['tipo_horario'],
+    };
   }
 
   /// Obtener tiendas actuales del estado
