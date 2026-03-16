@@ -18,6 +18,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../di/service_locator.dart';
 import '../../core/utils/firebase_auth_service.dart';
+import '../providers/avatar_provider.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const _kGold = Color(0xFFD4AF37);
@@ -159,14 +160,25 @@ class _ProfileFloatingButtonState extends State<ProfileFloatingButton>
   }
 
   Widget _buildUserAvatar(User user) {
-    if (user.photoURL != null && user.photoURL!.isNotEmpty) {
-      return Image.network(
-        user.photoURL!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildInitialAvatar(user),
-      );
-    }
-    return _buildInitialAvatar(user);
+    final avatarProvider = getIt<AvatarProvider>();
+
+    return ListenableBuilder(
+      listenable: avatarProvider,
+      builder: (context, _) {
+        final imageUrl = avatarProvider.avatarUrl;
+        final updateCount = avatarProvider.updateCount;
+
+        if (imageUrl != null && imageUrl.isNotEmpty) {
+          return Image.network(
+            imageUrl,
+            key: ValueKey('avatar_${imageUrl}_$updateCount'),
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildInitialAvatar(user),
+          );
+        }
+        return _buildInitialAvatar(user);
+      },
+    );
   }
 
   Widget _buildInitialAvatar(User user) {
@@ -204,7 +216,7 @@ class _ProfileFloatingButtonState extends State<ProfileFloatingButton>
 // ══════════════════════════════════════════════════════════════
 //  BOTTOM SHEET DE PERFIL Y NAVEGACIÓN
 // ══════════════════════════════════════════════════════════════
-class _ProfileSheet extends StatelessWidget {
+class _ProfileSheet extends StatefulWidget {
   final User user;
   final bool hideOrganizacionesOption;
   final bool hidePlazoletasOption;
@@ -215,6 +227,11 @@ class _ProfileSheet extends StatelessWidget {
     required this.hidePlazoletasOption,
   });
 
+  @override
+  State<_ProfileSheet> createState() => _ProfileSheetState();
+}
+
+class _ProfileSheetState extends State<_ProfileSheet> {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
@@ -275,7 +292,7 @@ class _ProfileSheet extends StatelessWidget {
                     context.push('/profile');
                   },
                 ),
-                if (!hidePlazoletasOption)
+                if (!widget.hidePlazoletasOption)
                   _SheetTile(
                     icon: Icons.location_city_rounded,
                     label: 'Plazoletas',
@@ -284,7 +301,7 @@ class _ProfileSheet extends StatelessWidget {
                       context.push('/plazoletas');
                     },
                   ),
-                if (!hideOrganizacionesOption)
+                if (!widget.hideOrganizacionesOption)
                   _SheetTile(
                     icon: Icons.account_balance_rounded,
                     label: 'Organizaciones',
@@ -365,12 +382,12 @@ class _ProfileSheet extends StatelessWidget {
 
   // ── Header con avatar y datos ─────────────────────────────
   Widget _buildUserHeader(BuildContext context) {
-    final hasPhoto = user.photoURL != null && user.photoURL!.isNotEmpty;
+    final avatarProvider = getIt<AvatarProvider>();
     final initial =
-        (user.displayName?.isNotEmpty == true)
-            ? user.displayName![0].toUpperCase()
-            : (user.email?.isNotEmpty == true)
-            ? user.email![0].toUpperCase()
+        (widget.user.displayName?.isNotEmpty == true)
+            ? widget.user.displayName![0].toUpperCase()
+            : (widget.user.email?.isNotEmpty == true)
+            ? widget.user.email![0].toUpperCase()
             : '?';
 
     return Padding(
@@ -402,15 +419,23 @@ class _ProfileSheet extends StatelessWidget {
               ),
               padding: const EdgeInsets.all(2),
               child: ClipOval(
-                child:
-                    hasPhoto
-                        ? Image.network(
-                          user.photoURL!,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (_, __, ___) => _buildInitialWidget(initial),
-                        )
-                        : _buildInitialWidget(initial),
+                child: ListenableBuilder(
+                  listenable: avatarProvider,
+                  builder: (context, _) {
+                    final imageUrl = avatarProvider.avatarUrl;
+                    final updateCount = avatarProvider.updateCount;
+                    if (imageUrl != null && imageUrl.isNotEmpty) {
+                      return Image.network(
+                        imageUrl,
+                        key: ValueKey('avatar_${imageUrl}_$updateCount'),
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (_, __, ___) => _buildInitialWidget(initial),
+                      );
+                    }
+                    return _buildInitialWidget(initial);
+                  },
+                ),
               ),
             ),
           ),
@@ -429,7 +454,7 @@ class _ProfileSheet extends StatelessWidget {
                         stops: [0.5, 1.0],
                       ).createShader(b),
                   child: Text(
-                    user.displayName ?? 'Usuario',
+                    widget.user.displayName ?? 'Usuario',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 17,
@@ -442,7 +467,7 @@ class _ProfileSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  user.email ?? '',
+                  widget.user.email ?? '',
                   style: const TextStyle(
                     color: _kHint,
                     fontSize: 12,

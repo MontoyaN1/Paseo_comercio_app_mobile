@@ -1363,12 +1363,51 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         urlFinal = 'https://$url';
       }
+
+      // Detectar si es WhatsApp para registrar el contacto
+      final isWhatsApp =
+          urlFinal.contains('wa.me') ||
+          urlFinal.contains('whatsapp.com') ||
+          urlFinal.contains('api.whatsapp.com');
+
+      if (isWhatsApp) {
+        await _incrementarContactosWhatsapp();
+      }
+
       final uri = Uri.parse(urlFinal);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } catch (e) {
       debugPrint('Error al abrir URL: $e');
+    }
+  }
+
+  /// Incrementar contador de contactos WhatsApp
+  Future<void> _incrementarContactosWhatsapp() async {
+    try {
+      final supabase = getIt<SupabaseClientService>();
+      final tienda =
+          await supabase.tiendas
+              .select('total_contactos_whatsapp')
+              .eq('id', widget.tiendaId)
+              .maybeSingle();
+
+      if (tienda != null) {
+        final totalContactos =
+            (tienda['total_contactos_whatsapp'] as int? ?? 0) + 1;
+        await supabase.tiendas
+            .update({
+              'total_contactos_whatsapp': totalContactos,
+              
+            })
+            .eq('id', widget.tiendaId);
+        debugPrint(
+          'Contacto WhatsApp registrado para tienda ${widget.tiendaId}: $totalContactos',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error registrando contacto WhatsApp: $e');
     }
   }
 
@@ -1827,13 +1866,11 @@ class _AccionButton extends StatefulWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color? color;
 
   const _AccionButton({
     required this.icon,
     required this.label,
     required this.onTap,
-    this.color,
   });
 
   @override
@@ -1862,7 +1899,7 @@ class _AccionButtonState extends State<_AccionButton>
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.color ?? _kGold;
+    const color = _kGold;
     return GestureDetector(
       onTapDown: (_) => setState(() => scale = 0.95),
       onTapUp: (_) {

@@ -91,18 +91,32 @@ class _TiendaCardState extends State<TiendaCard>
     if (imagenes != null) {
       if (imagenes is List && imagenes.isNotEmpty) {
         for (final imagen in imagenes) {
-          if (imagen is Map<String, dynamic> &&
-              imagen['tipo_imagen'] == 'logo') {
-            rawUrl = imagen['url_imagen'] as String?;
-            break;
+          if (imagen is Map<String, dynamic>) {
+            // Buscar url_large (nuevo formato) o url_imagen (formato anterior)
+            final urlLarge = imagen['url_large'] as String?;
+            final urlImagen = imagen['url_imagen'] as String?;
+            final urlThumb = imagen['url_thumb'] as String?;
+            final url = urlLarge ?? urlImagen ?? urlThumb;
+            if (url != null && url.isNotEmpty) {
+              rawUrl = url;
+              break;
+            }
           }
         }
-        if (rawUrl == null) {
+        if (rawUrl == null || rawUrl.isEmpty) {
           final p = imagenes[0];
-          if (p is Map<String, dynamic>) rawUrl = p['url_imagen'] as String?;
+          if (p is Map<String, dynamic>) {
+            rawUrl =
+                p['url_large'] as String? ??
+                p['url_imagen'] as String? ??
+                p['url_thumb'] as String?;
+          }
         }
       } else if (imagenes is Map<String, dynamic>) {
-        rawUrl = imagenes['url_imagen'] as String?;
+        rawUrl =
+            imagenes['url_large'] as String? ??
+            imagenes['url_imagen'] as String? ??
+            imagenes['url_thumb'] as String?;
       }
     }
 

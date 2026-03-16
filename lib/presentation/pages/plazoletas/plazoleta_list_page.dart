@@ -17,9 +17,11 @@
 //  • Efectos de bokeh / partículas de polvo de luz
 // ────────────────────────────────────────────────────────────
 
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -167,7 +169,7 @@ class PlazoletaListPage extends StatefulWidget {
 }
 
 class _PlazoletaListPageState extends State<PlazoletaListPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   AnimationController? _ambientCtrl;
   AnimationController? _selectCtrl;
   AnimationController? _panelCtrl;
@@ -176,6 +178,9 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
   AnimationController? _skylightCtrl; // luz cenital independiente
   AnimationController? _navCtrl; // animaciones de navegación (zoom/centrar)
   bool _initialized = false;
+
+  // Subscription para escuchar cambios de autenticación
+  StreamSubscription<User?>? _authSubscription;
 
   // Navegación
   double _scale = 0.72;
@@ -232,11 +237,42 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
     );
     _navCtrl!.addListener(_updateNavAnimation);
     _initialized = true;
+
+    // Registrar observer para detectar cuando la app vuelve al primer plano
+    WidgetsBinding.instance.addObserver(this);
+
+    // Escuchar cambios de autenticación para recargar datos
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((
+      User? user,
+    ) {
+      // Cuando el estado de auth cambia, recargar plazoletas
+      getIt<PlazoletaBloc>().add(
+        const LoadPlazoletasActivas(page: 1, limit: 20, forceRefresh: true),
+      );
+    });
+
     getIt<PlazoletaBloc>().add(const LoadPlazoletasActivas(page: 1, limit: 20));
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Cuando la app vuelve al primer plano, recargar plazoletas
+    if (state == AppLifecycleState.resumed) {
+      getIt<PlazoletaBloc>().add(
+        const LoadPlazoletasActivas(page: 1, limit: 20, forceRefresh: true),
+      );
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _authSubscription?.cancel();
     _ambientCtrl?.dispose();
     _selectCtrl?.dispose();
     _panelCtrl?.dispose();

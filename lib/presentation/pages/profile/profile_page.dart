@@ -19,10 +19,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:paseo_del_comercio/di/service_locator.dart';
 import 'package:paseo_del_comercio/core/utils/firebase_auth_service.dart';
+import 'package:paseo_del_comercio/presentation/providers/avatar_provider.dart';
 import 'package:paseo_del_comercio/core/errors/app_exceptions.dart';
 import 'package:paseo_del_comercio/core/utils/result.dart';
+import 'package:paseo_del_comercio/data/datasources/remote/supabase_client.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const Color _kGold = Color(0xFFD4AF37);
@@ -384,72 +387,106 @@ class _ProfilePageState extends State<ProfilePage>
   // ── Hero del Avatar ───────────────────────────────────────
   Widget _buildAvatarHero() {
     final authService = getIt<FirebaseAuthService>();
-    final imageUrl = authService.currentUserImageUrl;
+    final avatarProvider = getIt<AvatarProvider>();
     final displayName = authService.currentUserName;
     final email = authService.currentUserEmail;
 
     return Column(
       children: [
-        // Avatar con anillo dorado animado
-        AnimatedBuilder(
-          animation: _avatarPulse,
-          builder:
-              (_, child) => Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Anillo de glow exterior pulsante
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: _kGold.withOpacity(0.20 * _avatarPulse.value),
-                          blurRadius: 30 * _avatarPulse.value,
-                          spreadRadius: 6 * _avatarPulse.value,
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Anillo dorado exterior
-                  Container(
-                    width: 112,
-                    height: 112,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: SweepGradient(
-                        colors: [
-                          _kGold.withOpacity(0.80),
-                          _kGoldLight.withOpacity(0.30),
-                          _kGold.withOpacity(0.80),
+        // Avatar con anillo dorado animado y botón de edición
+        GestureDetector(
+          onTap: _showAvatarOptions,
+          child: AnimatedBuilder(
+            animation: _avatarPulse,
+            builder:
+                (_, child) => Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Anillo de glow exterior pulsante
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: _kGold.withOpacity(
+                              0.20 * _avatarPulse.value,
+                            ),
+                            blurRadius: 30 * _avatarPulse.value,
+                            spreadRadius: 6 * _avatarPulse.value,
+                          ),
                         ],
                       ),
                     ),
-                  ),
-                  // Avatar interior
-                  Container(
-                    width: 104,
-                    height: 104,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _kSurface,
-                      border: Border.all(color: _kBg, width: 3),
+                    // Anillo dorado exterior
+                    Container(
+                      width: 112,
+                      height: 112,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: SweepGradient(
+                          colors: [
+                            _kGold.withOpacity(0.80),
+                            _kGoldLight.withOpacity(0.30),
+                            _kGold.withOpacity(0.80),
+                          ],
+                        ),
+                      ),
                     ),
-                    child: ClipOval(
-                      child:
-                          imageUrl != null && imageUrl.isNotEmpty
-                              ? Image.network(
+                    // Avatar interior
+                    Container(
+                      width: 104,
+                      height: 104,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _kSurface,
+                        border: Border.all(color: _kBg, width: 3),
+                      ),
+                      child: ClipOval(
+                        child: ListenableBuilder(
+                          listenable: avatarProvider,
+                          builder: (context, _) {
+                            final imageUrl = avatarProvider.avatarUrl;
+                            final updateCount = avatarProvider.updateCount;
+                            if (imageUrl != null && imageUrl.isNotEmpty) {
+                              return Image.network(
                                 imageUrl,
+                                key: ValueKey(
+                                  'avatar_${imageUrl}_$updateCount',
+                                ),
                                 fit: BoxFit.cover,
                                 errorBuilder:
                                     (_, __, ___) => _buildAvatarFallback(),
-                              )
-                              : _buildAvatarFallback(),
+                              );
+                            }
+                            return _buildAvatarFallback();
+                          },
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    // Botón de edición de avatar
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: _kGold,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: _kBg, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 16,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+          ),
         ),
 
         const SizedBox(height: 18),
@@ -517,6 +554,175 @@ class _ProfilePageState extends State<ProfilePage>
           ),
         ),
       ],
+    );
+  }
+
+  // ── Opciones para cambiar avatar ─────────────────────────────────
+  void _showAvatarOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: _kSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder:
+          (context) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Título
+                  const Text(
+                    'Cambiar foto de perfil',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Opción: Cámara
+                  ListTile(
+                    leading: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: _kGold.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.camera_alt, color: _kGold),
+                    ),
+                    title: const Text(
+                      'Tomar foto',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: Text(
+                      'Usar la cámara',
+                      style: TextStyle(color: _kHint),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _cambiarAvatar(ImageSource.camera);
+                    },
+                  ),
+                  // Opción: Galería
+                  ListTile(
+                    leading: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: _kGold.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.photo_library, color: _kGold),
+                    ),
+                    title: const Text(
+                      'Elegir de galería',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: Text(
+                      'Seleccionar una imagen',
+                      style: TextStyle(color: _kHint),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _cambiarAvatar(ImageSource.gallery);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  // ── Cambiar avatar ─────────────────────────────────────────────
+  Future<void> _cambiarAvatar(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+
+      // Seleccionar imagen
+      final XFile? imagen = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (imagen == null) return;
+
+      // Mostrar loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:
+            (context) =>
+                const Center(child: CircularProgressIndicator(color: _kGold)),
+      );
+
+      // Obtener datos del usuario
+      final authService = getIt<FirebaseAuthService>();
+      final supabase = getIt<SupabaseClientService>();
+      final firebaseUser = authService.currentUser;
+
+      if (firebaseUser == null) {
+        Navigator.pop(context);
+        _mostrarError('No hay sesión activa');
+        return;
+      }
+
+      // Obtener usuario de Supabase
+      final usuario = await supabase.getUsuarioByFirebaseId(firebaseUser.uid);
+
+      if (usuario == null) {
+        Navigator.pop(context);
+        _mostrarError('Usuario no encontrado');
+        return;
+      }
+
+      final usuarioId = usuario['id'] as int;
+      final oldAvatarUrl = usuario['avatar_url'] as String?;
+
+      // Leer imagen
+      final bytes = await imagen.readAsBytes();
+
+      // Actualizar avatar
+      final result = await authService.actualizarAvatarUsuario(
+        imageData: bytes,
+        usuarioId: usuarioId,
+        firebaseUserId: firebaseUser.uid,
+        oldAvatarUrl: oldAvatarUrl,
+      );
+
+      Navigator.pop(context);
+
+      // Manejar resultado sin await dentro de fold
+      if (result.isSuccess) {
+        // Actualizar el perfil local
+        await authService.reloadUserProfile();
+        // El AvatarProvider ya fue notificado en actualizarAvatarUsuario
+        _mostrarSuccess('Foto de perfil actualizada');
+      } else {
+        _mostrarError('Error al actualizar: ${result.errorOrNull}');
+      }
+    } catch (e) {
+      _mostrarError('Error: $e');
+    }
+  }
+
+  // ── Mostrar mensaje de éxito ─────────────────────────────────
+  void _mostrarSuccess(String mensaje) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensaje), backgroundColor: Colors.green),
+    );
+  }
+
+  // ── Mostrar mensaje de error ─────────────────────────────────
+  void _mostrarError(String mensaje) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensaje), backgroundColor: Colors.red),
     );
   }
 

@@ -1,6 +1,8 @@
 // lib/core/utils/image_service.dart
 
+import 'dart:convert';
 import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:http/http.dart' as http;
@@ -23,6 +25,12 @@ class ImageService {
   String? _s3BaseUrl;
   String? _supabaseStorageUrl;
 
+  // Credenciales de Cloudflare R2
+  String? _r2AccessKeyId;
+  String? _r2SecretAccessKey;
+  String? _r2BucketName;
+  String? _r2AccountId;
+
   // Configuración actual
   String _primaryProvider = AppConstants.imageProviderR2;
   bool _isConfigured = false;
@@ -30,11 +38,19 @@ class ImageService {
   /// Configurar el servicio
   void configure({
     String? r2BaseUrl,
+    String? r2AccessKeyId,
+    String? r2SecretAccessKey,
+    String? r2BucketName,
+    String? r2AccountId,
     String? s3BaseUrl,
     String? supabaseUrl,
     String? supabaseBucket,
   }) {
     _r2BaseUrl = r2BaseUrl;
+    _r2AccessKeyId = r2AccessKeyId;
+    _r2SecretAccessKey = r2SecretAccessKey;
+    _r2BucketName = r2BucketName;
+    _r2AccountId = r2AccountId;
     _s3BaseUrl = s3BaseUrl;
 
     if (supabaseUrl != null && supabaseBucket != null) {
@@ -497,18 +513,124 @@ class ImageService {
     }
   }
 
-  /// Subir a Cloudflare R2
+  /// Subir a Cloudflare R2 usando AWS Signature V4
   Future<void> _uploadToR2({
     required String path,
     required Uint8List data,
     required String contentType,
     Map<String, String>? metadata,
   }) async {
-    // Nota: En una implementación real, esto usaría las credenciales de R2
-    // Para este ejemplo, asumimos que hay un endpoint configurado
-    throw UnimplementedError(
-      '_uploadToR2 necesita implementación con credenciales R2',
+    if (_r2BaseUrl == null ||
+        _r2AccessKeyId == null ||
+        _r2SecretAccessKey == null ||
+        _r2BucketName == null) {
+      throw Exception('Credenciales de R2 no configuradas');
+    }
+
+    // R2 usa API compatible con S3
+    final endpoint =
+        'https://${_r2BucketName}.${_r2AccountId}.r2.cloudflarestorage.com/$path';
+
+    final request = http.Request('PUT', Uri.parse(endpoint));
+    request.bodyBytes = data;
+    request.headers['Content-Type'] = contentType;
+
+    // Firmar solicitud con AWS Signature V4
+    final signedRequest = await _signS3Request(
+      request,
+      path,
+      contentType,
+      data,
     );
+
+    final streamedRequest = await signedRequest.send();
+    final response = await http.Response.fromStream(streamedRequest);
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception(
+        'Error subiendo a R2: ${response.statusCode} - ${response.body}',
+      );
+    }
+  }
+
+  /// Firmar solicitud con AWS Signature V4 para R2
+  Future<http.Request> _signS3Request(
+    http.Request request,
+    String objectKey,
+    String contentType,
+    Uint8List data,
+  ) async {
+    final now = DateTime.now().toUtc();
+    final dateStamp =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final amzDate =
+        '${dateStamp}T${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}Z';
+
+    final host = request.url.host;
+    final region = 'auto'; // R2 usa 'auto' como región
+
+    // Headers a firmar - calcular hash real del contenido
+    final contentHash = _sha256Bytes(data);
+    request.headers['Host'] = host;
+    request.headers['x-amz-date'] = amzDate;
+    request.headers['x-amz-content-sha256'] = contentHash;
+
+    // Canonical request
+    final canonicalUri = '/$objectKey';
+    final canonicalQueryString = '';
+    final signedHeaders = 'content-type;host;x-amz-content-sha256;x-amz-date';
+    final canonicalHeaders =
+        'content-type:$contentType\nhost:$host\nx-amz-content-sha256:$contentHash\nx-amz-date:$amzDate\n';
+
+    final canonicalRequest =
+        'PUT\n$canonicalUri\n$canonicalQueryString\n$canonicalHeaders\n$signedHeaders\n$contentHash';
+
+    // String to sign
+    final algorithm = 'AWS4-HMAC-SHA256';
+    final credentialScope = '$dateStamp/$region/s3/aws4_request';
+    final stringToSign =
+        '$algorithm\n$amzDate\n$credentialScope\n${_sha256(canonicalRequest)}';
+
+    // Calculate signature
+    final kDate = _hmacSha256(
+      utf8.encode('AWS4${_r2SecretAccessKey!}'),
+      dateStamp,
+    );
+    final kRegion = _hmacSha256(kDate, region);
+    final kService = _hmacSha256(kRegion, 's3');
+    final kSigning = _hmacSha256(kService, 'aws4_request');
+    final signature = _hmacSha256Hex(kSigning, stringToSign);
+
+    // Authorization header
+    request.headers['Authorization'] =
+        '$algorithm Credential=${_r2AccessKeyId}/$credentialScope, SignedHeaders=$signedHeaders, Signature=$signature';
+
+    return request;
+  }
+
+  /// SHA256 hash de string
+  String _sha256(String data) {
+    final bytes = utf8.encode(data);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  /// SHA256 hash de bytes (Uint8List)
+  String _sha256Bytes(Uint8List data) {
+    final digest = sha256.convert(data);
+    return digest.toString();
+  }
+
+  /// HMAC-SHA256
+  List<int> _hmacSha256(List<int> key, String data) {
+    final hmac = Hmac(sha256, key);
+    return hmac.convert(utf8.encode(data)).bytes;
+  }
+
+  /// HMAC-SHA256 hex
+  String _hmacSha256Hex(List<int> key, String data) {
+    final hmac = Hmac(sha256, key);
+    return hmac.convert(utf8.encode(data)).toString();
   }
 
   /// Eliminar de Cloudflare R2

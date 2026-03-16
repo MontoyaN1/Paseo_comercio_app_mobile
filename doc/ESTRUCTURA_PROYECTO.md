@@ -5,8 +5,8 @@
 **Nombre:** Paseo del Comercio - Aplicación Móvil  
 **Plataforma:** Flutter (iOS & Android)  
 **Arquitectura:** Clean Architecture  
-**Estado:** Fase 1 completada (85%)  
-**Próximo Hito:** MVP funcional en 7 días
+**Estado:** Fase 1 completada (95%)  
+**Próximo Hito:** MVP funcional en desarrollo
 
 ---
 
@@ -28,7 +28,7 @@ lib/core/
     ├── cache_service.dart # Caché local con Hive
     ├── connectivity_service.dart # Monitoreo de red
     ├── image_service.dart # Multi-CDN (R2 → S3 → Supabase)
-    ├── auth_service.dart  # Autenticación Clerk + Supabase
+    ├── auth_service.dart  # Autenticación Firebase + Supabase
     ├── auth_state.dart    # Estados de autenticación
     ├── image_info.dart    # Información de imágenes
     └── result.dart        # Patrón Result para operaciones
@@ -162,8 +162,9 @@ lib/di/
 - Generación automática de variantes (150px, 500px, 1200px)
 - Fallback automático entre proveedores
 
-### 4. **AuthService** (Clerk + Supabase)
-- Autenticación con Clerk (social logins)
+### 4. **AuthService** (Firebase Auth + Google Sign In)
+- Autenticación con Firebase Auth (email/password)
+- Google Sign In para login social
 - Sincronización con tabla `usuario` en Supabase
 - Modo invitado con funcionalidad limitada
 - Gestión de tokens y sesiones
@@ -180,7 +181,7 @@ lib/di/
 ### **AuthBloc** - Gestión de Autenticación
 - **15+ eventos:** Login, Logout, GuestLogin, CheckAuth, etc.
 - **20+ estados:** Initial, Loading, Success, Error, Guest, etc.
-- Integración completa con Clerk y Supabase
+- Integración completa con Firebase Auth y Supabase
 - Manejo de errores robusto
 
 ### **TiendaBloc** - Gestión de Tiendas
@@ -206,30 +207,54 @@ lib/di/
 ## 📱 PANTALLAS IMPLEMENTADAS
 
 ### 1. **LoginPage** (`presentation/pages/auth/login_page.dart`)
-- Autenticación con Clerk
-- Estados: SignedIn, SignedOut, Loading, Error
+- Autenticación con Firebase Auth + Google Sign In
+- Estados: Loading, Success, Error
 - UI profesional con tema oscuro
 - Manejo de errores de autenticación
 
-### 2. **ProfilePage** (`presentation/pages/profile/profile_page.dart`)
-- Información del usuario Clerk
+### 2. **SplashPage** (`presentation/pages/splash/splash_page.dart`)
+- Pantalla de carga inicial
+- Verificación de autenticación
+- Redirección según estado de sesión
+
+### 3. **ProfilePage** (`presentation/pages/profile/profile_page.dart`)
+- Información del usuario Firebase
 - Secciones: Información, Acciones, Configuración
 - Modo invitado con opción de login
 - Gestión de sesión
 
-### 3. **TiendaListPage** (`presentation/pages/tiendas/tienda_list_page.dart`)
-- Lista de tiendas con paginación infinita
-- Búsqueda en tiempo real
-- Filtros por categoría y ubicación
-- Integración completa con TiendaBloc
-- Pull-to-refresh para actualización
+### 4. **TiendaDetailPage** (`presentation/pages/tiendas/tienda_detail_page.dart`)
+- Detalle completo de tienda
+- Imagen principal, información, horarios
+- Lista de productos de la tienda
+- Navegación a productos
 
-### 4. **ProductoListPage** (`presentation/pages/productos/producto_list_page.dart`)
-- Lista de productos con filtros avanzados
-- Búsqueda por nombre, categoría, tienda
-- Indicadores de stock y disponibilidad
-- Integración con ProductoBloc
-- Navegación a detalle de producto
+### 5. **ProductoDetailPage** (`presentation/pages/productos/producto_detail_page.dart`)
+- Detalle completo de producto
+- Galería de imágenes
+- Información de precio, stock, categorías
+- Valoraciones
+
+### 6. **PlazoletaListPage** (`presentation/pages/plazoletas/plazoleta_list_page.dart`)
+- Vista isométrica 3D del centro comercial
+- Plazoletas interactivas
+- Animaciones y efectos visuales
+- Navegación a detalle de plazoleta
+
+### 7. **PlazoletaDetailPage** (`presentation/pages/plazoletas/plazoleta_detail_page.dart`)
+- Detalle de plazoleta
+- Tiendas asociadas
+- Información de ubicación
+
+### 8. **OrganizacionListPage** (`presentation/pages/organizaciones/organizacion_list_page.dart`)
+- Lista de organizaciones/colectivos
+- Búsqueda y filtros
+- Tarjetas profesionales
+
+### 9. **OrganizacionDetailPage** (`presentation/pages/organizaciones/organizacion_detail_page.dart`)
+- Detalle de organización
+- Miembros y tiendas asociadas
+- Información de contacto
 
 ---
 
@@ -285,12 +310,11 @@ lib/di/
 - **Guía detallada:** Instrucciones paso a paso para obtener credenciales
 - **CORS configurable:** Para acceso desde app móvil
 
-### **Clerk** - Autenticación
-- SDK Flutter integrado (versión beta)
-- **Social logins:** Configurados en dashboard.clerk.com (Google, Facebook, etc.)
-- **Temas:** Configurados en dashboard.clerk.com (light/dark mode)
-- **Configuración simplificada:** Solo necesita `CLERK_PUBLISHABLE_KEY`
-- Sincronización automática con Supabase
+### **Firebase Auth** - Autenticación
+- SDK Firebase Auth integrado
+- **Social logins:** Google Sign In configurado
+- **Email/Password:** Autenticación tradicional
+- **Sincronización:** Usuarios Firebase → tabla `usuario` en Supabase
 - Modo invitado implementado
 - Localización en español completa
 
@@ -307,7 +331,7 @@ lib/di/
 
 ### **Rutas Principales:**
 - `/` - Página de inicio (condicional según autenticación)
-- `/login` - Autenticación con Clerk
+- `/login` - Autenticación con Firebase Auth
 - `/profile` - Perfil de usuario
 - `/tiendas` - Lista de tiendas
 - `/tiendas/:id` - Detalle de tienda
@@ -339,10 +363,10 @@ lib/di/
 ## 🔐 ESTRATEGIA DE SEGURIDAD
 
 ### **Autenticación Híbrida:**
-1. **Primario:** Clerk con social logins
-2. **Fallback 1:** Email/password con Supabase Auth
+1. **Primario:** Firebase Auth con Google Sign In
+2. **Fallback 1:** Email/password con Firebase Auth
 3. **Fallback 2:** Modo invitado (solo lectura)
-4. **Sincronización:** Usuarios Clerk → tabla `usuario` en Supabase
+4. **Sincronización:** Usuarios Firebase → tabla `usuario` en Supabase
 
 ### **Manejo de Tokens:**
 - Tokens JWT validados en cada request
@@ -410,9 +434,16 @@ SUPABASE_URL=https://tu-proyecto.supabase.co
 SUPABASE_ANON_KEY=tu-clave-anon
 SUPABASE_SERVICE_ROLE_KEY=tu-clave-servicio
 
-# Clerk
-CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxx
-CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxx
+# Firebase Auth
+FIREBASE_API_KEY=tu-api-key
+FIREBASE_PROJECT_ID=tu-project-id
+FIREBASE_MESSAGING_SENDER_ID=tu-sender-id
+FIREBASE_APP_ID=tu-app-id
+FIREBASE_STORAGE_BUCKET=tu-storage-bucket
+
+# Google Sign In
+GOOGLE_SIGN_IN_IOS_CLIENT_ID=tu-ios-client-id
+GOOGLE_SIGN_IN_ANDROID_CLIENT_ID=tu-android-client-id
 ```
 
 ### **Nivel 2 - Cloudflare R2 (para migración):**
@@ -446,10 +477,19 @@ CONTABO_BUCKET_FOLDER=images
 - Copia `anon public` como `SUPABASE_ANON_KEY`
 - Copia `service_role` como `SUPABASE_SERVICE_ROLE_KEY`
 
-#### 2. **Clerk:**
-- Dashboard → API Keys
-- Copia `Publishable Key` como `CLERK_PUBLISHABLE_KEY`
-- Copia `Secret Key` como `CLERK_SECRET_KEY`
+#### 2. **Firebase Auth:**
+- Dashboard → Settings → General → Your apps
+- Copia `Web API Key` como `FIREBASE_API_KEY`
+- Copia `Project ID` como `FIREBASE_PROJECT_ID`
+- Copia `Messaging Sender ID` como `FIREBASE_MESSAGING_SENDER_ID`
+- Copia `App ID` como `FIREBASE_APP_ID`
+
+#### 3. **Google Sign In:**
+- En Firebase Console → Authentication → Sign-in method
+- Habilita Google Sign In
+- Configura OAuth consent screen
+- Para iOS: Configura en Firebase Console y Xcode
+- Para Android: Configura en Firebase Console y SHA-1 fingerprint
 
 #### 3. **Cloudflare R2 - GUÍA DETALLADA:**
 
@@ -520,9 +560,8 @@ CONTABO_BUCKET_FOLDER=images
 - Analizar métricas de performance
 - Revisar costos de Cloudflare R2
 - Actualizar dependencias regularmente
-- Configurar social logins en dashboard.clerk.com
-- Ajustar temas en dashboard.clerk.com según feedback
-- **Monitorear uso de R2:** Estadísticas en Cloudflare Dashboard
+- Configurar Google Sign In en Firebase Console
+- Monitorear uso de Firebase Auth: Estadísticas en Firebase Console
 
 ### **Solución de Problemas Comunes - Cloudflare R2:**
 

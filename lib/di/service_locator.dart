@@ -18,6 +18,7 @@ import '../data/repositories/plazoleta_repository.dart';
 import '../data/repositories/producto_repository.dart';
 import '../data/repositories/organizacion_repository.dart';
 import '../domain/repositories/auth_repository_interface.dart';
+import '../presentation/providers/avatar_provider.dart';
 import '../domain/repositories/tienda_repository_interface.dart';
 import '../domain/repositories/plazoleta_repository_interface.dart';
 import '../domain/repositories/producto_repository_interface.dart';
@@ -62,8 +63,11 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
   // Configurar y registrar servicio de imágenes
   final imageService = ImageService();
   imageService.configure(
-    r2BaseUrl:
-        appConfig.cloudflareR2PublicUrl, // Usar URL pública de Cloudflare R2
+    r2BaseUrl: appConfig.cloudflareR2PublicUrl,
+    r2AccessKeyId: appConfig.cloudflareR2AccessKeyId,
+    r2SecretAccessKey: appConfig.cloudflareR2SecretAccessKey,
+    r2BucketName: appConfig.cloudflareR2BucketName,
+    r2AccountId: appConfig.cloudflareAccountId,
     s3BaseUrl: appConfig.s3BaseUrl,
     supabaseUrl: appConfig.supabaseUrl,
     supabaseBucket: appConfig.awsS3BucketName,
@@ -89,6 +93,9 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
   );
   await authService.initialize();
   getIt.registerSingleton<FirebaseAuthService>(authService);
+
+  // Registrar AvatarProvider para gestión de avatar de usuario
+  getIt.registerSingleton<AvatarProvider>(AvatarProvider());
 
   // Registrar servicio S3 si está configurado
   if (appConfig.isS3Configured && appConfig.awsAccessKeyId.isNotEmpty) {

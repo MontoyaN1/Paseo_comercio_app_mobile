@@ -1,19 +1,24 @@
 // lib/core/utils/firebase_auth_service.dart
 
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kDebugMode, TargetPlatform;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 
 import '../errors/app_exceptions.dart';
 import 'auth_state.dart';
 import 'cache_service.dart';
 import 'result.dart';
+import 'image_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../data/datasources/remote/supabase_client.dart';
+import '../../presentation/providers/avatar_provider.dart';
+import '../../di/service_locator.dart';
 
 /// Servicio de autenticación con Firebase (reemplazo de Clerk)
 class FirebaseAuthService {
@@ -27,6 +32,13 @@ class FirebaseAuthService {
   AuthState _currentState = AuthState.unknown;
   final StreamController<AuthState> _stateController =
       StreamController<AuthState>.broadcast();
+
+  // Stream para通知 cambios en el perfil (incluyendo avatar)
+  final StreamController<void> _profileChangedController =
+      StreamController<void>.broadcast();
+
+  /// Stream que emite cuando el perfil cambia (para rebuild de widgets)
+  Stream<void> get onProfileChanged => _profileChangedController.stream;
 
   // Usuario actual
   User? _currentUser;
@@ -123,8 +135,32 @@ class FirebaseAuthService {
   }
 
   /// Obtener URL de imagen del usuario actual
-  String? get currentUserImageUrl =>
-      _currentUser?.photoURL ?? _userProfile?['avatar_url'];
+  /// Primero verifica Supabase (avatar personalizado), luego Firebase (Google)
+  String? get currentUserImageUrl {
+    final supabaseAvatar = _userProfile?['avatar_url'];
+    final firebaseAvatar = _currentUser?.photoURL;
+
+    // Si hay un avatar personalizado en Supabase (no de Google), usarlo
+    if (supabaseAvatar != null && supabaseAvatar.isNotEmpty) {
+      // Verificar que no sea una URL de Google (en caso de que se haya guardado antes)
+      if (!supabaseAvatar.toString().contains('googleusercontent.com') &&
+          !supabaseAvatar.toString().contains('googlesyndication') &&
+          !supabaseAvatar.toString().contains('google.com')) {
+        return supabaseAvatar;
+      }
+    }
+
+    // Si hay avatar de Firebase, verificar si es migrable a R2
+    if (firebaseAvatar != null && firebaseAvatar.isNotEmpty) {
+      if (firebaseAvatar.contains('googleusercontent.com')) {
+        // Retornar el de Firebase para mostrar mientras se migra
+        return firebaseAvatar;
+      }
+    }
+
+    // Retornar el de Supabase (puede ser de Google si no se ha migrado)
+    return supabaseAvatar ?? firebaseAvatar;
+  }
 
   /// Obtener teléfono del usuario actual
   String? get currentUserPhoneNumber {
@@ -132,6 +168,15 @@ class FirebaseAuthService {
     final phoneNumber = _currentUser?.phoneNumber;
     // Obtener número de teléfono del usuario actual
     return telefono ?? phoneNumber;
+  }
+
+  /// Recargar perfil del usuario desde Supabase
+  Future<void> reloadUserProfile() async {
+    if (_currentUser != null) {
+      await _loadUserProfile(_currentUser!.uid);
+      // Notificar a los widgets que el perfil cambió
+      _profileChangedController.add(null);
+    }
   }
 
   /// Iniciar sesión con email y contraseña
@@ -457,6 +502,10 @@ class FirebaseAuthService {
 
       _currentUser = null;
       _userProfile = null;
+
+      // Notificar a los listeners que el perfil cambió
+      _profileChangedController.add(null);
+
       await _updateAuthState(AuthState.unauthenticated);
       return Result.success(null);
     } catch (error) {
@@ -670,6 +719,8 @@ class FirebaseAuthService {
       final userProfile = await _supabaseClient.getUsuarioByFirebaseId(userId);
       if (userProfile != null) {
         _userProfile = userProfile;
+        // Notificar a los listeners que el perfil cambió
+        _profileChangedController.add(null);
       } else {
         // Si no existe en Supabase, sincronizar usuario
         if (_currentUser != null) {
@@ -679,6 +730,8 @@ class FirebaseAuthService {
             userId,
           );
           _userProfile = refreshedProfile;
+          // Notificar a los listeners que el perfil cambió
+          _profileChangedController.add(null);
         } else {
           _userProfile = null;
         }
@@ -692,6 +745,7 @@ class FirebaseAuthService {
   }
 
   /// Sincronizar usuario con Supabase
+  /// Este método descarga la imagen de Google y la sube a R2 solo si no existe un avatar personalizado
   Future<void> _syncUserWithSupabase(User firebaseUser) async {
     try {
       // Obtener información del usuario de Firebase
@@ -701,6 +755,7 @@ class FirebaseAuthService {
           firebaseUser.displayName ??
           (email != null ? email.split('@')[0] : 'Usuario');
       final telefono = firebaseUser.phoneNumber;
+      final googlePhotoUrl = firebaseUser.photoURL;
 
       if (email == null || email.isEmpty) {
         if (kDebugMode) {
@@ -711,13 +766,75 @@ class FirebaseAuthService {
         return;
       }
 
+      // Primero verificar si ya existe un avatar_url en Supabase
+      final existingUser = await _supabaseClient.getUsuarioByFirebaseId(
+        firebaseUserId,
+      );
+      String? existingAvatarUrl;
+      if (existingUser != null) {
+        existingAvatarUrl = existingUser['avatar_url'] as String?;
+      }
+
+      // Verificar si ya tenemos un avatar personalizado (no de Google)
+      bool hasCustomAvatar =
+          existingAvatarUrl != null &&
+          existingAvatarUrl.isNotEmpty &&
+          !existingAvatarUrl.contains('googleusercontent.com') &&
+          !existingAvatarUrl.contains('googlesyndication') &&
+          !existingAvatarUrl.contains('google.com');
+
+      // Determinar la URL del avatar
+      String? avatarUrlToSave;
+
+      // Solo procesar la imagen de Google si NO hay un avatar personalizado
+      if (!hasCustomAvatar &&
+          googlePhotoUrl != null &&
+          googlePhotoUrl.isNotEmpty) {
+        if (kDebugMode) {
+          print(
+            'No hay avatar personalizado, intentando migrar avatar de Google a R2: $googlePhotoUrl',
+          );
+        }
+
+        // Verificar si es una URL de Google
+        if (googlePhotoUrl.contains('googleusercontent.com')) {
+          final r2Url = await _migrateGoogleAvatarToR2(
+            googlePhotoUrl,
+            firebaseUserId,
+          );
+          if (r2Url != null) {
+            avatarUrlToSave = r2Url;
+            if (kDebugMode) {
+              print('Avatar migrado exitosamente a R2: $r2Url');
+            }
+          } else {
+            // Si falla la migración, usar la URL original de Google
+            avatarUrlToSave = googlePhotoUrl;
+            if (kDebugMode) {
+              print('Usando URL original de Google como fallback');
+            }
+          }
+        } else {
+          // No es URL de Google, usar directamente
+          avatarUrlToSave = googlePhotoUrl;
+        }
+      } else if (hasCustomAvatar) {
+        if (kDebugMode) {
+          print(
+            'El usuario ya tiene un avatar personalizado, no se sobrescribirá',
+          );
+        }
+        // No actualizar el avatar_url para preservar el personalizado
+      }
+
       // Llamar al método de sincronización unificado en SupabaseClientService
+      // Solo pasar avatarUrl si tenemos uno nuevo que guardar
       final supabaseUser = await _supabaseClient.syncUsuario(
         firebaseUserId: firebaseUserId,
         email: email,
         nombreCompleto: nombreCompleto,
         telefono: telefono,
-        avatarUrl: firebaseUser.photoURL,
+        avatarUrl: avatarUrlToSave,
       );
 
       if (supabaseUser != null && kDebugMode) {
@@ -730,6 +847,183 @@ class FirebaseAuthService {
         print('Error en _syncUserWithSupabase: $e');
       }
       // No lanzar excepción para no romper el flujo de autenticación
+    }
+  }
+
+  /// Migrar avatar de Google a R2
+  /// Descarga la imagen de Google y la sube a Cloudflare R2
+  Future<String?> _migrateGoogleAvatarToR2(
+    String googlePhotoUrl,
+    String firebaseUserId,
+  ) async {
+    try {
+      // Descargar imagen de Google
+      final response = await http.get(Uri.parse(googlePhotoUrl));
+
+      if (response.statusCode != 200) {
+        if (kDebugMode) {
+          print('Error descargando avatar de Google: ${response.statusCode}');
+        }
+        return null;
+      }
+
+      final imageData = response.bodyBytes;
+
+      // Subir a R2 usando ImageService
+      final imageService = ImageService();
+
+      if (!imageService.isConfigured) {
+        if (kDebugMode) {
+          print('ImageService no está configurado, usando URL original');
+        }
+        return googlePhotoUrl;
+      }
+
+      // Subir imagen a R2
+      final result = await imageService.uploadImage(
+        entityType: 'avatar',
+        entityId: firebaseUserId,
+        imageName: 'profile.jpg',
+        imageData: imageData,
+        contentType: 'image/jpeg',
+      );
+
+      return result.fold(
+        (url) {
+          if (kDebugMode) {
+            print('Avatar subido a R2 exitosamente: $url');
+          }
+          return url;
+        },
+        (error) {
+          if (kDebugMode) {
+            print('Error subiendo avatar a R2: $error');
+          }
+          return null;
+        },
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error en migración de avatar a R2: $e');
+      }
+      return null;
+    }
+  }
+
+  /// Actualizar avatar del usuario (para cambio manual de foto)
+  /// Sube una nueva imagen a R2 y actualiza la URL en la base de datos
+  Future<Result<String, Exception>> actualizarAvatarUsuario({
+    required Uint8List imageData,
+    required int usuarioId,
+    required String firebaseUserId,
+    String? oldAvatarUrl,
+  }) async {
+    try {
+      final imageService = ImageService();
+
+      if (!imageService.isConfigured) {
+        return Result.error(
+          ConfigurationException(message: 'ImageService no está configurado'),
+        );
+      }
+
+      // Eliminar avatar anterior si existe y no es de Google
+      if (oldAvatarUrl != null && oldAvatarUrl.isNotEmpty) {
+        // Verificar si no es una URL de Google (evitar eliminar imágenes de Google)
+        if (!oldAvatarUrl.contains('googleusercontent.com') &&
+            !oldAvatarUrl.contains('googlesyndication') &&
+            !oldAvatarUrl.contains('google.com')) {
+          // Extraer entityId de la URL de R2 para eliminar
+          // Formato esperado: https://pub-xxx.r2.dev/avatars/firebaseUserId/profile.jpg
+          try {
+            final deleteResult = await imageService.deleteImage(
+              entityType: 'avatar',
+              entityId: firebaseUserId,
+              imageName: 'profile.jpg',
+            );
+            if (deleteResult.isSuccess) {
+              if (kDebugMode) {
+                print('Avatar anterior eliminado exitosamente');
+              }
+            } else {
+              if (kDebugMode) {
+                print(
+                  'Advertencia: No se pudo eliminar el avatar anterior: ${deleteResult.errorOrNull}',
+                );
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print(
+                'Advertencia: Error al intentar eliminar avatar anterior: $e',
+              );
+            }
+            // No fallamos la operación si no se puede eliminar el avatar anterior
+          }
+        }
+      }
+
+      // Subir nueva imagen a R2
+      final result = await imageService.uploadImage(
+        entityType: 'avatar',
+        entityId: firebaseUserId,
+        imageName: 'profile.jpg',
+        imageData: imageData,
+        contentType: 'image/jpeg',
+      );
+
+      return result.fold((newAvatarUrl) async {
+        // Actualizar en la base de datos
+        try {
+          await _supabaseClient.usuarios
+              .update({'avatar_url': newAvatarUrl})
+              .eq('id', usuarioId);
+
+          // Actualizar el perfil local con la nueva URL
+          if (_userProfile != null) {
+            _userProfile = {..._userProfile!, 'avatar_url': newAvatarUrl};
+          }
+
+          // Notificar a los listeners que el perfil cambió
+          _profileChangedController.add(null);
+
+          // Notificar al AvatarProvider para actualizar la UI
+          if (kDebugMode) {
+            print('Intentando notificar AvatarProvider...');
+          }
+          try {
+            final avatarProvider = getIt<AvatarProvider>();
+            if (kDebugMode) {
+              print('AvatarProvider obtenido, llaman do onAvatarUpdated...');
+            }
+            avatarProvider.onAvatarUpdated(newAvatarUrl);
+            if (kDebugMode) {
+              print('AvatarProvider.onAvatarUpdated llamado exitosamente');
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error notifying AvatarProvider: $e');
+            }
+          }
+
+          // Recargar el perfil desde la base de datos para asegurar consistencia
+          // Usar delay pequeño para permitir que Supabase procese el update
+          if (_currentUser != null) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            await _loadUserProfile(_currentUser!.uid);
+          }
+
+          if (kDebugMode) {
+            print('Avatar actualizado exitosamente: $newAvatarUrl');
+          }
+
+          return Result.success(newAvatarUrl);
+        } catch (e) {
+          return Result.error(Exception('Error actualizando avatar en BD: $e'));
+        }
+      }, (error) => Result.error(error));
+    } catch (e) {
+      return Result.error(Exception('Error actualizando avatar: $e'));
     }
   }
 

@@ -148,7 +148,7 @@ class ProductoDetailPage extends StatefulWidget {
 }
 
 class _ProductoDetailPageState extends State<ProductoDetailPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   // Controladores
   late TabController _tabController;
   late ScrollController _scrollController;
@@ -178,6 +178,9 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
   @override
   void initState() {
     super.initState();
+
+    // Registrar observer para detectar cuando la app vuelve al primer plano
+    WidgetsBinding.instance.addObserver(this);
 
     _tabController = TabController(length: 3, vsync: this);
     _scrollController = ScrollController();
@@ -239,6 +242,8 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
     super.didChangeDependencies();
     if (!_hasLoaded && widget.producto == null) {
       _loadProducto();
+    } else if (_hasLoaded && _tiendaData == null && _productoData != null) {
+      _procesarProducto(_productoData!);
     }
   }
 
@@ -276,27 +281,40 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
       _tiendaData = _transformTiendaUrlsToR2(
         producto['tienda'] as Map<String, dynamic>,
       );
+      if (mounted) setState(() {});
     } else if (producto['tiendas'] != null) {
       _tiendaData = _transformTiendaUrlsToR2(
         producto['tiendas'] as Map<String, dynamic>,
       );
+      if (mounted) setState(() {});
     } else if (producto['tienda_id'] != null) {
+      // Si ya tenemos datos de la tienda, no volver a cargar
+      if (_tiendaData != null && _tiendaData!['id'] == producto['tienda_id']) {
+        return;
+      }
+
       // Cargar datos completos de la tienda desde Supabase
+      // Incluir imagen_tienda para obtener las imágenes
       try {
         final supabase = getIt<SupabaseClientService>();
-        final tiendaResponse =
-            await supabase.tiendas
-                .select()
-                .eq('id', producto['tienda_id'])
-                .maybeSingle();
+        final tiendaResponse = await supabase.tiendas
+            .select('''
+                  *,
+                  imagen_tienda!left(*)
+                ''')
+            .eq('id', producto['tienda_id'])
+            .limit(1);
 
         debugPrint('DEBUG: tiendaResponse completo: $tiendaResponse');
 
-        if (tiendaResponse != null) {
+        if (tiendaResponse.isNotEmpty) {
           _tiendaData = _transformTiendaUrlsToR2(
-            Map<String, dynamic>.from(tiendaResponse),
+            Map<String, dynamic>.from(tiendaResponse.first),
           );
           debugPrint('DEBUG: _tiendaData después de transformar: $_tiendaData');
+          if (mounted) {
+            setState(() {});
+          }
         } else {
           _tiendaData = {'id': producto['tienda_id']};
         }
@@ -616,9 +634,13 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
     }
     telefonoLimpio = telefonoLimpio.replaceAll(RegExp(r'[^\d]'), '');
 
-    final mensaje = 'Hola, estoy interesado en ${_getProductoNombre()}';
+    final mensaje =
+        'Hola vengo del Paseo del Comercio y estoy interesado en ${_getProductoNombre()}';
     final url =
         'https://wa.me/$telefonoLimpio?text=${Uri.encodeComponent(mensaje)}';
+
+    // Incrementar contador de clicks en WhatsApp
+    await _incrementarClicksWhatsapp();
 
     try {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
@@ -628,6 +650,31 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
           context,
         ).showSnackBar(SnackBar(content: Text('Error al abrir WhatsApp: $e')));
       }
+    }
+  }
+
+  /// Incrementar contador de clicks en WhatsApp del producto
+  Future<void> _incrementarClicksWhatsapp() async {
+    try {
+      final supabase = getIt<SupabaseClientService>();
+      final producto =
+          await supabase.productos
+              .select('total_clicks_whatsapp')
+              .eq('id', widget.productoId)
+              .maybeSingle();
+
+      if (producto != null) {
+        final totalClicks =
+            (producto['total_clicks_whatsapp'] as int? ?? 0) + 1;
+        await supabase.productos
+            .update({'total_clicks_whatsapp': totalClicks})
+            .eq('id', widget.productoId);
+        debugPrint(
+          'Click WhatsApp registrado para producto ${widget.productoId}: $totalClicks',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error registrando click WhatsApp: $e');
     }
   }
 
@@ -1149,7 +1196,7 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
                   }),
                   const SizedBox(width: 8),
                   Text(
-                    '${_productoData?['calificacion_promedio'] ?? 0} (${_productoData?['total_valoracion'] ?? 0} reseñas)',
+                    '${(_productoData?['calificacion_promedio'] as num?)?.toStringAsFixed(1) ?? '0.0'} (${_productoData?['total_valoracion'] ?? 0} reseñas)',
                     style: const TextStyle(color: Colors.white70),
                   ),
                 ],
@@ -1225,6 +1272,26 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
                   ),
                 ),
               ),
+
+            const SizedBox(height: 16),
+
+            // Botón WhatsApp
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _enviarWhatsapp,
+                icon: const Icon(Icons.chat_rounded),
+                label: const Text('Contactar por WhatsApp'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF25D366),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -1267,24 +1334,6 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
               showFavoriteButton: false,
             ),
             const SizedBox(height: 16),
-
-            // Botón WhatsApp
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _enviarWhatsapp,
-                icon: const Icon(Icons.chat_rounded),
-                label: const Text('Contactar por WhatsApp'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF25D366),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -1463,7 +1512,9 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
     // Obtener datos del usuario
     final usuario = valoracion['usuario'] as Map<String, dynamic>?;
     final nombreUsuario = usuario?['nombre_completo'] as String? ?? 'Anónimo';
-    final avatarUrl = usuario?['avatar_url'] as String?;
+    final avatarUrlRaw = usuario?['avatar_url'] as String?;
+    // Transformar URL del avatar a R2 si es necesario
+    final avatarUrl = _transformUrlToR2(avatarUrlRaw);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1870,12 +1921,22 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     _scrollController.dispose();
     _bgCtrl.dispose();
     _heroCtrl.dispose();
     _contentCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (_hasLoaded && _productoData != null) {
+        _procesarProducto(_productoData!);
+      }
+    }
   }
 }
 
@@ -1957,7 +2018,6 @@ class _GoldStatCard extends StatelessWidget {
     );
   }
 }
-
 
 class _GoldIconButton extends StatelessWidget {
   final IconData icon;

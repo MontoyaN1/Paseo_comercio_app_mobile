@@ -10,7 +10,7 @@ This file contains essential information for AI agents working on this Flutter p
 **State Management:** BLoC Pattern  
 **Database:** Supabase PostgreSQL + Hive local cache  
 **Authentication:** Firebase Auth + Google Sign In  
-**Image Storage:** Multi-CDN (Cloudflare R2 → Contabo S3 → Supabase Storage)
+**Image Storage:** Cloudflare R2 (primary) + Contabo S3 + Supabase Storage
 
 ## 🚀 Build & Development Commands
 
@@ -160,13 +160,13 @@ lib/
 - `TiendaBloc` - Stores
 
 ### Pages Structure
-- `auth/` - Authentication pages
-- `organizaciones/` - Organization pages
-- `plazoletas/` - Plaza pages
-- `productos/` - Product pages
-- `profile/` - User profile
+- `auth/` - Authentication pages (login)
 - `splash/` - Splash screen
-- `tiendas/` - Store pages
+- `profile/` - User profile
+- `tiendas/` - Store pages (detail)
+- `productos/` - Product pages (detail)
+- `plazoletas/` - Plaza pages (list, detail)
+- `organizaciones/` - Organization pages (list, detail)
 
 ## 📝 Code Style Guidelines
 
@@ -639,6 +639,6 @@ get_it: ^9.2.0
 
 ---
 
-**Last Updated:** June 2025  
-**Project Status:** Phase 1 Completed (92%), MVP in development  
+**Last Updated:** March 2026  
+**Project Status:** Phase 1 Completed, MVP in development  
 **Primary Contacts:** Development Team

@@ -6,7 +6,6 @@ import 'package:equatable/equatable.dart';
 
 import '../../../../data/datasources/remote/supabase_client.dart';
 import '../../../../di/service_locator.dart';
-import '../../../../domain/entities/horario.dart';
 import '../../../../domain/usecases/get_tiendas_usecase.dart';
 import '../../../../domain/usecases/get_tienda_by_id_usecase.dart';
 import '../../../../domain/usecases/search_tiendas_usecase.dart';

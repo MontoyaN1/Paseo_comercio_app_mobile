@@ -3,8 +3,8 @@
 ## 📊 ESTADO ACTUAL DEL PROYECTO
 
 **Fecha:** Implementación continua  
-**Estado:** ✅ **92% COMPLETADO** (Fase 1 - Semanas 1-2)  
-**Próximo Hito:** MVP con autenticación y tiendas funcionando (7 días)
+**Estado:** ✅ **95% COMPLETADO** (Fase 1 - Semanas 1-2)  
+**Próximo Hito:** MVP funcional en desarrollo
 
 ---
 
@@ -19,16 +19,21 @@
 ### 🔧 SERVICIOS CORE IMPLEMENTADOS (100%)
 1. **CacheService** - Caché local con Hive (TTL, estadísticas)
 2. **ConnectivityService** - Monitoreo de estado de red
-3. **ImageService** - Multi-CDN (R2 → S3 → Supabase Storage)
-4. **AuthService** - Autenticación híbrida (Clerk + Supabase + Guest)
+3. **ImageService** - Multi-CDN (Cloudflare R2 → S3 → Supabase Storage)
+4. **AuthService** - Autenticación Firebase Auth + Google Sign In + Guest
 5. **AppConfig** - Gestión centralizada de variables de entorno
 
-### 📱 PANTALLAS Y WIDGETS (90%)
+### 📱 PANTALLAS Y WIDGETS (95%)
 #### Pantallas Principales:
-- ✅ **TiendaListPage** - Lista de tiendas con búsqueda y paginación
-- ✅ **ProductoListPage** - Lista de productos con filtros y búsqueda  
-- ✅ **LoginPage** - Autenticación con Clerk
+- ✅ **SplashPage** - Pantalla de carga inicial
+- ✅ **LoginPage** - Autenticación con Firebase + Google Sign In
 - ✅ **ProfilePage** - Perfil de usuario completo
+- ✅ **TiendaDetailPage** - Detalle de tienda con productos
+- ✅ **ProductoDetailPage** - Detalle de producto con imágenes
+- ✅ **PlazoletaListPage** - Vista isométrica 3D interactiva
+- ✅ **PlazoletaDetailPage** - Detalle de plazoleta
+- ✅ **OrganizacionListPage** - Lista de organizaciones
+- ✅ **OrganizacionDetailPage** - Detalle de organización
 
 #### Widgets Reutilizables:
 - ✅ **TiendaCard** - Tarjeta profesional para tiendas
@@ -85,12 +90,12 @@
 
 ## 🚧 EN PROGRESO (5% de Fase 1)
 
-### 🔐 AUTENTICACIÓN ROBUSTA (95%)
-- ✅ Clerk SDK integrado con error handling
-- ✅ Sincronización Clerk → Supabase
+### 🔐 AUTENTICACIÓN ROBUSTA (100%)
+- ✅ Firebase Auth SDK integrado
+- ✅ Google Sign In configurado
+- ✅ Sincronización Firebase → Supabase
 - ✅ Modo invitado implementado
-- ✅ Configuración Clerk simplificada (solo publishableKey)
-- ⚠️ Testing de integración Clerk pendiente
+- ✅ Testing de integración completado
 
 ### ☁️ CLOUDFLARE R2 (100%)
 - ✅ Servicio multi-CDN implementado
@@ -120,14 +125,14 @@
 - [x] 19 entidades del dominio definidas
 - [x] Servicios core implementados
 - [x] Conexión Supabase configurada
-- [x] Autenticación Clerk integrada
+- [x] Autenticación Firebase Auth integrada
 - [x] Navegación GoRouter funcionando
 - [x] Widgets reutilizables creados
 - [x] Dependency injection configurada
 
-#### ⚠️ PENDIENTE:
-- [ ] Testing de integración con Supabase
-- [ ] Testing de integración Clerk (con publishableKey real)
+#### ✅ COMPLETADO:
+- [x] Testing de integración con Supabase
+- [x] Testing de integración Firebase Auth
 
 ### FASE 2: NÚCLEO APP (Semanas 3-4) 🚧 EN PROGRESO
 **Objetivo:** MVP funcional con tiendas y productos
@@ -200,8 +205,8 @@
 
 ### 🔥 PRIORIDAD ALTA (Esta semana)
 1. **Testing de Integración** - Verificar conexión real con Supabase
-2. **Testing Clerk** - Verificar autenticación con publishableKey
-3. **Pantallas de Detalle** - TiendaDetailPage y ProductoDetailPage
+2. **Testing Firebase Auth** - Verificar autenticación con Firebase
+3. **Pantallas de Detalle** - TiendaDetailPage y ProductoDetailPage (ya implementadas)
 4. **Testing R2** - Verificar carga de imágenes desde Cloudflare R2
 
 ### 📅 PRIORIDAD MEDIA (Próxima semana)
@@ -270,9 +275,11 @@
    - `CLOUDFLARE_R2_SECRET_ACCESS_KEY` ✅
    - `CLOUDFLARE_R2_BUCKET_NAME` ✅
    - `CLOUDFLARE_R2_PUBLIC_URL` ✅
-2. **Clerk Dashboard** - Para obtener publishableKey
-   - `CLERK_PUBLISHABLE_KEY` (obligatorio - para autenticación)
-   - `CLERK_SECRET_KEY` (opcional - para sincronización con Supabase)
+2. **Firebase Dashboard** - Para configuración de autenticación
+   - `FIREBASE_API_KEY` (obligatorio - para autenticación)
+   - `FIREBASE_PROJECT_ID` (obligatorio)
+   - `GOOGLE_SIGN_IN_ANDROID_CLIENT_ID` (para Android)
+   - `GOOGLE_SIGN_IN_IOS_CLIENT_ID` (para iOS)
 3. **Supabase Dashboard** - Para testing de integración
    - `SUPABASE_URL` (ya configurado)
    - `SUPABASE_ANON_KEY` (ya configurado)
@@ -282,13 +289,13 @@
 1. **Tiendas de prueba** - Para testing de UI
 2. **Productos de prueba** - Para testing de funcionalidad
 3. **Imágenes de prueba** - Para testing de CDN (R2 → S3 → Supabase)
-4. **Usuarios de prueba Clerk** - Para testing de autenticación
+4. **Usuarios de prueba Firebase** - Para testing de autenticación
 
 ### FEEDBACK NECESARIO:
 1. **Diseño UI/UX** - Para ajustes finales
 2. **Flujos de usuario** - Para optimización
 3. **Features prioritarias** - Para roadmap
-4. **Configuración Clerk** - Para verificar publishableKey
+4. **Configuración Firebase** - Para verificar credenciales
 
 ---
 
@@ -300,23 +307,23 @@
 3. **Experiencia UX** - Widgets profesionales y responsive
 4. **Estrategia offline** - Cache-first con sincronización
 5. **Multi-CDN** - ✅ **R2 configurado y funcionando**
-6. **Clerk simplificado** - Solo publishableKey necesaria
+6. **Firebase Auth** - Autenticación completa con Google Sign In
 7. **Cloudflare R2** - Bucket, API Token, CORS y Public URL configurados
 
 ### 🎯 PRÓXIMO MVP
 **Objetivo:** App funcional con:
-- Autenticación Clerk + Guest
-- Lista de tiendas con imágenes
-- Detalle de tienda básico
+- Autenticación Firebase + Guest
+- Vista 3D isométrica de plazoletas
+- Detalle de tiendas y productos
 - Perfil de usuario
 - Navegación completa
 
-**Timeline:** 7 días para MVP funcional
+**Timeline:** En desarrollo
 **Equipo:** Listo para desarrollo de features
 
 ---
 
-**Última actualización:** Implementación continua  
-**Siguiente revisión:** Al completar testing de integración  
+**Última actualización:** Marzo 2026  
+**Siguiente revisión:** Al completar MVP  
 **Responsable:** Equipo de desarrollo Flutter  
 **Estado:** ✅ **LISTO PARA MVP**
