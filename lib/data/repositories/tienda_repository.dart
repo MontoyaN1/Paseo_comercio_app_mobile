@@ -120,16 +120,15 @@ class TiendaRepository implements TiendaRepositoryInterface {
         return null;
       }
 
-      final tienda = response.first as Map<String, dynamic>?;
+      final rawTienda = response.first as Map<dynamic, dynamic>;
+      final tienda = Map<String, dynamic>.from(rawTienda);
 
-      if (tienda != null) {
-        // Transformar URLs de Contabo a Cloudflare R2 para imágenes de tienda
-        _transformTiendaUrlsToR2(tienda);
+      // Transformar URLs de Contabo a Cloudflare R2 para imágenes de tienda
+      _transformTiendaUrlsToR2(tienda);
 
-        // Guardar en caché
-        await _localCache.cacheTienda(tienda);
-        _logger.i('Tienda obtenida: $tiendaId');
-      }
+      // Guardar en caché
+      await _localCache.cacheTienda(tienda);
+      _logger.i('Tienda obtenida: $tiendaId');
 
       return tienda;
     } catch (e) {
@@ -244,7 +243,11 @@ class TiendaRepository implements TiendaRepositoryInterface {
 
       final response = await _supabaseClient.tiendas.insert(nuevaTienda);
 
-      final tiendaCreada = response as Map<String, dynamic>?;
+      final rawTienda = response;
+      final tiendaCreada =
+          rawTienda != null
+              ? Map<String, dynamic>.from(rawTienda as Map<dynamic, dynamic>)
+              : null;
 
       if (tiendaCreada != null) {
         // Guardar en caché

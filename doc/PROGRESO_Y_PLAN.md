@@ -238,6 +238,7 @@
 - **Productos:** 90% completado
 - **Imágenes:** 85% completado
 - **Navegación:** 100% completado
+- **Favoritos:** 30% completado (UI existe, lógica pendiente)
 
 ### ⚡ PERFORMANCE ESTIMADA
 - **Tamaño APK:** ~15-20MB objetivo
@@ -263,6 +264,28 @@
 - [ ] Imágenes cargando desde múltiples CDNs
 - [ ] Performance en dispositivos reales
 - [ ] Offline functionality completa
+
+---
+
+## ❤️ SISTEMA DE FAVORITOS (EN DESARROLLO)
+
+### 📋 Resumen
+Sistema para que usuarios marquen tiendas y productos como favoritos.
+
+### Base de Datos (NUEVO - 2 tablas)
+- ✅ Documentado en `doc/ESQUEMA_FAVORITOS.md`
+- ⏳ `tienda_favorito` - Por crear en PostgreSQL
+- ⏳ `producto_favorito` - Por crear en PostgreSQL
+
+### Flutter - Implementación Pendiente
+- ⏳ `FavoritoBloc` - BLoC para gestionar favoritos
+- ⏳ `FavoritosPage` - Página principal con TabBar
+- 🔗 Integrar con `TiendaCard` existente
+- 🔗 Integrar con `ProductoCard` existente
+
+### Documentación
+- ✅ `doc/ESQUEMA_FAVORITOS.md` - Documento completo
+- ✅ `doc/diagrama_favoritos.mmd` - Diagramas Mermaid
 
 ---
 

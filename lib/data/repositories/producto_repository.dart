@@ -229,7 +229,9 @@ class ProductoRepository implements ProductoRepositoryInterface {
                   .maybeSingle();
 
           if (tiendaResponse != null) {
-            productoFinal['tienda'] = tiendaResponse;
+            productoFinal['tienda'] = Map<String, dynamic>.from(
+              Map<dynamic, dynamic>.from(tiendaResponse as dynamic),
+            );
           }
         } catch (e) {
           _logger.w('Error obteniendo tienda: $e');
@@ -247,7 +249,9 @@ class ProductoRepository implements ProductoRepositoryInterface {
                   .maybeSingle();
 
           if (categoriaResponse != null) {
-            productoFinal['categoria'] = categoriaResponse;
+            productoFinal['categoria'] = Map<String, dynamic>.from(
+              Map<dynamic, dynamic>.from(categoriaResponse as dynamic),
+            );
           }
         } catch (e) {
           _logger.w('Error obteniendo categoría: $e');

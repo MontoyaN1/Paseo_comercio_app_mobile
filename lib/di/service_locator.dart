@@ -17,12 +17,15 @@ import '../data/repositories/tienda_repository.dart';
 import '../data/repositories/plazoleta_repository.dart';
 import '../data/repositories/producto_repository.dart';
 import '../data/repositories/organizacion_repository.dart';
+import '../data/repositories/favorito_repository_impl.dart';
 import '../domain/repositories/auth_repository_interface.dart';
 import '../presentation/providers/avatar_provider.dart';
 import '../domain/repositories/tienda_repository_interface.dart';
 import '../domain/repositories/plazoleta_repository_interface.dart';
 import '../domain/repositories/producto_repository_interface.dart';
 import '../domain/repositories/organizacion_repository_interface.dart';
+import '../domain/repositories/favorito_repository_interface.dart';
+import '../data/datasources/remote/favorito_remote_datasource.dart';
 // Los siguientes repositorios no existen aún, se comentan temporalmente
 // import '../data/repositories/categoria_repository.dart';
 // import '../data/repositories/imagen_repository.dart';
@@ -39,6 +42,7 @@ import '../presentation/blocs/plazoleta/plazoleta_bloc.dart';
 import '../presentation/blocs/producto/producto_bloc.dart';
 import '../presentation/blocs/image/image_bloc.dart';
 import '../presentation/blocs/organizacion/organizacion_bloc.dart';
+import '../presentation/blocs/favorito/favorito_bloc.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -154,6 +158,14 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
     ),
   );
 
+  getIt.registerLazySingleton<FavoritoRemoteDataSource>(
+    () => FavoritoRemoteDataSource(getIt<SupabaseClientService>()),
+  );
+
+  getIt.registerLazySingleton<FavoritoRepositoryInterface>(
+    () => FavoritoRepositoryImpl(getIt<FavoritoRemoteDataSource>()),
+  );
+
   // Los siguientes repositorios están comentados porque no existen aún
   /*
   getIt.registerLazySingleton<CategoriaRepository>(
@@ -243,6 +255,10 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
     () => OrganizacionBloc(
       organizacionRepository: getIt<OrganizacionRepositoryInterface>(),
     ),
+  );
+
+  getIt.registerLazySingleton<FavoritoBloc>(
+    () => FavoritoBloc(getIt<FavoritoRepositoryInterface>()),
   );
 
   // Verificar que todas las dependencias estén listas

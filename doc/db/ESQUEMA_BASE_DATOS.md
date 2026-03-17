@@ -5,7 +5,7 @@
 Base de datos PostgreSQL para la aplicación móvil "Paseo del Comercio", diseñada para gestionar un centro comercial virtual con tiendas, productos, organizaciones y sistema de interacciones.
 
 **Estadísticas:**
-- **22 tablas** principales
+- **24 tablas** principales
 - **8 tipos personalizados** (enums)
 - **40+ relaciones** entre tablas
 - **20+ índices** para optimización
@@ -573,6 +573,48 @@ ENUM ('admin', 'propietario', 'empleado', 'cliente', 'invitado')
 
 ---
 
+### 23. `tienda_favorito` (NUEVA)
+**Descripción:** Tiendas marcadas como favoritas por usuarios.
+
+| Columna | Tipo | Nullable | Default | Descripción |
+|---------|------|----------|---------|-------------|
+| id | bigserial | NO | - | ID único |
+| usuario_id | bigint | NO | - | FK a usuario |
+| tienda_id | bigint | NO | - | FK a tienda |
+| fecha_creacion | timestamp with time zone | NO | NOW() | Fecha creación |
+
+**Constraints:**
+- `tienda_favorito_pkey` PRIMARY KEY (id)
+- `tienda_favorito_usuario_tienda_unique` UNIQUE (usuario_id, tienda_id)
+- `tienda_favorito_usuario_id_fkey` FOREIGN KEY (usuario_id) REFERENCES usuario(id)
+- `tienda_favorito_tienda_id_fkey` FOREIGN KEY (tienda_id) REFERENCES tienda(id)
+
+**Índices:**
+- `idx_tienda_favorito_usuario` (usuario_id)
+- `idx_tienda_favorito_tienda` (tienda_id)
+
+### 24. `producto_favorito` (NUEVA)
+**Descripción:** Productos marcados como favoritos por usuarios.
+
+| Columna | Tipo | Nullable | Default | Descripción |
+|---------|------|----------|---------|-------------|
+| id | bigserial | NO | - | ID único |
+| usuario_id | bigint | NO | - | FK a usuario |
+| producto_id | bigint | NO | - | FK a producto |
+| fecha_creacion | timestamp with time zone | NO | NOW() | Fecha creación |
+
+**Constraints:**
+- `producto_favorito_pkey` PRIMARY KEY (id)
+- `producto_favorito_usuario_producto_unique` UNIQUE (usuario_id, producto_id)
+- `producto_favorito_usuario_id_fkey` FOREIGN KEY (usuario_id) REFERENCES usuario(id)
+- `producto_favorito_producto_id_fkey` FOREIGN KEY (producto_id) REFERENCES producto(id)
+
+**Índices:**
+- `idx_producto_favorito_usuario` (usuario_id)
+- `idx_producto_favorito_producto` (producto_id)
+
+---
+
 ## 🔗 DIAGRAMA DE RELACIONES
 
 ### Relaciones Principales:
@@ -583,6 +625,8 @@ usuario
 ├── valoracion_producto (1:N) - usuario_id
 ├── miembros_organizacion (1:N) - usuario_id
 ├── notificacion (1:N) - remitente_id, destinatario_id
+├── tienda_favorito (1:N) - usuario_id
+├── producto_favorito (1:N) - usuario_id
 └── interaccion (1:N) - implícito
 
 tienda
@@ -592,7 +636,8 @@ tienda
 ├── imagen_tienda (1:N) - tienda_id
 ├── interaccion (1:N) - tienda_id
 ├── estadisticas_diarias (1:N) - tienda_id
-└── organizacion (N:1) - organizacion_id
+├── organizacion (N:1) - organizacion_id
+└── tienda_favorito (1:N) - tienda_id
 
 producto
 ├── valoracion_producto (1:N) - producto_id
@@ -600,7 +645,8 @@ producto
 ├── imagen_productos (1:N) - id_producto
 ├── interaccion (1:N) - producto_id
 ├── estadisticas_diarias (1:N) - producto_id
-└── categoria (N:1) - categoria_id
+├── categoria (N:1) - categoria_id
+└── producto_favorito (1:N) - producto_id
 
 organizacion
 ├── tienda (1:N) - organizacion_id

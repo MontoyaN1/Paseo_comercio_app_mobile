@@ -11,6 +11,7 @@ import 'presentation/blocs/plazoleta/plazoleta_bloc.dart';
 import 'presentation/blocs/tienda/tienda_bloc.dart';
 import 'presentation/blocs/producto/producto_bloc.dart';
 import 'presentation/blocs/organizacion/organizacion_bloc.dart';
+import 'presentation/blocs/favorito/favorito_bloc.dart';
 
 import 'core/utils/firebase_config_loader.dart';
 
@@ -133,6 +134,7 @@ class PaseoDelComercioApp extends StatelessWidget {
         BlocProvider<ProductoBloc>.value(value: getIt<ProductoBloc>()),
         BlocProvider<ImageBloc>.value(value: getIt<ImageBloc>()),
         BlocProvider<OrganizacionBloc>.value(value: getIt<OrganizacionBloc>()),
+        BlocProvider<FavoritoBloc>.value(value: getIt<FavoritoBloc>()),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,

@@ -17,6 +17,7 @@ import '../../presentation/pages/plazoletas/plazoleta_list_page.dart';
 import '../../presentation/pages/plazoletas/plazoleta_detail_page.dart';
 import '../../presentation/pages/organizaciones/organizacion_list_page.dart';
 import '../../presentation/pages/organizaciones/organizacion_detail_page.dart';
+import '../../presentation/pages/favoritos/favoritos_page.dart';
 import '../../domain/entities/organizacion.dart';
 
 /// Configuración de rutas de la aplicación usando GoRouter
@@ -100,6 +101,28 @@ class AppRouter {
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
               child: const ProfilePage(),
+            ),
+      ),
+
+      // Favoritos (protegida)
+      GoRoute(
+        path: '/favoritos',
+        name: 'favoritos',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario no está autenticado, redirigir a login
+          if (user == null) {
+            return '/login';
+          }
+
+          return null;
+        },
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const FavoritosPage(),
             ),
       ),
 

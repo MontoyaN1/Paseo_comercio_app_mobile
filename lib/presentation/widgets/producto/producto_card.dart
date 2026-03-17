@@ -16,6 +16,12 @@ import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../di/service_locator.dart';
+import '../../blocs/favorito/favorito_bloc.dart';
+import '../../blocs/favorito/favorito_event.dart';
+import '../../blocs/favorito/favorito_state.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const _kGold = Color(0xFFD4AF37);
@@ -290,118 +296,142 @@ class _ProductoCardState extends State<ProductoCard>
     _StockBadgeData badge,
     String? categoria,
   ) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // ── Imagen a pantalla completa ──────────────────────
-        _buildImageSection(imageUrl),
+    return SizedBox(
+      height: 180,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // ── Imagen a pantalla completa ──────────────────────
+          _buildImageSection(imageUrl),
 
-        // ── Overlay degradado fuerte en la parte inferior ───
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.transparent,
-                  _kBg.withOpacity(0.55),
-                  _kBg.withOpacity(0.92),
-                ],
-                stops: const [0.0, 0.42, 0.68, 1.0],
+          // ── Overlay degradado fuerte en la parte inferior ───
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.transparent,
+                    _kBg.withOpacity(0.55),
+                    _kBg.withOpacity(0.92),
+                  ],
+                  stops: const [0.0, 0.42, 0.68, 1.0],
+                ),
               ),
             ),
           ),
-        ),
 
-        // ── Badge stock (top-left) ──────────────────────────
-        Positioned(
-          top: 8,
-          left: 8,
-          child: _buildStockBadge(badge, small: true),
-        ),
-
-        // ── Botón favorito (top-right) ──────────────────────
-        if (widget.showFavoriteButton)
+          // ── Badge stock (top-left) ──────────────────────────
           Positioned(
-            top: 6,
-            right: 6,
-            child: _FavButton(
-              isFavorite: widget.isFavorite,
-              onTap: widget.onFavoriteToggle,
-            ),
+            top: 8,
+            left: 8,
+            child: _buildStockBadge(badge, small: true),
           ),
 
-        // ── Panel de info inferior superpuesto ──────────────
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Nombre
-                Text(
-                  nombre,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    height: 1.3,
-                    letterSpacing: 0.1,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black54,
-                        blurRadius: 6,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
+          // ── Botón favorito (top-right) ──────────────────────
+          if (widget.showFavoriteButton)
+            Positioned(
+              top: 6,
+              right: 6,
+              child: Builder(
+                builder: (context) {
+                  final productoId =
+                      int.tryParse(widget.producto['id']?.toString() ?? '') ??
+                      0;
+                  return BlocBuilder<FavoritoBloc, FavoritoState>(
+                    builder: (context, state) {
+                      bool isFav = widget.isFavorite;
+                      if (state is FavoritosLoaded && productoId > 0) {
+                        isFav = state.isProductoFavorito(productoId);
+                      }
+                      return _FavButton(
+                        isFavorite: isFav,
+                        onTap: () {
+                          if (productoId > 0) {
+                            getIt<FavoritoBloc>().add(
+                              ToggleProductoFavorito(productoId: productoId),
+                            );
+                          }
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+
+          // ── Panel de info inferior superpuesto ──────────────
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Nombre
+                  Text(
+                    nombre,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      height: 1.3,
+                      letterSpacing: 0.1,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black54,
+                          blurRadius: 6,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
 
-                const SizedBox(height: 5),
+                  const SizedBox(height: 5),
 
-                // Precio + Rating en fila
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Precio con ShaderMask dorado
-                    Flexible(
-                      child: ShaderMask(
-                        shaderCallback:
-                            (b) => const LinearGradient(
-                              colors: [_kGold, _kGoldLight],
-                            ).createShader(b),
-                        child: Text(
-                          '\$${precio.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.2,
+                  // Precio + Rating en fila
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Precio con ShaderMask dorado
+                      Flexible(
+                        child: ShaderMask(
+                          shaderCallback:
+                              (b) => const LinearGradient(
+                                colors: [_kGold, _kGoldLight],
+                              ).createShader(b),
+                          child: Text(
+                            '\$${precio.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.2,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
 
-                    // Rating
-                    _buildRatingMini(rating, ratingCnt),
-                  ],
-                ),
-              ],
+                      // Rating
+                      _buildRatingMini(rating, ratingCnt),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -655,27 +685,38 @@ class _FavButtonState extends State<_FavButton>
                 borderRadius: BorderRadius.circular(20),
                 child: BackdropFilter(
                   filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
                     width: 30,
                     height: 30,
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.45),
+                      color:
+                          widget.isFavorite
+                              ? Colors.red.withOpacity(0.8)
+                              : Colors.black.withOpacity(0.45),
                       shape: BoxShape.circle,
                       border: Border.all(
                         color:
                             widget.isFavorite
-                                ? const Color(0xFFEF4444).withOpacity(0.55)
+                                ? Colors.red.withOpacity(0.8)
                                 : _kBorder,
                         width: 1,
                       ),
                     ),
-                    child: Icon(
-                      widget.isFavorite
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      size: 15,
-                      color:
-                          widget.isFavorite ? const Color(0xFFEF4444) : _kHint,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) {
+                        return ScaleTransition(scale: animation, child: child);
+                      },
+                      child: Icon(
+                        widget.isFavorite
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        key: ValueKey(widget.isFavorite),
+                        size: 15,
+                        color: widget.isFavorite ? Colors.white : _kHint,
+                      ),
                     ),
                   ),
                 ),

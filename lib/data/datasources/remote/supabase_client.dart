@@ -129,6 +129,13 @@ class SupabaseClientService {
   SupabaseQueryBuilder get estadisticasDiarias =>
       _client.from('estadisticas_diarias');
 
+  /// Tabla: tienda_favorito
+  SupabaseQueryBuilder get tiendaFavoritos => _client.from('tienda_favorito');
+
+  /// Tabla: producto_favorito
+  SupabaseQueryBuilder get productoFavoritos =>
+      _client.from('producto_favorito');
+
   // ========== MÉTODOS DE CONSULTA COMUNES ==========
 
   /// Obtener usuario por Clerk ID

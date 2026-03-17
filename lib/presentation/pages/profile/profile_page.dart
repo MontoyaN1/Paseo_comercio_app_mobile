@@ -816,7 +816,7 @@ class _ProfilePageState extends State<ProfilePage>
             icon: Icons.favorite_outline_rounded,
             title: 'Favoritos',
             subtitle: 'Tiendas y productos guardados',
-            onTap: () {},
+            onTap: () => context.push('/favoritos'),
           ),
           _SectionDivider(),
           _ActionTile(

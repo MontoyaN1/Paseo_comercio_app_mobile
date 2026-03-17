@@ -17,7 +17,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../di/service_locator.dart';
-import '../../core/utils/firebase_auth_service.dart';
 import '../providers/avatar_provider.dart';
 import '../blocs/auth/auth_bloc.dart';
 

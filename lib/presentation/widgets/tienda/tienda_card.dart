@@ -16,8 +16,13 @@ import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/app/app_config.dart';
+import '../../../di/service_locator.dart';
+import '../../blocs/favorito/favorito_bloc.dart';
+import '../../blocs/favorito/favorito_event.dart';
+import '../../blocs/favorito/favorito_state.dart';
 import '../../../di/service_locator.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
@@ -383,9 +388,30 @@ class _TiendaCardState extends State<TiendaCard>
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: _FavButton(
-                    isFavorite: widget.isFavorite,
-                    onTap: widget.onFavoriteToggle,
+                  child: Builder(
+                    builder: (context) {
+                      final tiendaId =
+                          int.tryParse(widget.tienda['id']?.toString() ?? '') ??
+                          0;
+                      return BlocBuilder<FavoritoBloc, FavoritoState>(
+                        builder: (context, state) {
+                          bool isFav = widget.isFavorite;
+                          if (state is FavoritosLoaded && tiendaId > 0) {
+                            isFav = state.isTiendaFavorita(tiendaId);
+                          }
+                          return _FavButton(
+                            isFavorite: isFav,
+                            onTap: () {
+                              if (tiendaId > 0) {
+                                getIt<FavoritoBloc>().add(
+                                  ToggleTiendaFavorito(tiendaId: tiendaId),
+                                );
+                              }
+                            },
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
 
@@ -837,27 +863,38 @@ class _FavButtonState extends State<_FavButton>
                 borderRadius: BorderRadius.circular(20),
                 child: BackdropFilter(
                   filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.45),
+                      color:
+                          widget.isFavorite
+                              ? Colors.red.withOpacity(0.8)
+                              : Colors.black.withOpacity(0.45),
                       shape: BoxShape.circle,
                       border: Border.all(
                         color:
                             widget.isFavorite
-                                ? const Color(0xFFEF4444).withOpacity(0.55)
+                                ? Colors.red.withOpacity(0.8)
                                 : _kBorder,
                         width: 1,
                       ),
                     ),
-                    child: Icon(
-                      widget.isFavorite
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      size: 16,
-                      color:
-                          widget.isFavorite ? const Color(0xFFEF4444) : _kHint,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) {
+                        return ScaleTransition(scale: animation, child: child);
+                      },
+                      child: Icon(
+                        widget.isFavorite
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        key: ValueKey(widget.isFavorite),
+                        size: 16,
+                        color: widget.isFavorite ? Colors.white : _kHint,
+                      ),
                     ),
                   ),
                 ),
