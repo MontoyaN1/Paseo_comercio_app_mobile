@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../core/utils/firebase_auth_service.dart';
+import '../../di/service_locator.dart';
 import '../../presentation/pages/splash/splash_page.dart';
 import '../../presentation/pages/auth/login_page.dart';
 import '../../presentation/pages/profile/profile_page.dart';
@@ -50,6 +52,16 @@ class AppRouter {
         path: '/login',
         name: 'login',
         redirect: (context, state) {
+          // Si estamos en proceso de logout, permitir acceso a login
+          try {
+            final authService = getIt<FirebaseAuthService>();
+            if (authService.isSigningOut) {
+              return null;
+            }
+          } catch (_) {
+            // Si el servicio no está disponible, continuar con la verificación normal
+          }
+
           final auth = FirebaseAuth.instance;
           final user = auth.currentUser;
 

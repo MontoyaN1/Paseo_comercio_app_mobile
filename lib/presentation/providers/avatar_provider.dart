@@ -24,13 +24,8 @@ class AvatarProvider extends ChangeNotifier {
       _avatarUrl = authService.currentUserImageUrl;
       _previousAvatarUrl = _avatarUrl;
       notifyListeners();
-      if (kDebugMode) {
-        print('AvatarProvider loaded initial avatar: $_avatarUrl');
-      }
     } catch (e) {
-      if (kDebugMode) {
-        print('AvatarProvider _loadInitialAvatar error: $e');
-      }
+      // Service not ready yet
     }
   }
 
@@ -41,9 +36,7 @@ class AvatarProvider extends ChangeNotifier {
         refreshAvatar();
       });
     } catch (e) {
-      if (kDebugMode) {
-        print('AvatarProvider _listenToProfileChanges error: $e');
-      }
+      // Service not ready yet
     }
   }
 
@@ -52,44 +45,22 @@ class AvatarProvider extends ChangeNotifier {
       final authService = getIt<FirebaseAuthService>();
       final newUrl = authService.currentUserImageUrl;
 
-      // Check if URL changed from previous
       if (newUrl != _previousAvatarUrl) {
-        if (kDebugMode) {
-          print(
-            'AvatarProvider refreshAvatar: URL changed from $_previousAvatarUrl to $newUrl',
-          );
-        }
         _avatarUrl = newUrl;
         _previousAvatarUrl = newUrl;
         _invalidateCache();
         notifyListeners();
-      } else if (kDebugMode) {
-        print('AvatarProvider refreshAvatar: URL unchanged ($newUrl)');
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('AvatarProvider refreshAvatar error: $e');
-      }
+      // Service not ready
     }
   }
 
   void onAvatarUpdated(String newUrl) {
-    if (kDebugMode) {
-      print(
-        'AvatarProvider.onAvatarReceived: newUrl=$newUrl, current=$_avatarUrl',
-      );
-    }
-    // Always notify because the image content changed even if URL is the same
-    // This handles the case where Cloudflare R2 serves a new image at the same URL
     _avatarUrl = newUrl;
     _updateCount++;
     _invalidateCache();
     notifyListeners();
-    if (kDebugMode) {
-      print(
-        'AvatarProvider: Notified listeners (URL may be same but content changed), updateCount=$_updateCount',
-      );
-    }
   }
 
   void _invalidateCache() {

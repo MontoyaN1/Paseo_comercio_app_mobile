@@ -54,12 +54,9 @@ class TiendaRepository implements TiendaRepositoryInterface {
       if (!forceRefresh) {
         final cachedTiendas = await _localCache.getCachedTiendas(key: cacheKey);
         if (cachedTiendas != null && cachedTiendas.isNotEmpty) {
-          _logger.d('Tiendas obtenidas de caché: ${cachedTiendas.length}');
           return cachedTiendas;
         }
       }
-
-      _logger.d('Obteniendo tiendas desde Supabase...');
 
       // Usar método básico de Supabase
       var query = _supabaseClient.tiendas.select();
@@ -106,12 +103,9 @@ class TiendaRepository implements TiendaRepositoryInterface {
       if (!forceRefresh) {
         final cachedTienda = await _localCache.getCachedTienda(tiendaId);
         if (cachedTienda != null) {
-          _logger.d('Tienda obtenida de caché: $tiendaId');
           return cachedTienda;
         }
       }
-
-      _logger.d('Obteniendo tienda $tiendaId desde Supabase...');
 
       final response = await _supabaseClient.tiendas
           .select('''
@@ -202,8 +196,6 @@ class TiendaRepository implements TiendaRepositoryInterface {
     int limit = 20,
   }) async {
     try {
-      _logger.d('Buscando tiendas con query: "$query"');
-
       final response = await _supabaseClient.tiendas
           .select()
           .ilike('nombre_tienda', '%$query%')
@@ -235,8 +227,6 @@ class TiendaRepository implements TiendaRepositoryInterface {
     String? direccion,
   }) async {
     try {
-      _logger.d('Creando nueva tienda: $nombreTienda');
-
       final nuevaTienda = {
         'id_propietario': idPropietario,
         'nombre_tienda': nombreTienda,
@@ -289,8 +279,6 @@ class TiendaRepository implements TiendaRepositoryInterface {
     String? direccion,
   }) async {
     try {
-      _logger.d('Actualizando tienda $tiendaId');
-
       final updates = <String, dynamic>{};
       if (nombreTienda != null) updates['nombre_tienda'] = nombreTienda;
       if (descripcion != null) updates['descripcion'] = descripcion;
@@ -340,8 +328,6 @@ class TiendaRepository implements TiendaRepositoryInterface {
   @override
   Future<bool> deleteTienda(int tiendaId) async {
     try {
-      _logger.d('Eliminando tienda $tiendaId');
-
       final response = await _supabaseClient.tiendas.delete().eq(
         'id',
         tiendaId,
@@ -370,8 +356,6 @@ class TiendaRepository implements TiendaRepositoryInterface {
   @override
   Future<bool> registrarVisitaTienda(int tiendaId) async {
     try {
-      _logger.d('Registrando visita a tienda $tiendaId');
-
       // Obtener tienda actual
       final tienda = await getTiendaById(tiendaId);
       if (tienda == null) {
@@ -413,8 +397,6 @@ class TiendaRepository implements TiendaRepositoryInterface {
     int limit = 12,
   }) async {
     try {
-      _logger.d('Obteniendo tiendas destacadas');
-
       final response = await _supabaseClient.tiendas
           .select()
           .order('total_visitas', ascending: false)
@@ -449,7 +431,6 @@ class TiendaRepository implements TiendaRepositoryInterface {
     try {
       // Limpiar caché de tiendas usando el método público
       await _localCache.clearExpiredCache();
-      _logger.d('Caché de tiendas invalidada');
     } catch (e) {
       _logger.e('Error invalidando caché de tiendas: $e');
     }
@@ -576,7 +557,6 @@ class TiendaRepository implements TiendaRepositoryInterface {
       // Construir URL de R2
       final r2Url = '$baseUrl/$relativePath';
 
-      _logger.d('URL transformada de Contabo a R2: $contaboUrl → $r2Url');
       return r2Url;
     } catch (e, stackTrace) {
       _logger.e(

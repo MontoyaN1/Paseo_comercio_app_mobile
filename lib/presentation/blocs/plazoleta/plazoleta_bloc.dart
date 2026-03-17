@@ -38,8 +38,6 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
         ),
       ),
       super(const PlazoletaInitial()) {
-    _logger.i('=== PLAZOLETA BLOC INICIALIZADO ===');
-
     on<LoadPlazoletasActivas>(_onLoadPlazoletasActivas);
     on<LoadPlazoletaById>(_onLoadPlazoletaById);
     on<LoadPlazoletasPopulares>(_onLoadPlazoletasPopulares);
@@ -75,9 +73,8 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
     Emitter<PlazoletaState> emit,
   ) async {
     try {
-      _logger.i('=== EVENTO LoadPlazoletasActivas RECIBIDO ===');
-      _logger.i(
-        'Parámetros: forceRefresh=${event.forceRefresh}, page=${event.page}, limit=${event.limit}',
+      _logger.d(
+        'Loading plazoletas: page=${event.page}, refresh=${event.forceRefresh}',
       );
 
       // Si es refresh, resetear paginación
@@ -100,7 +97,6 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
         );
 
         _hasMore = plazoletas.length >= (event.limit ?? _pageSize);
-        _logger.i('_hasMore calculado como: $_hasMore');
 
         // Obtener imágenes principales para las plazoletas cargadas
         List<ImagenBase> nuevasImagenes = [];
@@ -117,7 +113,7 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
                     .map((entry) => entry.value!)
                     .toList();
 
-            _logger.i(
+            _logger.d(
               'Se cargaron ${nuevasImagenes.length} imágenes principales',
             );
           } catch (e) {
@@ -127,7 +123,7 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
         }
 
         if (event.forceRefresh || _currentPage == 1) {
-          _logger.i(
+          _logger.d(
             'Emitting PlazoletaLoaded con ${plazoletas.length} plazoletas y ${nuevasImagenes.length} imágenes',
           );
           emit(
@@ -143,6 +139,7 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
         } else {
           // Para paginación, agregar a las existentes
           if (state is PlazoletaLoaded) {
+            _logger.d(' state is PlazoletaLoaded, merging pagination');
             final currentState = state as PlazoletaLoaded;
             final todasPlazoletas = [...currentState.plazoletas, ...plazoletas];
 
@@ -153,7 +150,7 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
               ...nuevasImagenes,
             ];
 
-            _logger.i(
+            _logger.d(
               'Emitting PlazoletaLoaded (paginación) con ${todasPlazoletas.length} plazoletas totales y ${todasImagenes.length} imágenes',
             );
             emit(
@@ -170,14 +167,9 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
         // Incrementar página si no es forceRefresh
         if (!event.forceRefresh && _hasMore) {
           _currentPage++;
-          _logger.i('Página incrementada a: $_currentPage');
         }
-
-        _logger.i(
-          '=== EVENTO LoadPlazoletasActivas COMPLETADO EXITOSAMENTE ===',
-        );
       } catch (e) {
-        _logger.e('Error en la llamada al repositorio: $e');
+        _logger.e('Error loading plazoletas: $e');
         emit(
           PlazoletasActivasError(
             message: 'Error al cargar plazoletas: $e',
@@ -1089,7 +1081,6 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
 
   @override
   Future<void> close() {
-    _logger.i('=== PLAZOLETA BLOC CERRADO ===');
     // Llamar al método de la clase base para liberar recursos
     return super.close();
   }

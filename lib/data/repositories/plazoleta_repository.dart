@@ -33,7 +33,7 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
        _connectivityService = connectivityService,
        _cacheService = cacheService,
        _appConfig = AppConfig(),
-       _logger = Logger(
+       _logger = Logger(level: Level.warning, 
          printer: PrettyPrinter(
            methodCount: 0,
            errorMethodCount: 3,

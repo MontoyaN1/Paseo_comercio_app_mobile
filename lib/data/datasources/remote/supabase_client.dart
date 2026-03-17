@@ -162,7 +162,6 @@ class SupabaseClientService {
           .limit(1);
 
       if (response.isEmpty) {
-        _logger.d('User not found by Firebase ID: $firebaseUserId');
         return null;
       }
 
@@ -179,7 +178,6 @@ class SupabaseClientService {
       final response = await usuarios.select().eq('email', email).limit(1);
 
       if (response.isEmpty) {
-        _logger.d('User not found by email: $email');
         return null;
       }
 
@@ -302,7 +300,6 @@ class SupabaseClientService {
       );
       // 1. Buscar por ID externo (prioridad)
       if (clerkUserId != null) {
-        _logger.d('Buscando usuario por clerkUserId: $clerkUserId');
         final userByClerkId = await getUsuarioByClerkId(clerkUserId);
         if (userByClerkId != null) {
           _logger.d(
@@ -320,13 +317,10 @@ class SupabaseClientService {
           }
           await _actualizarUltimoLogin(clerkUserId, null);
           return userByClerkId;
-        } else {
-          _logger.d('No se encontró usuario con clerkUserId: $clerkUserId');
-        }
+        } else {}
       }
 
       if (firebaseUserId != null) {
-        _logger.d('Buscando usuario por firebaseUserId: $firebaseUserId');
         final userByFirebaseId = await getUsuarioByFirebaseId(firebaseUserId);
         if (userByFirebaseId != null) {
           _logger.d(
@@ -352,7 +346,6 @@ class SupabaseClientService {
       }
 
       // 2. Buscar por email (fusión de cuentas)
-      _logger.d('Buscando usuario por email: $email');
       final userByEmail = await getUsuarioByEmail(email);
       if (userByEmail != null) {
         _logger.d(
@@ -376,7 +369,6 @@ class SupabaseClientService {
           await _actualizarAvatar(userByEmail['id'] as int, avatarUrl);
         }
         await _actualizarUltimoLogin(clerkUserId, firebaseUserId);
-        _logger.d('Usuario fusionado exitosamente: ${userByEmail['id']}');
         return userByEmail;
       } else {
         _logger.d(
@@ -385,7 +377,6 @@ class SupabaseClientService {
       }
 
       // 3. Crear nuevo usuario
-      _logger.d('Creando nuevo usuario para email: $email');
       final nuevoUsuario = await _crearUsuario(
         clerkUserId: clerkUserId,
         firebaseUserId: firebaseUserId,
@@ -395,7 +386,6 @@ class SupabaseClientService {
         avatarUrl: avatarUrl,
       );
       if (nuevoUsuario != null) {
-        _logger.d('Nuevo usuario creado exitosamente: ${nuevoUsuario['id']}');
       } else {
         _logger.e('Error al crear nuevo usuario para email: $email');
       }
@@ -464,7 +454,6 @@ class SupabaseClientService {
 
       if (updates.isNotEmpty) {
         await usuarios.update(updates).eq('id', usuarioId);
-        _logger.d('Campos de usuario actualizados exitosamente: $updates');
       }
     } catch (e) {
       _logger.e('Error actualizando campos del usuario: $e');
@@ -475,12 +464,10 @@ class SupabaseClientService {
   Future<void> _actualizarAvatar(int usuarioId, String avatarUrl) async {
     try {
       if (avatarUrl.isEmpty) {
-        _logger.d('URL de avatar vacía, omitiendo actualización');
         return;
       }
 
       await usuarios.update({'avatar_url': avatarUrl}).eq('id', usuarioId);
-      _logger.d('Avatar actualizado exitosamente para usuario $usuarioId');
     } catch (e) {
       // Si es un error de columna no encontrada en el esquema, solo registramos warning
       if (e.toString().contains('avatar_url') &&
@@ -504,8 +491,6 @@ class SupabaseClientService {
     String? avatarUrl,
   }) async {
     try {
-      _logger.d('Creando nuevo usuario para email: $email');
-
       // Construir datos base del usuario
       // Generar clerk_user_id si es nulo
       final String clerkUserIdValue;
@@ -547,12 +532,10 @@ class SupabaseClientService {
 
       // Primero intentar con avatar_url si está presente y no está vacío
       if (avatarUrl != null && avatarUrl.isNotEmpty) {
-        _logger.d('Intentando crear usuario con avatar_url: $avatarUrl');
         try {
           final userDataWithAvatar = Map<String, dynamic>.from(userData)
             ..['avatar_url'] = avatarUrl;
           final insertResponse = await usuarios.insert(userDataWithAvatar);
-          _logger.d('Usuario creado exitosamente con avatar_url');
           return insertResponse as Map<String, dynamic>?;
         } catch (e) {
           // Si es error de columna no encontrada en el esquema, intentar sin avatar_url
@@ -571,10 +554,8 @@ class SupabaseClientService {
       }
 
       // Intentar sin avatar_url (ya sea porque no hay avatar o porque falló)
-      _logger.d('Intentando crear usuario sin avatar_url');
       try {
         final insertResponse = await usuarios.insert(userData);
-        _logger.d('Usuario creado exitosamente');
         return insertResponse as Map<String, dynamic>?;
       } catch (e) {
         _logger.e('Error creando usuario: $e');

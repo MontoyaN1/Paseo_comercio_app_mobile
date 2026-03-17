@@ -19,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import '../../di/service_locator.dart';
 import '../../core/utils/firebase_auth_service.dart';
 import '../providers/avatar_provider.dart';
+import '../blocs/auth/auth_bloc.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const _kGold = Color(0xFFD4AF37);
@@ -650,7 +651,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
   }
 
   Future<void> _performLogout(BuildContext context) async {
-    final authService = getIt<FirebaseAuthService>();
+    final authBloc = getIt<AuthBloc>();
     try {
       showDialog(
         context: context,
@@ -672,16 +673,19 @@ class _ProfileSheetState extends State<_ProfileSheet> {
             ),
       );
 
-      final result = await authService.signOut();
-      Navigator.of(context, rootNavigator: true).pop();
+      authBloc.add(const AuthSignOutRequested());
 
-      result.fold(
-        (_) {
-          Future.microtask(() {
+      // Wait for state change to AuthUnauthenticated
+      await for (final state in authBloc.stream) {
+        if (state is AuthUnauthenticated) {
+          Navigator.of(context, rootNavigator: true).pop();
+          await Future.delayed(const Duration(milliseconds: 300));
+          if (context.mounted) {
             context.push('/login');
-          });
-        },
-        (error) {
+          }
+          break;
+        } else if (state is AuthError) {
+          Navigator.of(context, rootNavigator: true).pop();
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -701,8 +705,8 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Error al cerrar sesión: ${error.toString()}',
-                        style: TextStyle(color: Colors.red[300], fontSize: 13),
+                        'Error al cerrar sesión: ${state.message}',
+                        style: TextStyle(color: Colors.red[200], fontSize: 13),
                       ),
                     ),
                   ],
@@ -710,12 +714,11 @@ class _ProfileSheetState extends State<_ProfileSheet> {
               ),
             );
           }
-        },
-      );
+          break;
+        }
+      }
     } catch (error) {
-      try {
-        Navigator.of(context, rootNavigator: true).pop();
-      } catch (_) {}
+      Navigator.of(context, rootNavigator: true).pop();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -725,14 +728,25 @@ class _ProfileSheetState extends State<_ProfileSheet> {
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: Colors.red.withOpacity(0.35)),
             ),
-            content: Text(
-              'Error inesperado: ${error.toString()}',
-              style: TextStyle(color: Colors.red[300], fontSize: 13),
+            content: Row(
+              children: [
+                Icon(
+                  Icons.error_outline_rounded,
+                  color: Colors.red[300],
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Error inesperado: $error',
+                    style: TextStyle(color: Colors.red[200], fontSize: 13),
+                  ),
+                ),
+              ],
             ),
           ),
         );
       }
-      // Error en _performLogout
     }
   }
 }

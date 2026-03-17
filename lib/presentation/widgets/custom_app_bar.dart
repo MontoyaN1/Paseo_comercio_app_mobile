@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../di/service_locator.dart';
 import '../../core/utils/firebase_auth_service.dart';
 import '../../core/app/app_config.dart';
+import '../blocs/auth/auth_bloc.dart';
 
 /// AppBar personalizado con botón de perfil y funcionalidad de cerrar sesión
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -287,13 +288,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     BuildContext context,
     FirebaseAuthService authService,
   ) async {
-    // Capturar contexto local para usar en callbacks
-    final currentContext = context;
+    final authBloc = getIt<AuthBloc>();
 
     try {
-      // Mostrar indicador de carga
       showDialog(
-        context: currentContext,
+        context: context,
         barrierDismissible: false,
         builder:
             (context) => const Center(
@@ -301,43 +300,43 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
       );
 
-      // Cerrar sesión
-      final result = await authService.signOut();
+      authBloc.add(const AuthSignOutRequested());
 
-      // Cerrar diálogo de carga
-      if (currentContext.mounted) {
-        Navigator.of(currentContext).pop();
-      }
+      await for (final state in authBloc.stream) {
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
 
-      result.fold(
-        (success) {
-          // Redirigir a login
-          if (currentContext.mounted) {
-            currentContext.go('/login');
-            ScaffoldMessenger.of(currentContext).showSnackBar(
-              const SnackBar(
-                content: Text('Sesión cerrada correctamente'),
-                backgroundColor: Colors.green,
-              ),
-            );
+        if (state is AuthUnauthenticated) {
+          if (context.mounted) {
+            await Future.delayed(const Duration(milliseconds: 300));
+            if (context.mounted) {
+              context.go('/login');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Sesión cerrada correctamente'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
           }
-        },
-        (error) {
-          if (currentContext.mounted) {
-            ScaffoldMessenger.of(currentContext).showSnackBar(
+          break;
+        } else if (state is AuthError) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Error al cerrar sesión: ${error.toString()}'),
+                content: Text('Error al cerrar sesión: ${state.message}'),
                 backgroundColor: Colors.red,
               ),
             );
           }
-        },
-      );
+          break;
+        }
+      }
     } catch (error) {
-      if (currentContext.mounted) {
-        // Cerrar diálogo de carga si existe
-        Navigator.of(currentContext).pop();
-        ScaffoldMessenger.of(currentContext).showSnackBar(
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error inesperado: ${error.toString()}'),
             backgroundColor: Colors.red,

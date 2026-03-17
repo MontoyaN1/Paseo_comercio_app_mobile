@@ -119,6 +119,7 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
     () => AuthRepository(
       supabaseClient: getIt<SupabaseClientService>(),
       localCache: getIt<LocalCacheService>(),
+      firebaseAuthService: getIt<FirebaseAuthService>(),
     ),
   );
 

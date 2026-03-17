@@ -33,12 +33,18 @@ class FirebaseAuthService {
   final StreamController<AuthState> _stateController =
       StreamController<AuthState>.broadcast();
 
-  // Stream para通知 cambios en el perfil (incluyendo avatar)
+  // Flag para indicar que estamos en proceso de logout
+  bool _isSigningOut = false;
+
+  /// Stream que emite cuando el perfil cambia (para rebuild de widgets)
   final StreamController<void> _profileChangedController =
       StreamController<void>.broadcast();
 
   /// Stream que emite cuando el perfil cambia (para rebuild de widgets)
   Stream<void> get onProfileChanged => _profileChangedController.stream;
+
+  /// Indica si el servicio está en proceso de cierre de sesión
+  bool get isSigningOut => _isSigningOut;
 
   // Usuario actual
   User? _currentUser;
@@ -492,9 +498,11 @@ class FirebaseAuthService {
   /// Cerrar sesión
   Future<Result<void, Exception>> signOut() async {
     try {
-      // Cerrar sesión de Google si está activa
+      _isSigningOut = true;
+
+      // Cerrar sesión de Google si está activa - disconnect() revoca el token OAuth
       if (_googleSignIn.currentUser != null) {
-        await _googleSignIn.signOut();
+        await _googleSignIn.disconnect();
       }
 
       // Cerrar sesión de Firebase
@@ -507,8 +515,15 @@ class FirebaseAuthService {
       _profileChangedController.add(null);
 
       await _updateAuthState(AuthState.unauthenticated);
+
+      // Reset flag after a delay to allow router to check
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _isSigningOut = false;
+      });
+
       return Result.success(null);
     } catch (error) {
+      _isSigningOut = false;
       return Result.error(
         AuthException(message: 'Error al cerrar sesión', cause: error),
       );
@@ -988,18 +1003,9 @@ class FirebaseAuthService {
           _profileChangedController.add(null);
 
           // Notificar al AvatarProvider para actualizar la UI
-          if (kDebugMode) {
-            print('Intentando notificar AvatarProvider...');
-          }
           try {
             final avatarProvider = getIt<AvatarProvider>();
-            if (kDebugMode) {
-              print('AvatarProvider obtenido, llaman do onAvatarUpdated...');
-            }
             avatarProvider.onAvatarUpdated(newAvatarUrl);
-            if (kDebugMode) {
-              print('AvatarProvider.onAvatarUpdated llamado exitosamente');
-            }
           } catch (e) {
             if (kDebugMode) {
               print('Error notifying AvatarProvider: $e');

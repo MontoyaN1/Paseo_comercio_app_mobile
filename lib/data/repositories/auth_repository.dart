@@ -7,13 +7,13 @@ import 'package:logger/logger.dart';
 
 import '../datasources/remote/supabase_client.dart';
 import '../datasources/local/local_database.dart';
+import '../../core/utils/firebase_auth_service.dart';
 
 /// Repositorio para manejar autenticación y sincronización de usuarios
-/// NOTA: La integración con Clerk Flutter está pendiente de implementación
-/// debido a que la versión beta (0.0.14-beta) tiene una API limitada.
 class AuthRepository implements AuthRepositoryInterface {
   final SupabaseClientService _supabaseClient;
   final LocalCacheService _localCache;
+  final FirebaseAuthService _firebaseAuthService;
   final Logger _logger;
 
   // Stream para notificar cambios en el usuario
@@ -23,8 +23,10 @@ class AuthRepository implements AuthRepositoryInterface {
   AuthRepository({
     required SupabaseClientService supabaseClient,
     required LocalCacheService localCache,
+    required FirebaseAuthService firebaseAuthService,
   }) : _supabaseClient = supabaseClient,
        _localCache = localCache,
+       _firebaseAuthService = firebaseAuthService,
        _logger = Logger(
          printer: PrettyPrinter(
            methodCount: 0,
@@ -76,8 +78,6 @@ class AuthRepository implements AuthRepositoryInterface {
   /// Obtener usuario actual (placeholder hasta que implementemos Clerk)
   Future<Map<String, dynamic>?> getCurrentUser() async {
     try {
-      _logger.d('Clerk integration pending - using placeholder user');
-
       // TODO: Implementar integración real con Clerk Flutter
       // Por ahora, retornamos null o un usuario de prueba
       return null;
@@ -93,7 +93,6 @@ class AuthRepository implements AuthRepositoryInterface {
       // Primero intentar obtener de caché local
       final cachedUser = await _localCache.getCachedUsuario(clerkUserId);
       if (cachedUser != null) {
-        _logger.d('User found in local cache');
         return cachedUser;
       }
 
@@ -104,7 +103,6 @@ class AuthRepository implements AuthRepositoryInterface {
       if (supabaseUser != null) {
         // Guardar en caché
         await _localCache.cacheUsuario(supabaseUser);
-        _logger.d('User retrieved from Supabase and cached');
         return supabaseUser;
       }
 
@@ -119,35 +117,30 @@ class AuthRepository implements AuthRepositoryInterface {
   @override
   Future<bool> isAuthenticated() async {
     // TODO: Implementar verificación real con Clerk
-    _logger.d('Clerk authentication check pending implementation');
     return false;
   }
 
   /// Obtener ID del usuario actual
   String? get currentUserId {
     // TODO: Implementar obtención real con Clerk
-    _logger.d('Clerk user ID retrieval pending implementation');
     return null;
   }
 
   /// Obtener email del usuario actual
   String? get currentUserEmail {
     // TODO: Implementar obtención real con Clerk
-    _logger.d('Clerk user email retrieval pending implementation');
     return null;
   }
 
   /// Obtener nombre del usuario actual
   String? get currentUserName {
     // TODO: Implementar obtención real con Clerk
-    _logger.d('Clerk user name retrieval pending implementation');
     return null;
   }
 
   /// Obtener imagen del usuario actual
   String? get currentUserImage {
     // TODO: Implementar obtención real con Clerk
-    _logger.d('Clerk user image retrieval pending implementation');
     return null;
   }
 
@@ -163,12 +156,13 @@ class AuthRepository implements AuthRepositoryInterface {
     }
   }
 
-  /// Cerrar sesión (placeholder)
+  /// Cerrar sesión
   @override
   Future<bool> signOut() async {
     try {
-      // TODO: Implementar cierre de sesión real con Clerk
-      _logger.i('Sign out functionality pending Clerk implementation');
+      _logger.i('Signing out user');
+
+      final result = await _firebaseAuthService.signOut();
 
       // Limpiar caché de usuario
       final userId = currentUserId;
@@ -176,8 +170,13 @@ class AuthRepository implements AuthRepositoryInterface {
         await _localCache.removePreference('current_user_$userId');
       }
 
-      _logger.i('Sign out completed (placeholder)');
-      return true;
+      if (result.isSuccess) {
+        _logger.i('Sign out completed successfully');
+        return true;
+      } else {
+        _logger.e('Sign out failed: ${result.errorOrNull}');
+        return false;
+      }
     } catch (e) {
       _logger.e('Error during sign out: $e');
       return false;
@@ -343,25 +342,21 @@ class AuthRepository implements AuthRepositoryInterface {
 
   @override
   Future<String?> getAuthToken() async {
-    _logger.d('getAuthToken not implemented');
     return null;
   }
 
   @override
   Future<bool> hasUserProfile() async {
-    _logger.d('hasUserProfile not implemented');
     return false;
   }
 
   @override
   Future<bool> isTokenValid() async {
-    _logger.d('isTokenValid not implemented');
     return false;
   }
 
   @override
   Future<String?> refreshToken() async {
-    _logger.d('refreshToken not implemented');
     return null;
   }
 
@@ -370,13 +365,11 @@ class AuthRepository implements AuthRepositoryInterface {
     required String email,
     required String password,
   }) async {
-    _logger.d('signInWithClerk not implemented');
     return null;
   }
 
   @override
   Future<Map<String, dynamic>?> signInWithSocial(String provider) async {
-    _logger.d('signInWithSocial not implemented');
     return null;
   }
 
@@ -387,7 +380,6 @@ class AuthRepository implements AuthRepositoryInterface {
     required String nombreCompleto,
     String? telefono,
   }) async {
-    _logger.d('signUpWithClerk not implemented');
     return null;
   }
 
@@ -399,7 +391,6 @@ class AuthRepository implements AuthRepositoryInterface {
     String? telefono,
     String? avatarUrl,
   }) async {
-    _logger.d('syncUserFromClerk: delegating to _syncUserWithSupabase');
     return await _syncUserWithSupabase(
       clerkUserId: clerkUserId,
       nombreCompleto: nombreCompleto,
@@ -416,7 +407,6 @@ class AuthRepository implements AuthRepositoryInterface {
     bool? perfilPublico,
     String? avatarUrl,
   }) async {
-    _logger.d('updateUserProfile: delegating to updateProfile');
     // TODO: Necesitamos obtener el clerkUserId del usuario actual
     final currentUser = await getCurrentUser();
     if (currentUser == null || currentUser['clerk_user_id'] == null) {

@@ -78,8 +78,6 @@ class ProductoRepository implements ProductoRepositoryInterface {
           .order('fecha_creacion', ascending: false)
           .range((page - 1) * limit, page * limit - 1);
 
-      _logger.d('Productos obtenidos: ${response.length}');
-
       // Transformar URLs de Contabo a Cloudflare R2
       final productosTransformados =
           response.map((producto) {
@@ -163,7 +161,6 @@ class ProductoRepository implements ProductoRepositoryInterface {
       // Construir URL de R2
       final r2Url = '$baseUrl/$relativePath';
 
-      _logger.d('URL producto transformada: $contaboUrl → $r2Url');
       return r2Url;
     } catch (e) {
       _logger.e('Error transformando URL: $e');
@@ -195,9 +192,6 @@ class ProductoRepository implements ProductoRepositoryInterface {
         _logger.w('Producto no encontrado: $productoId');
         return null;
       }
-
-      _logger.d('REPO: Keys basicas: ${basicResponse.keys.toList()}');
-      _logger.d('REPO: tienda_id=${basicResponse['tienda_id']}');
 
       // Ahora construir respuesta con datos enriquecidos
       Map<String, dynamic> productoFinal = Map<String, dynamic>.from(
@@ -236,7 +230,6 @@ class ProductoRepository implements ProductoRepositoryInterface {
 
           if (tiendaResponse != null) {
             productoFinal['tienda'] = tiendaResponse;
-            _logger.d('REPO: tienda obtained for id=$tiendaId');
           }
         } catch (e) {
           _logger.w('Error obteniendo tienda: $e');
@@ -255,21 +248,17 @@ class ProductoRepository implements ProductoRepositoryInterface {
 
           if (categoriaResponse != null) {
             productoFinal['categoria'] = categoriaResponse;
-            _logger.d('REPO: categoria obtained for id=$categoriaId');
           }
         } catch (e) {
           _logger.w('Error obteniendo categoría: $e');
         }
       }
 
-      _logger.d('Producto obtenido: ${productoFinal['id']}');
-
       // Transformar URLs de Contabo a Cloudflare R2
       final productoTransformado = _transformProductoUrlsToR2(productoFinal);
 
       // Transformar datos de la tienda si existe
       if (productoTransformado['tienda'] != null) {
-        _logger.d('REPO: Transformando tienda...');
         productoTransformado['tienda'] = _transformTiendaDataToR2(
           productoTransformado['tienda'] as Map<String, dynamic>,
         );
@@ -476,8 +465,6 @@ class ProductoRepository implements ProductoRepositoryInterface {
   @override
   Future<bool> registrarVistaProducto(int productoId) async {
     try {
-      _logger.d('Registrando vista a producto $productoId');
-
       // Obtener producto actual
       final producto = await getProductoById(productoId);
       if (producto == null) {

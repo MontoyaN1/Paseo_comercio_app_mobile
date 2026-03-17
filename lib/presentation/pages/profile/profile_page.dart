@@ -23,6 +23,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:paseo_del_comercio/di/service_locator.dart';
 import 'package:paseo_del_comercio/core/utils/firebase_auth_service.dart';
 import 'package:paseo_del_comercio/presentation/providers/avatar_provider.dart';
+import 'package:paseo_del_comercio/presentation/blocs/auth/auth_bloc.dart';
 import 'package:paseo_del_comercio/core/errors/app_exceptions.dart';
 import 'package:paseo_del_comercio/core/utils/result.dart';
 import 'package:paseo_del_comercio/data/datasources/remote/supabase_client.dart';
@@ -1627,23 +1628,32 @@ class _ProfilePageState extends State<ProfilePage>
     );
 
     try {
-      final authService = getIt<FirebaseAuthService>();
-      final result = await authService.signOut();
+      final authBloc = getIt<AuthBloc>();
+      authBloc.add(const AuthSignOutRequested());
 
-      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
-
-      result.fold(
-        (_) {
+      // Wait for state change to AuthUnauthenticated
+      await for (final state in authBloc.stream) {
+        if (state is AuthUnauthenticated) {
           if (context.mounted) {
-            context.go('/login');
+            Navigator.of(context, rootNavigator: true).pop();
+            // Small delay to ensure Firebase auth state is fully updated
+            await Future.delayed(const Duration(milliseconds: 300));
+            if (context.mounted) {
+              context.go('/login');
+            }
           }
-        },
-        (error) {
+          break;
+        } else if (state is AuthError) {
           if (context.mounted) {
-            _showErrorSnackBar(context, 'Error al cerrar sesión: $error');
+            Navigator.of(context, rootNavigator: true).pop();
+            _showErrorSnackBar(
+              context,
+              'Error al cerrar sesión: ${state.message}',
+            );
           }
-        },
-      );
+          break;
+        }
+      }
     } catch (error) {
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();

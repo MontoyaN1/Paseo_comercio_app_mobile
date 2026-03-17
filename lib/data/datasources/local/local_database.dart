@@ -110,7 +110,6 @@ class LocalCacheService {
     await tiendasBox.put(cacheKey, cacheEntry);
     await _updateMetadata('tiendas', tiendas.length);
 
-    _logger.d('Cached ${tiendas.length} tiendas with key: $cacheKey');
   }
 
   /// Obtener tiendas desde caché
@@ -124,12 +123,10 @@ class LocalCacheService {
     final cacheEntry = tiendasBox.get(cacheKey);
 
     if (cacheEntry == null) {
-      _logger.d('No cache found for key: $cacheKey');
       return null;
     }
 
     if (checkExpiry && _isCacheExpired(cacheEntry)) {
-      _logger.d('Cache expired for key: $cacheKey');
       await tiendasBox.delete(cacheKey);
       return null;
     }
@@ -176,7 +173,6 @@ class LocalCacheService {
     );
 
     await tiendasBox.put('tienda_$tiendaId', cacheEntry);
-    _logger.d('Cached tienda with ID: $tiendaId');
   }
 
   /// Obtener una tienda individual desde caché
@@ -233,7 +229,6 @@ class LocalCacheService {
     );
 
     await imagenesBox.put(cacheKey, cacheEntry);
-    _logger.d('Cached image: $url (${bytes.length} bytes)');
 
     // Limpiar caché si excede límite
     await _cleanupImageCache();
@@ -308,7 +303,6 @@ class LocalCacheService {
     );
 
     await usuariosBox.put('usuario_$clerkUserId', cacheEntry);
-    _logger.d('Cached usuario with Clerk ID: $clerkUserId');
   }
 
   /// Obtener usuario desde caché
@@ -546,7 +540,6 @@ class LocalCacheService {
             }
           } catch (e) {
             // Continuar con la siguiente clave
-            _logger.d('Error checking cache key $key: $e');
           }
         }
 
@@ -556,7 +549,6 @@ class LocalCacheService {
             totalCleaned++;
           } catch (e) {
             // Ignorar errores al eliminar
-            _logger.d('Error deleting cache key $key: $e');
           }
         }
       }
@@ -634,7 +626,6 @@ class LocalCacheService {
 
         await metadataBox.put('stats', serializableMetadata);
       } catch (e) {
-        _logger.d('Error updating cleanup metadata: $e');
       }
 
       if (totalCleaned > 0) {
