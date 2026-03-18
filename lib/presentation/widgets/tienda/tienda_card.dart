@@ -23,7 +23,6 @@ import '../../../di/service_locator.dart';
 import '../../blocs/favorito/favorito_bloc.dart';
 import '../../blocs/favorito/favorito_event.dart';
 import '../../blocs/favorito/favorito_state.dart';
-import '../../../di/service_locator.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const _kGold = Color(0xFFD4AF37);

@@ -85,14 +85,16 @@ class FavoritoBloc extends Bloc<FavoritoEvent, FavoritoState> {
     ToggleTiendaFavorito event,
     Emitter<FavoritoState> emit,
   ) async {
-    var usuarioId = event.usuarioId ?? _currentUsuarioId;
+    var usuarioId = event.usuarioId;
 
     _logger.i(
       'Toggle tienda favorito - usuarioId: $usuarioId, tiendaId: ${event.tiendaId}',
     );
 
     if (usuarioId == null) {
-      _logger.w('Usuario no autenticado, intentando obtener usuario actual');
+      _logger.w(
+        'Usuario no proporcionado, obteniendo usuario actual de Firebase',
+      );
       usuarioId = await _getCurrentUsuarioId();
       if (usuarioId == null) {
         _logger.e('Usuario no autenticado - no se pudo obtener usuario');
@@ -151,14 +153,16 @@ class FavoritoBloc extends Bloc<FavoritoEvent, FavoritoState> {
     ToggleProductoFavorito event,
     Emitter<FavoritoState> emit,
   ) async {
-    var usuarioId = event.usuarioId ?? _currentUsuarioId;
+    var usuarioId = event.usuarioId;
 
     _logger.i(
       'Toggle producto favorito - usuarioId: $usuarioId, productoId: ${event.productoId}',
     );
 
     if (usuarioId == null) {
-      _logger.w('Usuario no autenticado, intentando obtener usuario actual');
+      _logger.w(
+        'Usuario no proporcionado, obteniendo usuario actual de Firebase',
+      );
       usuarioId = await _getCurrentUsuarioId();
       if (usuarioId == null) {
         _logger.e('Usuario no autenticado - no se pudo obtener usuario');
