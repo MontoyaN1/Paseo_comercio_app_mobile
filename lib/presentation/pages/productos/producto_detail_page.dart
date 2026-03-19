@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:paseo_del_comercio/core/app/app_config.dart';
 import 'package:paseo_del_comercio/core/utils/firebase_auth_service.dart';
+import 'package:paseo_del_comercio/core/utils/share_service.dart';
 import 'package:paseo_del_comercio/data/datasources/remote/supabase_client.dart';
 import 'package:paseo_del_comercio/di/service_locator.dart';
 import 'package:paseo_del_comercio/presentation/blocs/producto/producto_bloc.dart';
@@ -613,6 +614,54 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
     }
   }
 
+  Future<void> _onShareProducto() async {
+    if (_productoData == null) return;
+
+    try {
+      final shareService = getIt<ShareService>();
+      final nombre =
+          _productoData!['nombre_producto'] ??
+          _productoData!['nombre'] ??
+          'Producto';
+      final descripcion = _productoData!['descripcion'] as String?;
+      final precio = _productoData!['precio'];
+      final precioDouble =
+          precio is int ? precio.toDouble() : (precio as double?);
+
+      await shareService.compartirProducto(
+        productoId: widget.productoId,
+        nombreProducto: nombre,
+        descripcion: descripcion,
+        precio: precioDouble,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF1A0808),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.red.withOpacity(0.35)),
+            ),
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red[300], size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Error al compartir: $e',
+                    style: TextStyle(color: Colors.red[200], fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _enviarWhatsapp() async {
     final telefonoTienda =
         _tiendaData?['telefono_contacto'] ??
@@ -893,6 +942,10 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+              ),
+              _GoldIconButton(
+                icon: Icons.share_rounded,
+                onTap: _onShareProducto,
               ),
               const SizedBox(width: 8),
             ],

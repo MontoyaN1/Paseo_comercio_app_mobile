@@ -21,6 +21,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../domain/entities/organizacion.dart';
 import '../../../../domain/entities/enums.dart';
+import '../../../../core/utils/share_service.dart';
+import '../../../../di/service_locator.dart';
 import '../../../../presentation/blocs/organizacion/organizacion_bloc.dart';
 
 import '../../widgets/profile_floating_button.dart';
@@ -74,6 +76,9 @@ class _OrganizacionDetailPageState extends State<OrganizacionDetailPage>
   // ── Scroll state para AppBar ──────────────────────────────
   double _scrollOffset = 0;
   static const double _heroHeight = 300;
+
+  // ── Organización actual ────────────────────────────────────
+  Organizacion? _organizacion;
 
   @override
   void initState() {
@@ -165,27 +170,42 @@ class _OrganizacionDetailPageState extends State<OrganizacionDetailPage>
   }
 
   // ── Helpers ───────────────────────────────────────────────
-  void _onShareOrganizacion() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: _kSurface,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: _kBorder),
-        ),
-        content: const Row(
-          children: [
-            Icon(Icons.share_rounded, color: _kGold, size: 18),
-            SizedBox(width: 10),
-            Text(
-              'Compartir organización (pendiente)',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+  Future<void> _onShareOrganizacion() async {
+    if (_organizacion == null) return;
+
+    try {
+      final shareService = getIt<ShareService>();
+      await shareService.compartirOrganizacion(
+        organizacionId: _organizacion!.id,
+        nombreOrganizacion: _organizacion!.nombre ?? 'Organización',
+        descripcion: _organizacion!.descripcion,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF1A0808),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.red.withOpacity(0.35)),
             ),
-          ],
-        ),
-      ),
-    );
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red[300], size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Error al compartir: $e',
+                    style: TextStyle(color: Colors.red[200], fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
   }
 
   void _onTiendaTap(Map<String, dynamic> tienda) {
@@ -226,9 +246,11 @@ class _OrganizacionDetailPageState extends State<OrganizacionDetailPage>
 
         if (state is OrganizacionDetailLoaded) {
           org = state.organizacion;
+          _organizacion = org; // Guardar para usar en share
           tiendas = state.tiendas ?? [];
         } else if (widget.organizacion != null) {
           org = widget.organizacion;
+          _organizacion = org;
         }
 
         if (org == null) {

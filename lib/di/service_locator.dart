@@ -8,6 +8,7 @@ import '../core/utils/cache_service.dart';
 import '../core/utils/connectivity_service.dart';
 import '../core/utils/image_service.dart';
 import '../core/utils/firebase_auth_service.dart';
+import '../core/utils/share_service.dart';
 import '../core/utils/app_utils_simple.dart';
 import '../data/datasources/remote/supabase_client.dart';
 import '../data/datasources/remote/s3_client.dart';
@@ -117,6 +118,9 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
   final localDatabase = LocalCacheService();
   await localDatabase.initialize();
   getIt.registerSingleton<LocalCacheService>(localDatabase);
+
+  // Registrar servicio de compartir
+  getIt.registerSingleton<ShareService>(ShareService());
 
   // Registrar repositorios
   getIt.registerLazySingleton<AuthRepositoryInterface>(

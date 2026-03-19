@@ -416,33 +416,13 @@ test/presentation/widgets/favorite_button_test.dart
 
 | Feature | Prioridad | Notas |
 |---------|-----------|-------|
+| Deep links | Media | App Links (Android) + Universal Links (iOS) - **Guía en `doc/DEEP_LINKS_IMPLEMENTATION.md`** |
 | Push notifications | Baja | Firebase Cloud Messaging |
 | Geolocator | Baja | Tiendas cercanas, costos envío |
 | Pasarela de pagos | Alta | **Futuro app emprendedores** |
 | Eliminar cuenta | Baja | Requiere flujo especial |
 | Multi-idioma | Baja | i18n |
 | Coordenadas exactas | Media | Por ahora funciona con dirección texto |
-
----
-
-## DEEP LINKS
-
-### URLs de la web
-```
-https://paseodelcomercio.com/plazoleta/{slug}
-https://paseodelcomercio.com/store/{id}
-https://paseodelcomercio.com/producto/{id}
-https://paseodelcomercio.com/organizacion/{id}
-```
-
-### Para app móvil
-Cuando alguien comparte desde el celular, la app debe:
-1. Abrir la app si está instalada
-2. Ir directamente al detalle correspondiente
-
-**Implementación futura (post-launch):**
-- Firebase Dynamic Links, o
-- App Links (Android), Universal Links (iOS)
 
 **Por ahora:**
 - Compartir genera URL web

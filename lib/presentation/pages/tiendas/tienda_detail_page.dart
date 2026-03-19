@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:paseo_del_comercio/core/app/app_config.dart';
+import 'package:paseo_del_comercio/core/utils/share_service.dart';
 import 'package:paseo_del_comercio/data/datasources/remote/supabase_client.dart';
 import 'package:paseo_del_comercio/di/service_locator.dart';
 import 'package:paseo_del_comercio/domain/entities/tienda.dart';
@@ -429,27 +430,46 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
   }
 
   // ── Helpers ───────────────────────────────────────────────
-  void _onShareTienda() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: _kSurface,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: _kBorder),
-        ),
-        content: const Row(
-          children: [
-            Icon(Icons.share_rounded, color: _kGold, size: 18),
-            SizedBox(width: 10),
-            Text(
-              'Compartir tienda (pendiente)',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+  Future<void> _onShareTienda() async {
+    if (_tiendaData == null) return;
+
+    try {
+      final shareService = getIt<ShareService>();
+      final nombre =
+          _tiendaData!['nombre_tienda'] ?? _tiendaData!['nombre'] ?? 'Tienda';
+      final descripcion = _tiendaData!['descripcion'] as String?;
+
+      await shareService.compartirTienda(
+        tiendaId: widget.tiendaId,
+        nombreTienda: nombre,
+        descripcion: descripcion,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF1A0808),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.red.withOpacity(0.35)),
             ),
-          ],
-        ),
-      ),
-    );
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red[300], size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Error al compartir: $e',
+                    style: TextStyle(color: Colors.red[200], fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
   }
 
   void _onProductoTap(Map<String, dynamic> producto) {

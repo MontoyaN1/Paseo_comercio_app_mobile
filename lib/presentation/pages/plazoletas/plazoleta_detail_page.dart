@@ -24,6 +24,8 @@ import 'package:paseo_del_comercio/domain/entities/plazoleta.dart';
 import 'package:paseo_del_comercio/domain/entities/producto.dart';
 import 'package:paseo_del_comercio/domain/entities/tienda.dart';
 import 'package:paseo_del_comercio/domain/entities/imagen_base.dart';
+import 'package:paseo_del_comercio/core/utils/share_service.dart';
+import 'package:paseo_del_comercio/di/service_locator.dart';
 
 import 'package:paseo_del_comercio/presentation/blocs/plazoleta/plazoleta_bloc.dart';
 import 'package:paseo_del_comercio/presentation/blocs/plazoleta/plazoleta_event.dart';
@@ -74,6 +76,9 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
   // ── Scroll state para AppBar ──────────────────────────────
   double _scrollOffset = 0;
   static const double _heroHeight = 300;
+
+  // ── Plazoleta actual ──────────────────────────────────────
+  Plazoleta? _plazoleta;
 
   @override
   void initState() {
@@ -192,6 +197,44 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
       context.push('/productos/${producto.id}', extra: producto.toJson());
   void _onTiendaTap(Tienda tienda) => context.push('/tiendas/${tienda.id}');
 
+  Future<void> _onSharePlazoleta() async {
+    if (_plazoleta == null) return;
+
+    try {
+      final shareService = getIt<ShareService>();
+      await shareService.compartirPlazoleta(
+        slug: _plazoleta!.slug,
+        nombrePlazoleta: _plazoleta!.nombre,
+        descripcion: _plazoleta!.descripcion,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF1A0808),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.red.withOpacity(0.35)),
+            ),
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red[300], size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Error al compartir: $e',
+                    style: TextStyle(color: Colors.red[200], fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   // ── Cuánto ha colapsado el hero (0..1) ────────────────────
   double get _collapseProgress =>
       (_scrollOffset / (_heroHeight - kToolbarHeight)).clamp(0.0, 1.0);
@@ -280,6 +323,7 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
 
         if (state is PlazoletaLoaded && state.plazoletaSeleccionada != null) {
           plazoleta = state.plazoletaSeleccionada!;
+          _plazoleta = plazoleta; // Guardar para usar en share
           imagenes = state.imagenesPlazoleta ?? [];
           productos = state.productosPlazoleta ?? [];
           tiendas = state.tiendasPlazoleta ?? [];
@@ -448,31 +492,7 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
               ),
               _GoldIconButton(
                 icon: Icons.share_rounded,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: _kSurface,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: _kBorder),
-                      ),
-                      content: const Row(
-                        children: [
-                          Icon(Icons.share_rounded, color: _kGold, size: 18),
-                          SizedBox(width: 10),
-                          Text(
-                            'Compartir plazoleta (pendiente)',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+                onTap: _onSharePlazoleta,
               ),
               const SizedBox(width: 8),
             ],
