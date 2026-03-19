@@ -23,6 +23,7 @@ class LocalCacheService {
   static const String usuariosBoxName = 'usuarios_cache';
   static const String metadataBoxName = 'cache_metadata';
   static const String preferencesBoxName = 'app_preferences';
+  static const String historialBoxName = 'historial_visitas';
 
   // Instancias de las cajas
   late Box<Map<String, dynamic>> tiendasBox;
@@ -33,6 +34,10 @@ class LocalCacheService {
   late Box<Map<String, dynamic>> usuariosBox;
   late Box<Map<String, dynamic>> metadataBox;
   late Box<Map<String, dynamic>> preferencesBox;
+  late Box<Map<String, dynamic>> historialBox;
+
+  // Límite de historial
+  static const int maxHistorialItems = 50;
 
   /// Inicializar el servicio de caché
   Future<void> initialize() async {
@@ -67,6 +72,7 @@ class LocalCacheService {
       usuariosBox = await Hive.openBox(usuariosBoxName);
       metadataBox = await Hive.openBox(metadataBoxName);
       preferencesBox = await Hive.openBox(preferencesBoxName);
+      historialBox = await Hive.openBox(historialBoxName);
 
       _isInitialized = true;
 
@@ -829,5 +835,125 @@ class LocalCacheService {
   Future<void> set(String key, dynamic value) async {
     _checkInitialized();
     // Stub implementation
+  }
+
+  // ========== MÉTODOS PARA HISTORIAL DE VISITAS ==========
+
+  /// Guardar una visita en el historial
+  Future<void> guardarVisita({
+    required int id,
+    required String tipo,
+    required Map<String, dynamic> datos,
+  }) async {
+    _checkInitialized();
+
+    final key = '${tipo}_$id';
+    final visita = {
+      'id': id,
+      'tipo': tipo,
+      'datos': datos,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    await historialBox.put(key, visita);
+
+    // Limpiar excedentes por tipo
+    await _limitarHistorialPorTipo(tipo);
+  }
+
+  /// Limitar historial a los últimos 50 elementos por tipo
+  Future<void> _limitarHistorialPorTipo(String tipo) async {
+    final visitas = _obtenerKeysPorTipo(tipo);
+
+    if (visitas.length <= maxHistorialItems) return;
+
+    // Ordenar por timestamp (más reciente primero)
+    visitas.sort((a, b) {
+      final timestampA = historialBox.get(a)?['timestamp'] ?? '';
+      final timestampB = historialBox.get(b)?['timestamp'] ?? '';
+      return timestampB.compareTo(timestampA);
+    });
+
+    // Eliminar los más antiguos
+    final keysAEliminar = visitas.skip(maxHistorialItems);
+    for (final key in keysAEliminar) {
+      await historialBox.delete(key);
+    }
+  }
+
+  /// Obtener claves de un tipo específico
+  List<String> _obtenerKeysPorTipo(String tipo) {
+    final keys = <String>[];
+    for (final key in historialBox.keys) {
+      if (key.toString().startsWith('${tipo}_')) {
+        keys.add(key.toString());
+      }
+    }
+    return keys;
+  }
+
+  /// Obtener historial de tiendas visitadas
+  List<Map<String, dynamic>> obtenerHistorialTiendas() {
+    _checkInitialized();
+
+    final keys = _obtenerKeysPorTipo('tienda');
+    final visitas = <Map<String, dynamic>>[];
+
+    for (final key in keys) {
+      final visita = historialBox.get(key);
+      if (visita != null) {
+        visitas.add(Map<String, dynamic>.from(visita));
+      }
+    }
+
+    // Ordenar por timestamp (más reciente primero)
+    visitas.sort((a, b) {
+      final timestampA = a['timestamp'] ?? '';
+      final timestampB = b['timestamp'] ?? '';
+      return timestampB.compareTo(timestampA);
+    });
+
+    return visitas;
+  }
+
+  /// Obtener historial de productos visitados
+  List<Map<String, dynamic>> obtenerHistorialProductos() {
+    _checkInitialized();
+
+    final keys = _obtenerKeysPorTipo('producto');
+    final visitas = <Map<String, dynamic>>[];
+
+    for (final key in keys) {
+      final visita = historialBox.get(key);
+      if (visita != null) {
+        visitas.add(Map<String, dynamic>.from(visita));
+      }
+    }
+
+    // Ordenar por timestamp (más reciente primero)
+    visitas.sort((a, b) {
+      final timestampA = a['timestamp'] ?? '';
+      final timestampB = b['timestamp'] ?? '';
+      return timestampB.compareTo(timestampA);
+    });
+
+    return visitas;
+  }
+
+  /// Limpiar todo el historial
+  Future<void> limpiarHistorial() async {
+    _checkInitialized();
+    await historialBox.clear();
+    _logger.i('Historial de visitas limpiado');
+  }
+
+  /// Limpiar historial de un tipo específico
+  Future<void> limpiarHistorialPorTipo(String tipo) async {
+    _checkInitialized();
+
+    final keys = _obtenerKeysPorTipo(tipo);
+    for (final key in keys) {
+      await historialBox.delete(key);
+    }
   }
 }

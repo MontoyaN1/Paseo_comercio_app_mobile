@@ -57,6 +57,17 @@ class AppConfig {
   bool enableLogging = true;
   bool enableAnalytics = true;
 
+  // Soporte y redes sociales
+  String whatsappSoporteUrl = '';
+  String instagramUrl = '';
+  String tiktokUrl = '';
+  String youtubeUrl = '';
+  String companyName = 'Paseo del Comercio';
+  String companyUrl = '';
+
+  // Tema de la aplicación
+  bool isDarkMode = true; // Por defecto oscuro
+
   /// Inicializar configuración desde variables de entorno
   Future<void> initializeFromEnv(Map<String, String> env) async {
     // Información de la aplicación
@@ -103,6 +114,14 @@ class AppConfig {
     debugMode = env['DEBUG_MODE']?.toLowerCase() == 'true';
     enableLogging = env['ENABLE_LOGGING']?.toLowerCase() != 'false';
     enableAnalytics = env['ENABLE_ANALYTICS']?.toLowerCase() != 'false';
+
+    // Soporte y redes sociales
+    whatsappSoporteUrl = env['WHATSAPP_SOPORTE_URL'] ?? '';
+    instagramUrl = env['INSTAGRAM_URL'] ?? '';
+    tiktokUrl = env['TIKTOK_URL'] ?? '';
+    youtubeUrl = env['YOUTUBE_URL'] ?? '';
+    companyName = env['COMPANY_NAME'] ?? companyName;
+    companyUrl = env['COMPANY_URL'] ?? '';
 
     // Validar configuración mínima requerida
     _validateConfiguration();
@@ -216,6 +235,17 @@ class AppConfig {
       'ENABLE_ANALYTICS': 'true/false para analytics',
       'CACHE_TTL_HOURS': 'TTL de caché en horas (default: 1)',
       'MAX_CACHE_SIZE_MB': 'Tamaño máximo de caché en MB (default: 100)',
+
+      // Soporte y redes sociales
+      'WHATSAPP_SOPORTE_URL': 'URL de WhatsApp para soporte',
+      'INSTAGRAM_URL': 'URL de Instagram',
+      'TIKTOK_URL': 'URL de TikTok',
+      'YOUTUBE_URL': 'URL de YouTube',
+      'COMPANY_NAME': 'Nombre de la empresa',
+      'COMPANY_URL': 'URL de la empresa',
+
+      // Tema
+      'DEFAULT_THEME': 'dark/light (default: dark)',
     };
   }
 

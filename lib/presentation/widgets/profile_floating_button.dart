@@ -315,33 +315,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                   label: 'Configuración',
                   onTap: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: _kSurface,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: _kBorder),
-                        ),
-                        content: const Row(
-                          children: [
-                            Icon(
-                              Icons.settings_outlined,
-                              color: _kGold,
-                              size: 16,
-                            ),
-                            SizedBox(width: 10),
-                            Text(
-                              'Configuración — En desarrollo',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
+                    context.push('/settings');
                   },
                 ),
 

@@ -500,9 +500,17 @@ class FirebaseAuthService {
     try {
       _isSigningOut = true;
 
-      // Cerrar sesión de Google si está activa - disconnect() revoca el token OAuth
-      if (_googleSignIn.currentUser != null) {
+      // Cerrar sesión de Google - siempre intentamos ambos métodos para asegurar
+      // que la sesión se cierre completamente y el usuario pueda elegir otra cuenta
+      try {
+        await _googleSignIn.signOut();
+      } catch (_) {
+        // Ignorar errores de signOut
+      }
+      try {
         await _googleSignIn.disconnect();
+      } catch (_) {
+        // Ignorar errores de disconnect
       }
 
       // Cerrar sesión de Firebase

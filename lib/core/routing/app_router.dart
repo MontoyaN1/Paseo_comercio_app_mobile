@@ -18,6 +18,9 @@ import '../../presentation/pages/plazoletas/plazoleta_detail_page.dart';
 import '../../presentation/pages/organizaciones/organizacion_list_page.dart';
 import '../../presentation/pages/organizaciones/organizacion_detail_page.dart';
 import '../../presentation/pages/favoritos/favoritos_page.dart';
+import '../../presentation/pages/settings/settings_page.dart';
+import '../../presentation/pages/soporte/soporte_page.dart';
+import '../../presentation/pages/historial/historial_page.dart';
 import '../../domain/entities/organizacion.dart';
 
 /// Configuración de rutas de la aplicación usando GoRouter
@@ -123,6 +126,72 @@ class AppRouter {
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
               child: const FavoritosPage(),
+            ),
+      ),
+
+      // Historial (protegida)
+      GoRoute(
+        path: '/historial',
+        name: 'historial',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario no está autenticado, redirigir a login
+          if (user == null) {
+            return '/login';
+          }
+
+          return null;
+        },
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const HistorialPage(),
+            ),
+      ),
+
+      // Configuración (protegida)
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario no está autenticado, redirigir a login
+          if (user == null) {
+            return '/login';
+          }
+
+          return null;
+        },
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const SettingsPage(),
+            ),
+      ),
+
+      // Soporte (protegida)
+      GoRoute(
+        path: '/soporte',
+        name: 'soporte',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          // Si el usuario no está autenticado, redirigir a login
+          if (user == null) {
+            return '/login';
+          }
+
+          return null;
+        },
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const SoportePage(),
             ),
       ),
 

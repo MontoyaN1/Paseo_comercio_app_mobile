@@ -310,9 +310,7 @@ class _OrganizacionDetailPageState extends State<OrganizacionDetailPage>
           SafeArea(child: _buildFloatingAppBar(org)),
         ],
       ),
-      floatingActionButton: ProfileFloatingButton(
-        hideOrganizacionesOption: true,
-      ),
+      floatingActionButton: ProfileFloatingButton(),
     );
   }
 

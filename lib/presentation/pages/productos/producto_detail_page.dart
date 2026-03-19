@@ -757,9 +757,7 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
                 _buildContent(state),
               ],
             ),
-            floatingActionButton: const ProfileFloatingButton(
-              hideOrganizacionesOption: true,
-            ),
+            floatingActionButton: const ProfileFloatingButton(),
           );
         },
       ),

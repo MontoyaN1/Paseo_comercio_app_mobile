@@ -646,9 +646,7 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
           SafeArea(child: _buildFloatingAppBar(tienda)),
         ],
       ),
-      floatingActionButton: const ProfileFloatingButton(
-        hideOrganizacionesOption: true,
-      ),
+      floatingActionButton: const ProfileFloatingButton(),
     );
   }
 
@@ -1397,10 +1395,7 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
         final totalContactos =
             (tienda['total_contactos_whatsapp'] as int? ?? 0) + 1;
         await supabase.tiendas
-            .update({
-              'total_contactos_whatsapp': totalContactos,
-              
-            })
+            .update({'total_contactos_whatsapp': totalContactos})
             .eq('id', widget.tiendaId);
         debugPrint(
           'Contacto WhatsApp registrado para tienda ${widget.tiendaId}: $totalContactos',

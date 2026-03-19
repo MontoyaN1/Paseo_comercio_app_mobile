@@ -139,51 +139,7 @@ class PaseoDelComercioApp extends StatelessWidget {
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         title: AppConfig().appName,
-
-        // Localización
         locale: const Locale('es', 'ES'),
-
-        // Tema
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          fontFamily: 'Inter',
-          scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF121212),
-            elevation: 4,
-            centerTitle: true,
-            titleTextStyle: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'Inter',
-            ),
-          ),
-          textTheme: const TextTheme(
-            displayLarge: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w700,
-              fontFamily: 'Inter',
-            ),
-            displayMedium: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'Inter',
-            ),
-            bodyLarge: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w400,
-              fontFamily: 'Inter',
-            ),
-            bodyMedium: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              fontFamily: 'Inter',
-            ),
-          ),
-        ),
-
-        // Router configuration
         routerConfig: AppRouter.router,
       ),
     );

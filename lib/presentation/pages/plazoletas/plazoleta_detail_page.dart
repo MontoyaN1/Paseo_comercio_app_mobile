@@ -393,9 +393,7 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
           SafeArea(child: _buildFloatingAppBar(plazoleta)),
         ],
       ),
-      floatingActionButton: ProfileFloatingButton(
-        hideOrganizacionesOption: true,
-      ),
+      floatingActionButton: ProfileFloatingButton(),
     );
   }
 
