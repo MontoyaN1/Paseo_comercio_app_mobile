@@ -824,6 +824,7 @@ class _FavButtonState extends State<_FavButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
+  late bool _localIsFavorite;
 
   @override
   void initState() {
@@ -836,6 +837,15 @@ class _FavButtonState extends State<_FavButton>
       begin: 1.0,
       end: 0.78,
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _localIsFavorite = widget.isFavorite;
+  }
+
+  @override
+  void didUpdateWidget(_FavButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isFavorite != widget.isFavorite) {
+      _localIsFavorite = widget.isFavorite;
+    }
   }
 
   @override
@@ -849,6 +859,9 @@ class _FavButtonState extends State<_FavButton>
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) {
+        setState(() {
+          _localIsFavorite = !_localIsFavorite;
+        });
         _ctrl.reverse();
         widget.onTap?.call();
       },
@@ -869,13 +882,13 @@ class _FavButtonState extends State<_FavButton>
                     height: 32,
                     decoration: BoxDecoration(
                       color:
-                          widget.isFavorite
+                          _localIsFavorite
                               ? Colors.red.withOpacity(0.8)
                               : Colors.black.withOpacity(0.45),
                       shape: BoxShape.circle,
                       border: Border.all(
                         color:
-                            widget.isFavorite
+                            _localIsFavorite
                                 ? Colors.red.withOpacity(0.8)
                                 : _kBorder,
                         width: 1,
@@ -887,12 +900,12 @@ class _FavButtonState extends State<_FavButton>
                         return ScaleTransition(scale: animation, child: child);
                       },
                       child: Icon(
-                        widget.isFavorite
+                        _localIsFavorite
                             ? Icons.favorite_rounded
                             : Icons.favorite_border_rounded,
-                        key: ValueKey(widget.isFavorite),
+                        key: ValueKey(_localIsFavorite),
                         size: 16,
-                        color: widget.isFavorite ? Colors.white : _kHint,
+                        color: _localIsFavorite ? Colors.white : _kHint,
                       ),
                     ),
                   ),

@@ -109,7 +109,6 @@ class LocalCacheService {
 
     await tiendasBox.put(cacheKey, cacheEntry);
     await _updateMetadata('tiendas', tiendas.length);
-
   }
 
   /// Obtener tiendas desde caché
@@ -180,33 +179,56 @@ class LocalCacheService {
     _checkInitialized();
 
     final cacheKey = 'tienda_$tiendaId';
-    final cacheEntry = tiendasBox.get(cacheKey);
+    try {
+      final cacheEntry = tiendasBox.get(cacheKey);
 
-    if (cacheEntry == null) {
+      if (cacheEntry == null) {
+        return null;
+      }
+
+      // Convertir el cacheEntry a Map<String, dynamic> de forma segura
+      Map<String, dynamic> entry;
+      if (cacheEntry is Map<String, dynamic>) {
+        entry = cacheEntry;
+      } else if (cacheEntry is Map) {
+        entry = Map<String, dynamic>.from(
+          (cacheEntry).map((key, value) => MapEntry(key.toString(), value)),
+        );
+      } else {
+        _logger.w(
+          'Cache entry for tienda $tiendaId has unexpected type: ${cacheEntry.runtimeType}',
+        );
+        await tiendasBox.delete(cacheKey);
+        return null;
+      }
+
+      if (_isCacheExpired(entry)) {
+        await tiendasBox.delete(cacheKey);
+        return null;
+      }
+
+      // Actualizar último acceso
+      entry['last_access'] = DateTime.now().toIso8601String();
+      entry['access_count'] = (entry['access_count'] ?? 0) + 1;
+      await tiendasBox.put(cacheKey, entry);
+
+      final data = entry['data'];
+      if (data is Map<String, dynamic>) {
+        return data;
+      } else if (data is Map) {
+        return Map<String, dynamic>.from(
+          (data).map((key, value) => MapEntry(key.toString(), value)),
+        );
+      } else if (data != null) {
+        _logger.w(
+          'Cache data for tienda $tiendaId has unexpected data type: ${data.runtimeType}',
+        );
+      }
+      return null;
+    } catch (e) {
+      _logger.e('Error getting cached tienda $tiendaId: $e');
       return null;
     }
-
-    if (_isCacheExpired(cacheEntry)) {
-      await tiendasBox.delete(cacheKey);
-      return null;
-    }
-
-    // Convertir cacheEntry a Map<String, dynamic> si es necesario
-    final Map<String, dynamic> entry = _convertToMapStringDynamic(cacheEntry);
-
-    // Actualizar último acceso
-    entry['last_access'] = DateTime.now().toIso8601String();
-    entry['access_count'] = (entry['access_count'] ?? 0) + 1;
-    await tiendasBox.put(cacheKey, entry);
-
-    final data = entry['data'];
-    if (data is Map) {
-      return _convertToMapStringDynamic(data);
-    } else if (data != null) {
-      // Intentar convertir si no es null pero tampoco es Map
-      return _convertToMapStringDynamic({'data': data});
-    }
-    return null;
   }
 
   // ========== MÉTODOS PARA IMÁGENES ==========
@@ -625,8 +647,7 @@ class LocalCacheService {
         }
 
         await metadataBox.put('stats', serializableMetadata);
-      } catch (e) {
-      }
+      } catch (e) {}
 
       if (totalCleaned > 0) {
         _logger.i('Cleaned $totalCleaned expired cache entries');

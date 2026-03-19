@@ -103,10 +103,12 @@ class TiendaRepository implements TiendaRepositoryInterface {
       if (!forceRefresh) {
         final cachedTienda = await _localCache.getCachedTienda(tiendaId);
         if (cachedTienda != null) {
+          _logger.d('Tienda $tiendaId obtenida del caché');
           return cachedTienda;
         }
       }
 
+      _logger.d('Consultando Supabase para tienda $tiendaId');
       final response = await _supabaseClient.tiendas
           .select('''
             *,
@@ -120,8 +122,19 @@ class TiendaRepository implements TiendaRepositoryInterface {
         return null;
       }
 
-      final rawTienda = response.first as Map<dynamic, dynamic>;
-      final tienda = Map<String, dynamic>.from(rawTienda);
+      _logger.d('Response type: ${response.first.runtimeType}');
+      final rawTienda = response.first;
+      Map<String, dynamic> tienda;
+      if (rawTienda is Map<String, dynamic>) {
+        tienda = rawTienda;
+      } else if (rawTienda is Map) {
+        tienda = Map<String, dynamic>.from(rawTienda);
+      } else {
+        _logger.e('Unexpected type for tienda: ${rawTienda.runtimeType}');
+        return null;
+      }
+
+      _logger.d('Tienda convertida exitosamente, aplicando transformaciones');
 
       // Transformar URLs de Contabo a Cloudflare R2 para imágenes de tienda
       _transformTiendaUrlsToR2(tienda);
@@ -131,8 +144,9 @@ class TiendaRepository implements TiendaRepositoryInterface {
       _logger.i('Tienda obtenida: $tiendaId');
 
       return tienda;
-    } catch (e) {
+    } catch (e, stackTrace) {
       _logger.e('Error obteniendo tienda $tiendaId: $e');
+      _logger.e('Stack trace: $stackTrace');
       return null;
     }
   }

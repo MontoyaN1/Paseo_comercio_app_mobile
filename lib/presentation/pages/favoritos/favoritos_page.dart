@@ -85,31 +85,53 @@ class _FavoritosPageState extends State<FavoritosPage>
 
     return BlocProvider.value(
       value: _favoritoBloc,
-      child: Scaffold(
-        backgroundColor: _kBg,
-        appBar: AppBar(
-          backgroundColor: _kSurface,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          title: const Text(
-            'Mis Favoritos',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-          ),
-          bottom: TabBar(
-            controller: _tabController,
-            indicatorColor: _kGold,
-            labelColor: _kGold,
-            unselectedLabelColor: _kHint,
-            tabs: const [Tab(text: 'Tiendas'), Tab(text: 'Productos')],
-          ),
-        ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _TiendasFavoritasContent(usuarioId: _usuarioId),
-            _ProductosFavoritosContent(usuarioId: _usuarioId),
-          ],
-        ),
+      child: BlocBuilder<FavoritoBloc, FavoritoState>(
+        builder: (context, state) {
+          final tiendaCount =
+              state is FavoritosLoaded ? state.tiendaIds.length : 0;
+          final productoCount =
+              state is FavoritosLoaded ? state.productoIds.length : 0;
+
+          return Scaffold(
+            backgroundColor: _kBg,
+            appBar: AppBar(
+              backgroundColor: _kSurface,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: _kGold,
+                ),
+                onPressed: () => context.pop(),
+              ),
+              title: const Text(
+                'Mis Favoritos',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              bottom: TabBar(
+                controller: _tabController,
+                indicatorColor: _kGold,
+                labelColor: _kGold,
+                unselectedLabelColor: _kHint,
+                tabs: [
+                  Tab(text: 'Tiendas ($tiendaCount)'),
+                  Tab(text: 'Productos ($productoCount)'),
+                ],
+              ),
+            ),
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _TiendasFavoritasContent(usuarioId: _usuarioId),
+                _ProductosFavoritosContent(usuarioId: _usuarioId),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -252,16 +274,12 @@ class _TiendasList extends StatelessWidget {
 
   Future<List<Map<String, dynamic>>> _loadTiendas(List<int> tiendaIds) async {
     final repository = getIt<TiendaRepositoryInterface>();
-    final tiendas = <Map<String, dynamic>>[];
 
-    for (final id in tiendaIds) {
-      final tienda = await repository.getTiendaById(id);
-      if (tienda != null) {
-        tiendas.add(tienda);
-      }
-    }
+    final results = await Future.wait(
+      tiendaIds.map((id) => repository.getTiendaById(id)),
+    );
 
-    return tiendas;
+    return results.whereType<Map<String, dynamic>>().toList();
   }
 }
 
@@ -407,16 +425,12 @@ class _ProductosList extends StatelessWidget {
     List<int> productoIds,
   ) async {
     final repository = getIt<ProductoRepositoryInterface>();
-    final productos = <Map<String, dynamic>>[];
 
-    for (final id in productoIds) {
-      final producto = await repository.getProductoById(id);
-      if (producto != null) {
-        productos.add(producto);
-      }
-    }
+    final results = await Future.wait(
+      productoIds.map((id) => repository.getProductoById(id)),
+    );
 
-    return productos;
+    return results.whereType<Map<String, dynamic>>().toList();
   }
 }
 

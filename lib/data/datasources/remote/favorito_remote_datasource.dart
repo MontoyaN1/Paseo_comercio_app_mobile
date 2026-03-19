@@ -21,9 +21,10 @@ class FavoritoRemoteDataSource {
 
       _logger.i('Response: $response');
 
-      return response
-          .map((map) => Favorito.fromTiendaMap(Map<String, dynamic>.from(map)))
-          .toList();
+      return response.map((map) {
+        final converted = Map<String, dynamic>.from(map is Map ? map : {});
+        return Favorito.fromTiendaMap(converted);
+      }).toList();
     } catch (e) {
       _logger.e('Error fetching tiendas favoritas: $e');
       return [];
@@ -40,11 +41,10 @@ class FavoritoRemoteDataSource {
 
       _logger.i('Response: $response');
 
-      return response
-          .map(
-            (map) => Favorito.fromProductoMap(Map<String, dynamic>.from(map)),
-          )
-          .toList();
+      return response.map((map) {
+        final converted = Map<String, dynamic>.from(map is Map ? map : {});
+        return Favorito.fromProductoMap(converted);
+      }).toList();
     } catch (e) {
       _logger.e('Error fetching productos favoritos: $e');
       return [];
