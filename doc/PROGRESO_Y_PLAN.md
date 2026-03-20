@@ -258,22 +258,33 @@ https://paseodelcomercio.com/organizacion/{id}
 
 ## 🔵 GOOGLE MAPS (WebView + Embed)
 
-### M1: WebView + Google Maps Embed ✅ DECISIÓN TOMADA
-**Solución inicial** - WebView con Google Maps Embed (gratuito).
+### M1: Google Maps - ⚠️ PENDIENTE/DISCUSIÓN
+**Error encontrado:** `flutter_inappwebview` causa errores de platform channel en Android:
+```
+PlatformException(error, java.lang.IllegalStateException: Trying to create a platform view of unregistered type: com.pichillilorenzo/flutter_inappwebview
+```
 
-**Futuro:** Migrar a Google Maps SDK cuando sea necesario.
+**Solución actual:**
+- Botón "Ver mapa" que usa `url_launcher` para abrir Google Maps en navegador externo
+- URL: `https://www.google.com/maps/search/?api=1&query={direccion}`
 
-**Pasos:**
-- [ ] Agregar webview_flutter o usar UrlLauncher
-- [ ] Crear TiendaMapaWidget con WebView
-- [ ] Integrar en TiendaDetailPage
-- [ ] Manejar dirección no encontrable
+**Implementación en TiendaDetailPage:**
+- `_openInMaps()` método que construye URL y abre con `launchUrl(uri, mode: LaunchMode.externalApplication)`
+- Botón "Ver mapa" junto a la dirección (funciona correctamente)
+
+**Archivos:**
+- `lib/presentation/pages/tiendas/tienda_detail_page.dart` - Botón "Ver mapa" funcional
+
+**Pendiente por confirmar con el equipo:**
+- ¿Usar Google Maps API oficial (requiere API key + billing)?
+- ¿Otra solución de mapa embebido?
+- ¿Solo mantener la apertura externa?
 
 ### M2: Preparar migración futura ⚠️ PENDIENTE
 **Para cuando sea necesario migrar a Google Maps SDK:**
 - [ ] Obtener Google Maps API Key
 - [ ] Configurar billing en Google Cloud
-- [ ] Reemplazar WebView por google_maps_flutter
+- [ ] Integrar google_maps_flutter
 
 ---
 
@@ -330,7 +341,7 @@ https://paseodelcomercio.com/organizacion/{id}
 - **Historial:** ⚠️ POSTERGADO (código listo pero no activo)
 - **Settings/Soporte:** 100% ✅
 - **Share:** 100% ✅
-- **Google Maps:** 0% (en desarrollo - WebView + Embed)
+- **Google Maps:** ⚠️ Parcial - Botón "Ver mapa" funciona (url_launcher); mapa embebido FALLIDO
 
 ---
 
@@ -352,7 +363,6 @@ https://paseodelcomercio.com/organizacion/{id}
 - [x] Settings funcional (S2 - implementado)
 - [x] Soporte WhatsApp (S3 - implementado)
 - [ ] Compartir funcional
-- [ ] Mapa en tiendas (WebView + Embed)
 - [ ] Tests pasando
 
 ### ⚠️ POSTERGADO
@@ -365,6 +375,9 @@ https://paseodelcomercio.com/organizacion/{id}
 ```
 1. C1 + C2 → 2. S1 → 3. S2 + S3 → 4. H1 + H2 + H3 → 5. SH1 + SH2 → 6. M1 + M2 → 7. T1-T4 → 8. Testing
 ```
+
+### Fase 5: Google Maps (M1, M2) ✅ COMPLETADO
+- [x] UrlLauncher + Google Maps web - Implementado en TiendaDetailPage
 
 ### Fase 1: Críticos (C1, C2) ✅
 - [x] Unificar logout - FirebaseAuthService.signOut() mejorado
@@ -384,9 +397,11 @@ https://paseodelcomercio.com/organizacion/{id}
 - [x] ShareService - Creado con métodos para tienda, producto, plazoleta, organizacion
 - [x] Botones compartir - Integrados en todas las páginas de detalle
 
-### Fase 5: Google Maps (M1, M2) - WebView + Embed
-- [ ] WebView con Google Maps Embed
-- [ ] Integrar en TiendaDetailPage
+### Fase 5: Google Maps (M1, M2) ⚠️ PENDIENTE/DISCUSIÓN
+- [x] Botón "Ver mapa" con url_launcher - FUNCIONAL
+- [x] Apertura en navegador externo - FUNCIONAL
+- [ ] Mapa embebido en app - FALLIDO (flutter_inappwebview no funciona)
+- [ ] Decisión del equipo sobre API de Google Maps
 
 ### Fase 6: Tests (T1-T4)
 - [ ] AuthBloc tests

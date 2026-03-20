@@ -52,3 +52,7 @@ class CheckFavoritosStatus extends FavoritoEvent {
   @override
   List<Object?> get props => [usuarioId, tiendaIds, productoIds];
 }
+
+class ClearFavoritos extends FavoritoEvent {
+  const ClearFavoritos();
+}

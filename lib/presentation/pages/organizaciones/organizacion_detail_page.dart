@@ -56,7 +56,7 @@ class OrganizacionDetailPage extends StatefulWidget {
 }
 
 class _OrganizacionDetailPageState extends State<OrganizacionDetailPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   // ── Controllers ───────────────────────────────────────────
   late final TabController _tabController;
   final _scrollController = ScrollController();
@@ -83,6 +83,7 @@ class _OrganizacionDetailPageState extends State<OrganizacionDetailPage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 2, vsync: this);
 
     // Fondo continuo
@@ -161,12 +162,32 @@ class _OrganizacionDetailPageState extends State<OrganizacionDetailPage>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     _scrollController.dispose();
     _bgCtrl.dispose();
     _heroCtrl.dispose();
     _contentCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      if (mounted) {
+        final bloc = context.read<OrganizacionBloc>();
+        if (!bloc.isClosed) {
+          bloc.add(
+            LoadOrganizacionById(
+              organizacionId: widget.organizacionId,
+              loadTiendas: true,
+              loadMiembros: true,
+            ),
+          );
+        }
+      }
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────

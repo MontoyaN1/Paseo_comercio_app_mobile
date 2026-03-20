@@ -57,7 +57,7 @@ class PlazoletaDetailPage extends StatefulWidget {
 }
 
 class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   // ── Controllers ───────────────────────────────────────────
   late final TabController _tabController;
   final _scrollController = ScrollController();
@@ -83,6 +83,7 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_onTabChanged);
 
@@ -144,12 +145,24 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     _scrollController.dispose();
     _bgCtrl.dispose();
     _heroCtrl.dispose();
     _contentCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      if (_plazoleta != null && mounted) {
+        _loadPlazoleta();
+        _loadTabData(_currentTabIndex);
+      }
+    }
   }
 
   // ── Tab change ────────────────────────────────────────────

@@ -286,36 +286,29 @@ Agregar botón compartir en las páginas de detalle.
 
 ---
 
-## 🔵 FASE 5: GOOGLE MAPS (WebView + Embed - Solución Inicial)
+## 🔵 FASE 5: GOOGLE MAPS ⚠️ PENDIENTE/DISCUSIÓN
 
-### M1: WebView + Google Maps Embed
+### M1: Google Maps - Solución Actual
 
-**Objetivo:**
-Mostrar mapa en TiendaDetail usando Google Maps Embed (gratuito).
+**Error encontrado (19/mar/2026):**
+- `flutter_inappwebview` causa errores de platform channel en Android:
+  ```
+  PlatformException(error, java.lang.IllegalStateException: Trying to create a platform view of unregistered type: com.pichillilorenzo/flutter_inappwebview
+  ```
 
-**Decisión del equipo:**
-- Usar **WebView + Google Maps Embed** como solución inicial
-- **Futuro:** Migrar a Google Maps SDK cuando sea necesario
+**Solución funcionando:**
+- Botón "Ver mapa" en TiendaDetailPage
+- Usa `url_launcher` para abrir Google Maps en navegador externo
+- URL: `https://www.google.com/maps/search/?api=1&query={direccion}`
+- Fallback a esquema `geo:` si falla
 
-**Cómo funciona:**
-- URL tipo: `https://www.google.com/maps?q=DIRECCION&output=embed`
-- No requiere API key
-- Sin costos
-- Similar a como funciona en la web actual
+**Archivos:**
+- `lib/presentation/pages/tiendas/tienda_detail_page.dart` - Método `_openInMaps()` y botón "Ver mapa"
 
-**Widget:**
-```dart
-class TiendaMapaWidget extends StatelessWidget {
-  final String direccion;
-  // WebView con Google Maps Embed
-}
-```
-
-**Pasos:**
-1. [ ] Agregar `webview_flutter` a pubspec.yaml (o usar UrlLauncher para abrir en app)
-2. [ ] Crear widget TiendaMapaWidget con WebView
-3. [ ] Integrar en TiendaDetailPage
-4. [ ] Manejar caso de dirección no encontrable
+**Pendiente por confirmar con el equipo:**
+- ¿Usar Google Maps API oficial (requiere API key + billing)?
+- ¿Otra solución de mapa embebido?
+- ¿Solo mantener la apertura externa?
 
 ---
 
@@ -470,17 +463,17 @@ test/presentation/widgets/favorite_button_test.dart
 
 ## 📊 COMPARATIVA: GOOGLE MAPS vs ALTERNATIVAS
 
-### Decisión tomada ✅
-> **WebView + Google Maps Embed** como solución inicial, con intención de migrar a Google Maps SDK en el futuro.
+### Estado actual ⚠️ PENDIENTE/DISCUSIÓN
+> El WebView (flutter_inappwebview) no funciona en Android. Se usa apertura externa temporalmente.
 
 ### Opciones disponibles
 
-| Opción | Costo Mensual | API Key Requerida | Calidad Mapa | Esfuerzo |
-|--------|--------------|-------------------|--------------|----------|
-| **WebView + Embed** ✅ | Gratis | No | ⭐⭐⭐ | Bajo |
-| **Google Maps SDK** | ~$7/1K cargas | Sí (con billing) | ⭐⭐⭐⭐⭐ | Bajo |
-| **OpenStreetMap** | Gratis | No | ⭐⭐⭐⭐ | Alto |
-| **Mapbox** | 50K gratis/mes | Sí | ⭐⭐⭐⭐⭐ | Bajo |
+| Opción | Costo Mensual | API Key Requerida | Calidad Mapa | Esfuerzo | Estado |
+|--------|--------------|-------------------|--------------|----------|--------|
+| **UrlLauncher (actual)** ✅ | Gratis | No | ⭐⭐⭐ | Bajo | **FUNCIONAL** |
+| **Google Maps SDK** | ~$7/1K cargas | Sí (con billing) | ⭐⭐⭐⭐⭐ | Bajo | **PENDIENTE** |
+| **OpenStreetMap** | Gratis | No | ⭐⭐⭐⭐ | Alto | Posible alternativa |
+| **Mapbox** | 50K gratis/mes | Sí | ⭐⭐⭐⭐⭐ | Bajo | Posible alternativa |
 
 ### Detalle de costos (Google Maps SDK - futuro)
 
@@ -493,21 +486,20 @@ test/presentation/widgets/favorite_button_test.dart
 
 **$200/mes gratis** con billing configurado.
 
-### Cómo funciona la solución actual (WebView + Embed)
+### Cómo funciona la solución actual (UrlLauncher)
 
-- URL tipo: `https://www.google.com/maps?q=DIRECCION&output=embed`
+- Botón "Ver mapa" en TiendaDetailPage
+- URL: `https://www.google.com/maps/search/?api=1&query={direccion}`
+- Abre en navegador externo con `url_launcher`
 - No requiere API key
 - Sin costos
-- Similar a como funciona en la web actual
-- Requiere conexión a internet
+- Funciona correctamente
 
-### Plan de migración futura
+### Plan a confirmar con el equipo
 
-Cuando el volumen de usuarios lo justifique:
-1. Obtener Google Maps API Key de Google Cloud Console
-2. Configurar billing en Google Cloud
-3. Reemplazar WebView por `google_maps_flutter` SDK
-4. Beneficios: mejor UX, offline maps, markers personalizados
+1. Mantener UrlLauncher (solución simple y funcional)
+2. O migrar a Google Maps SDK cuando sea necesario
+3. O usar alternativa como OpenStreetMap/Mapbox
 
 ---
 

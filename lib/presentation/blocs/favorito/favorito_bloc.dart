@@ -3,6 +3,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 
+import '../../../core/utils/auth_state.dart';
 import '../../../core/utils/firebase_auth_service.dart';
 import '../../../data/datasources/remote/supabase_client.dart';
 import '../../../di/service_locator.dart';
@@ -14,39 +15,77 @@ class FavoritoBloc extends Bloc<FavoritoEvent, FavoritoState> {
   final FavoritoRepositoryInterface _repository;
   final Logger _logger = Logger();
   int? _currentUsuarioId;
+  bool _isListeningToAuth = false;
 
   FavoritoBloc(this._repository) : super(const FavoritoInitial()) {
     on<LoadFavoritos>(_onLoadFavoritos);
     on<ToggleTiendaFavorito>(_onToggleTiendaFavorito);
     on<ToggleProductoFavorito>(_onToggleProductoFavorito);
     on<CheckFavoritosStatus>(_onCheckFavoritosStatus);
+    on<ClearFavoritos>(_onClearFavoritos);
 
-    _loadInitialFavorites();
+    _initAndListenToAuth();
   }
 
   int? get currentUsuarioId => _currentUsuarioId;
 
+  Future<void> _initAndListenToAuth() async {
+    await _loadInitialFavorites();
+    _listenToAuthChanges();
+  }
+
+  void _listenToAuthChanges() {
+    if (_isListeningToAuth) return;
+    _isListeningToAuth = true;
+
+    final authService = getIt<FirebaseAuthService>();
+    authService.onAuthStateChanged.listen((authState) async {
+      if (authState == AuthState.authenticated) {
+        _logger.i('Auth state changed to authenticated - loading favorites');
+        await _loadInitialFavorites();
+      } else if (authState == AuthState.unauthenticated ||
+          authState == AuthState.guest) {
+        _logger.i('Auth state changed to unauthenticated - clearing favorites');
+        add(const ClearFavoritos());
+        _currentUsuarioId = null;
+      }
+    });
+  }
+
+  void _onClearFavoritos(ClearFavoritos event, Emitter<FavoritoState> emit) {
+    _currentUsuarioId = null;
+    emit(const FavoritoInitial());
+  }
+
   Future<void> _loadInitialFavorites() async {
     try {
       final authService = getIt<FirebaseAuthService>();
-      final firebaseUser = authService.currentUser;
-      _logger.i('Firebase user: ${firebaseUser?.uid}');
+      var firebaseUser = authService.currentUser;
 
-      if (firebaseUser != null) {
-        final supabaseClient = getIt<SupabaseClientService>();
-        final usuario = await supabaseClient.getUsuarioByFirebaseId(
-          firebaseUser.uid,
-        );
+      if (firebaseUser == null) {
+        _logger.w('No hay usuario de Firebase autenticado, esperando...');
+        await Future.delayed(const Duration(milliseconds: 500));
+        firebaseUser = authService.currentUser;
+      }
 
-        _logger.i('Usuario encontrado: $usuario');
+      if (firebaseUser == null) {
+        _logger.w('Still no Firebase user after retry');
+        return;
+      }
 
-        if (usuario != null) {
-          _currentUsuarioId = usuario['id'] as int;
-          _logger.i('Usuario ID: $_currentUsuarioId');
-          add(LoadFavoritos(_currentUsuarioId!));
-        }
-      } else {
-        _logger.w('No hay usuario de Firebase autenticado');
+      _logger.i('Firebase user: ${firebaseUser.uid}');
+
+      final supabaseClient = getIt<SupabaseClientService>();
+      final usuario = await supabaseClient.getUsuarioByFirebaseId(
+        firebaseUser.uid,
+      );
+
+      _logger.i('Usuario encontrado: $usuario');
+
+      if (usuario != null) {
+        _currentUsuarioId = usuario['id'] as int;
+        _logger.i('Usuario ID: $_currentUsuarioId');
+        add(LoadFavoritos(_currentUsuarioId!));
       }
     } catch (e) {
       _logger.e('Error cargando favoritos iniciales: $e');

@@ -154,7 +154,7 @@ class TiendaDetailPage extends StatefulWidget {
 }
 
 class _TiendaDetailPageState extends State<TiendaDetailPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   // ── Controllers ───────────────────────────────────────────
   late final TabController _tabController;
   final _scrollController = ScrollController();
@@ -190,6 +190,7 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 2, vsync: this);
 
     // Fondo continuo
@@ -244,6 +245,16 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
     if (!_hasLoaded) {
       _hasLoaded = true;
       _loadTienda();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      if (_tiendaData != null && mounted) {
+        _loadTienda();
+      }
     }
   }
 
@@ -421,6 +432,7 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     _scrollController.dispose();
     _bgCtrl.dispose();
@@ -461,6 +473,104 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
                 Expanded(
                   child: Text(
                     'Error al compartir: $e',
+                    style: TextStyle(color: Colors.red[200], fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openInMaps() async {
+    if (_tiendaData == null) return;
+
+    final direccion = _tiendaData!['direccion'] as String?;
+    if (direccion == null || direccion.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: _kSurface,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: _kBorder),
+            ),
+            content: const Row(
+              children: [
+                Icon(Icons.location_off_rounded, color: _kHint, size: 18),
+                SizedBox(width: 10),
+                Text(
+                  'Dirección no disponible',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      // Google Maps Embed URL (gratuito, sin API key)
+      final encodedAddress = Uri.encodeComponent(direccion);
+      final mapsUrl =
+          'https://www.google.com/maps/search/?api=1&query=$encodedAddress';
+
+      final uri = Uri.parse(mapsUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: intentar con el esquema geo:
+        final geoUrl = 'geo:0,0?q=$encodedAddress';
+        final geoUri = Uri.parse(geoUrl);
+        if (await canLaunchUrl(geoUri)) {
+          await launchUrl(geoUri, mode: LaunchMode.externalApplication);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: const Color(0xFF1A0808),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.red.withOpacity(0.35)),
+                ),
+                content: const Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red, size: 18),
+                    SizedBox(width: 10),
+                    Text(
+                      'No se pudo abrir el mapa',
+                      style: TextStyle(color: Colors.red, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF1A0808),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.red.withOpacity(0.35)),
+            ),
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red[300], size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Error al abrir mapa: $e',
                     style: TextStyle(color: Colors.red[200], fontSize: 13),
                   ),
                 ),
@@ -1142,6 +1252,38 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
                       icon: Icons.location_on_rounded,
                       label: 'Dirección',
                       value: tienda['direccion'].toString(),
+                      trailing: GestureDetector(
+                        onTap: _openInMaps,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _kGold.withAlpha((0.10 * 255).toInt()),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _kGold.withAlpha((0.25 * 255).toInt()),
+                              width: 1,
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.map_rounded, size: 14, color: _kGold),
+                              SizedBox(width: 4),
+                              Text(
+                                'Ver mapa',
+                                style: TextStyle(
+                                  color: _kGold,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                     _GoldDivider(),
                   ],
@@ -1755,12 +1897,14 @@ class _GoldInfoRow extends StatelessWidget {
   final String label;
   final String? value;
   final Widget? valueWidget;
+  final Widget? trailing;
 
   const _GoldInfoRow({
     required this.icon,
     required this.label,
     this.value,
     this.valueWidget,
+    this.trailing,
   }) : assert(
          value != null || valueWidget != null,
          'Se debe proporcionar value o valueWidget',
@@ -1807,6 +1951,7 @@ class _GoldInfoRow extends StatelessWidget {
               ],
             ),
           ),
+          if (trailing != null) ...[const SizedBox(width: 8), trailing!],
         ],
       ),
     );
