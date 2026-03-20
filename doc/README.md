@@ -1,125 +1,155 @@
 # 📚 DOCUMENTACIÓN - Paseo del Comercio App Móvil
 
-Esta carpeta contiene toda la documentación del proyecto organizada por temas.
+Esta carpeta contiene toda la documentación del proyecto organizada por categorías.
 
-## 📋 ESTRUCTURA DE CARPETAS
+---
+
+## 📁 ESTRUCTURA DE CARPETAS
 
 ```
 doc/
-├── README.md              # Este archivo
-├── AGENTS.md              # Guía para agentes IA
-├── PROPUESTAS_UI.md       # Propuestas de diseño UI/UX
-├── PROGRESO_Y_PLAN.md     # Estado del proyecto y roadmap
+├── README.md                          # Este archivo - índice general
 │
-├── db/                    # Documentación de Base de Datos
-│   ├── ESQUEMA_BASE_DATOS.md    # Esquema completo de PostgreSQL
-│   └── ESQUEMA_FAVORITOS.md     # Sistema de favoritos (nuevo)
+├── 1_PROJECT/                         # Estado y planificación
+│   ├── README.md                       # Índice del proyecto
+│   ├── PROGRESO_Y_PLAN.md              # Estado actual y roadmap
+│   ├── MOVIL_PLAN.md                   # Plan de implementación móvil
+│   └── FUNCIONALIDADES_PENDIENTES.md    # Catálogo de features pendientes
 │
-├── architecture/          # Documentación de Arquitectura
-│   └── ESTRUCTURA_PROYECTO.md   # Arquitectura Clean Architecture
+├── 2_ARCHITECTURE/                    # Arquitectura técnica
+│   ├── README.md                       # Índice de arquitectura
+│   └── ESTRUCTURA_PROYECTO.md          # Arquitectura Clean Architecture
 │
-└── diagrams/              # Diagramas Mermaid
-    ├── entidades_completo.mmd  # Diagrama ER completo (24 tablas)
-    └── diagrama_favoritos.mmd   # Diagramas del sistema de favoritos
+├── 3_DATABASE/                        # Base de datos
+│   ├── README.md                       # Índice de base de datos
+│   ├── ESQUEMA_BASE_DATOS.md           # Esquema PostgreSQL (24+ tablas)
+│   └── ESQUEMA_FAVORITOS.md            # Sistema de favoritos
+│
+├── 4_IMPLEMENTATION/                  # Guías de implementación
+│   ├── README.md                       # Índice de guías
+│   └── DEEP_LINKS_IMPLEMENTATION.md    # Guía de deep links
+│
+├── 5_DIAGRAMS/                        # Diagramas Mermaid
+│   ├── README.md                       # Índice de diagramas
+│   ├── entidades_completo.mmd           # Diagrama ER completo
+│   └── diagrama_favoritos.mmd          # Diagrama de favoritos
+│
+├── PROPUESTAS_UI.md                   # Propuestas de diseño UI/UX
+└── AGENTS.md                          # Guía para agentes IA
 ```
+
+---
+
+## 🚀 GUÍA DE INICIO RÁPIDA
+
+### Para desarrolladores nuevos:
+
+1. **了解 Estado del proyecto:** `1_PROJECT/PROGRESO_Y_PLAN.md`
+2. **🏗️ Arquitectura:** `2_ARCHITECTURE/ESTRUCTURA_PROYECTO.md`
+3. **🗄️ Base de datos:** `3_DATABASE/ESQUEMA_BASE_DATOS.md`
+4. **📱 UI/UX:** `PROPUESTAS_UI.md`
+
+---
 
 ## 📋 ÍNDICE DE DOCUMENTACIÓN
 
-### 1. 🗃️ **db/ESQUEMA_BASE_DATOS.md** - **BASE DE DATOS COMPLETA**
-**Descripción:** Documentación completa del esquema de PostgreSQL.
+### 1_PROJECT - Estado y Planificación
 
-**Contenido:**
-- 24 tablas principales con columnas, tipos y constraints
-- 8 tipos personalizados (enums) definidos
-- 40+ relaciones entre tablas documentadas
-- Índices y triggers para optimización
-- **NUEVO:** Tablas `tienda_favorito` y `producto_favorito`
+| Documento | Descripción |
+|-----------|-------------|
+| **PROGRESO_Y_PLAN.md** | Estado actual del proyecto, fases completadas, próximo roadmap |
+| **MOVIL_PLAN.md** | Plan detallado de implementación móvil (Fases 1-7) |
+| **FUNCIONALIDADES_PENDIENTES.md** | Catálogo completo: pendientes de testing, pendientes de implementar, postergadas |
 
-### 2. 🗃️ **db/ESQUEMA_FAVORITOS.md** - **SISTEMA DE FAVORITOS**
-**Descripción:** Documentación del sistema de favoritos.
+### 2_ARCHITECTURE - Arquitectura
 
-**Contenido:**
-- SQL de creación de tablas
-- Funciones RPC
-- Entidades Flutter
-- Estados y eventos del BLoC
-- Flujo de usuario
+| Documento | Descripción |
+|-----------|-------------|
+| **ESTRUCTURA_PROYECTO.md** | Arquitectura Clean Architecture, estructura de carpetas, patrones usados |
 
-### 3. 📊 **PROGRESO_Y_PLAN.md** - **ESTADO Y PLANIFICACIÓN**
-**Descripción:** Estado actual del proyecto y plan de implementación.
+### 3_DATABASE - Base de Datos
 
-### 4. 🏗️ **architecture/ESTRUCTURA_PROYECTO.md** - **ARQUITECTURA TÉCNICA**
-**Descripción:** Estructura técnica completa del proyecto Flutter.
+| Documento | Descripción |
+|-----------|-------------|
+| **ESQUEMA_BASE_DATOS.md** | Esquema completo PostgreSQL con 24+ tablas, relaciones, índices |
+| **ESQUEMA_FAVORITOS.md** | Sistema de favoritos: SQL, entidades Flutter, BLoC |
 
-### 5. 🎨 **PROPUESTAS_UI.md** - **DISEÑO Y EXPERIENCIA**
-**Descripción:** Propuestas de diseño, wireframes y flujos de usuario.
+### 4_IMPLEMENTATION - Guías de Implementación
 
-### 6. 🤖 **AGENTS.md** - **AUTOMATIZACIONES**
-**Descripción:** Configuración de agentes, workflows y automatizaciones.
+| Documento | Descripción |
+|-----------|-------------|
+| **DEEP_LINKS_IMPLEMENTATION.md** | Guía paso a paso para implementar deep links (Firebase App Links / Dynamic Links) |
 
-## 📊 Diagramas Mermaid
+### 5_DIAGRAMS - Diagramas
 
-### diagrams/entidades_completo.mmd
-Diagrama ER completo con las 24 tablas de la base de datos:
-- Modelo Entidad-Relación completo
-- Diagrama de relaciones simplificado
-- Jerarquía de entidades
-- Flujo de datos general
-- Arquitectura Clean
-- Tipos Enum definidos
+| Documento | Descripción |
+|-----------|-------------|
+| **entidades_completo.mmd** | Diagrama ER con 24+ tablas (formato Mermaid) |
+| **diagrama_favoritos.mmd** | Diagrama del sistema de favoritos (formato Mermaid) |
 
-### diagrams/diagrama_favoritos.mmd
-Diagramas específicos del sistema de favoritos:
-- Arquitectura del sistema
-- Flujo de usuario (agregar/quitar)
-- Carga de favoritos
-- Estados del BLoC
-- Navegación
-- UI de la página
+### Raíz
+
+| Documento | Descripción |
+|-----------|-------------|
+| **PROPUESTAS_UI.md** | Propuestas de diseño UI/UX, wireframes, flujos de usuario |
+| **AGENTS.md** | Guía para agentes IA, convenciones de código, comandos útiles |
 
 ---
 
-## 🚀 GUÍA RÁPIDA DE INICIO
+## 📊 ESTADÍSTICAS DEL PROYECTO
 
-### Para desarrolladores nuevos:
-1. **Comienza con:** `PROGRESO_Y_PLAN.md` → Entiende el estado actual
-2. **Luego revisa:** `db/ESQUEMA_BASE_DATOS.md` → Conoce la estructura de datos
-3. **Continúa con:** `architecture/ESTRUCTURA_PROYECTO.md` → Entiende la arquitectura
-4. **Finaliza con:** `PROPUESTAS_UI.md` → Conoce el diseño
+### Estado General (Marzo 2026)
 
-### Tablas de Base de Datos (24 totales)
+| Métrica | Valor |
+|---------|-------|
+| **Total archivos docs** | 15+ |
+| **Total tablas BD** | 24 + 2 (favoritos) |
+| **BLoCs implementados** | 7 |
+| **Pages** | 10+ |
+| **Estado** | MVP Funcional |
 
-| # | Tabla | Descripción |
-|---|-------|-------------|
-| 1 | usuario | Usuarios del sistema |
-| 2 | roles | Roles disponibles |
-| 3 | organizacion | Organizaciones |
-| 4 | plazoleta | Ubicaciones físicas |
-| 5 | categoria | Categorías de productos |
-| 6 | tienda | Tiendas comerciales |
-| 7 | producto | Productos |
-| 8 | horario | Horarios de tiendas |
-| 9 | valoracion_producto | Valoraciones |
-| 10 | interaccion | Registro de interacciones |
-| 11 | estadisticas_diarias | Estadísticas diarias |
-| 12 | miembros_organizacion | Miembros de organizaciones |
-| 13 | notificacion | Notificaciones |
-| 14 | etiqueta_tienda | Etiquetas de tiendas |
-| 15 | etiqueta_producto | Etiquetas de productos |
-| 16 | imagen_tienda | Imágenes de tiendas |
-| 17 | imagen_productos | Imágenes de productos |
-| 18 | imagen_plazoleta | Imágenes de plazoletas |
-| 19 | imagen_organizacion | Imágenes de organizaciones |
-| 20 | imagen_valoracion_producto | Imágenes en valoraciones |
-| 21 | contactos_empresa | Contactos de la empresa |
-| 22 | redes_sociales | Redes sociales |
-| 23 | trigger_logs | Logs de triggers |
-| 24 | ⭐ tienda_favorito | Favoritos de tiendas (NUEVO) |
-| 25 | ⭐ producto_favorito | Favoritos de productos (NUEVO) |
+### Cobertura Funcional
+
+| Feature | Estado |
+|---------|--------|
+| Autenticación | ✅ 95% (faltan tests) |
+| Tiendas | ✅ 95% |
+| Productos | ✅ 95% |
+| Favoritos | ✅ 100% |
+| Imágenes | ✅ 90% |
+| Navegación | ✅ 100% |
+| Settings/Soporte | ✅ 100% |
+| Share | ✅ 100% |
+| Google Maps | ⚠️ Parcial (url_launcher funciona) |
+| Historial | ⏸️ Postergado (código listo) |
+| Tests | ❌ Pendientes (T1-T4) |
 
 ---
 
-**📅 Última actualización:** 2026-03-17  
-**📁 Estructura:** ✅ **Organizada en carpetas**  
-**🔗 Diagramas:** ✅ **Mermaid (.mmd)**  
-**📊 Total tablas:** 24 + 2 nuevas (favoritos)
+## 🔧 HERRAMIENTAS Y COMANDOS
+
+Ver `AGENTS.md` para comandos completos de desarrollo:
+
+```bash
+# Instalar dependencias
+flutter pub get
+
+# Ejecutar la app
+flutter run
+
+# Analizar código
+flutter analyze
+
+# Tests
+flutter test
+
+# Build release
+flutter build apk --release
+```
+
+---
+
+**📅 Última actualización:** Marzo 2026  
+**📁 Estructura:** ✅ Organizada en carpetas por categoría  
+**🔗 Diagramas:** ✅ Mermaid (.mmd)  
+**📊 Total tablas BD:** 24 + 2 nuevas (favoritos)
