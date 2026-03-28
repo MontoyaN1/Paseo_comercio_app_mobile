@@ -83,7 +83,51 @@ Estas funcionalidades están **implementadas en código** pero requieren **testi
 
 ---
 
-### 1.4 Botón "Ver Mapa" en Tiendas
+### 1.4 Microsoft Sign In
+**Estado:** ✅ Implementado | ⚠️ Pendiente testing
+
+**Fecha de implementación:** Marzo 2026
+
+**Funcionalidad:** Login con cuenta Microsoft usando Firebase MicrosoftAuthProvider.
+
+**Implementación:**
+- `FirebaseAuthService.signInWithMicrosoft()` usa `MicrosoftAuthProvider` de `firebase_auth`
+- Scopes: `email`, `profile`, `openid`
+- Flag `_isSigningInWithMicrosoft` para evitar múltiples intentos simultáneos
+- Manejo de errores: `web-context-canceled`, `web-context-already-presented`, `cancelled`, `user-cancelled`
+- Mensaje amigable: "Proceso cancelado por el usuario" (snackbar informativo, no error)
+
+**Cambios en archivos:**
+- `lib/core/utils/firebase_auth_service.dart` - Método `signInWithMicrosoft()` y manejo de errores
+- `lib/presentation/pages/auth/login_page.dart` - Botón Microsoft y método `_microsoftSignIn()`
+- `android/app/src/main/res/raw/msal_config.json` - Configuración Azure AD
+- `android/app/src/main/AndroidManifest.xml` - BrowserTabActivity para MSAL
+
+**Configuración Azure:**
+- Client ID: `39c6ba8e-6b2d-4d69-847a-66d8fa5e5fff`
+- Redirect URI: `msauth://com.example.paseo_del_comercio/rdlatGzYybgBxHGQRFSkXK8kC58%3D`
+
+**Variables de entorno (.env):**
+```env
+MICROSOFT_CLIENT_ID=39c6ba8e-6b2d-4d69-847a-66d8fa5e5fff
+MICROSOFT_REDIRECT_URI=msauth://com.example.paseo_del_comercio/rdlatGzYybgBxHGQRFSkXK8kC58%3D
+```
+
+**Nota técnica:**
+- Microsoft Sign In usa Chrome Custom Tabs (webview) - no tiene SDK nativo como Google
+- El avatar de perfil de Microsoft puede no tomarse en el primer login
+- El logout de Microsoft funciona automáticamente al cerrar sesión de Firebase
+
+**Validación requerida:**
+- [ ] Login exitoso con cuenta Microsoft
+- [ ] Cancelar login - verificar mensaje amigable
+- [ ] Volver sin completar - verificar mensaje amigable
+- [ ] Avatar de perfil se muestra correctamente
+- [ ] Logout cierra sesión de Microsoft
+
+---
+
+### 1.5 Botón "Ver Mapa" en Tiendas
 **Estado:** ✅ Implementado | ⚠️ Pendiente testing
 
 **Funcionalidad:** Botón "Ver mapa" junto a la dirección que abre Google Maps en navegador externo.

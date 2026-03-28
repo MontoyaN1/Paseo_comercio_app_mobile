@@ -438,6 +438,10 @@ FIREBASE_STORAGE_BUCKET=your-storage-bucket
 GOOGLE_SIGN_IN_IOS_CLIENT_ID=your-ios-client-id
 GOOGLE_SIGN_IN_ANDROID_CLIENT_ID=your-android-client-id
 
+# Microsoft Sign In (mandatory - Azure AD)
+MICROSOFT_CLIENT_ID=your-microsoft-client-id
+MICROSOFT_REDIRECT_URI=msauth://com.your.package.name/your-signature-hash
+
 # Cloudflare R2 (optional - for image storage migration)
 CLOUDFLARE_ACCOUNT_ID=xxxxxxxx
 CLOUDFLARE_R2_ACCESS_KEY_ID=xxxxxxxx
@@ -636,6 +640,18 @@ cached_network_image: ^3.3.0
 # DI
 get_it: ^9.2.0
 ```
+
+## 🔐 Microsoft Sign In Configuration
+
+La app soporta login con Microsoft además de Google. Configuración en Azure AD:
+
+```env
+# Microsoft OAuth (Azure AD)
+MICROSOFT_CLIENT_ID=39c6ba8e-6b2d-4d69-847a-66d8fa5e5fff
+MICROSOFT_REDIRECT_URI=msauth://com.example.paseo_del_comercio/rdlatGzYybgBxHGQRFSkXK8kC58%3D
+```
+
+**Nota:** Microsoft Sign In usa Chrome Custom Tabs (webview) ya que no tiene SDK nativo como Google Sign In.
 
 ---
 

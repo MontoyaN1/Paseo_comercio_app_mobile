@@ -91,15 +91,9 @@ class _LoginScreenState extends State<_LoginScreen>
   late final Animation<double> _shakeX;
 
   // ── Form state ────────────────────────────────────────────
-  final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
   final _authService = getIt<FirebaseAuthService>();
   bool _isLoading = false;
-  bool _obscurePass = true;
   String? _errorMessage;
-  bool _emailFocused = false;
-  bool _passFocused = false;
 
   @override
   void initState() {
@@ -195,51 +189,10 @@ class _LoginScreenState extends State<_LoginScreen>
     _cardCtrl.dispose();
     _shakeCtrl.dispose();
     _shimmerCtrl.dispose();
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
     super.dispose();
   }
 
   // ── Acciones ──────────────────────────────────────────────
-  Future<void> _signIn() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final result = await _authService.signInWithEmail(
-        _emailCtrl.text.trim(),
-        _passwordCtrl.text,
-      );
-      result.fold((_) {}, (err) => _showError(err.toString()));
-    } catch (e) {
-      _showError('Error inesperado: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _signUp() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final result = await _authService.signUpWithEmail(
-        _emailCtrl.text.trim(),
-        _passwordCtrl.text,
-        nombre: _emailCtrl.text.split('@').first,
-      );
-      result.fold((_) {}, (err) => _showError(err.toString()));
-    } catch (e) {
-      _showError('Error inesperado: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   Future<void> _googleSignIn() async {
     setState(() {
       _isLoading = true;
@@ -247,12 +200,58 @@ class _LoginScreenState extends State<_LoginScreen>
     });
     try {
       final result = await _authService.signInWithGoogle();
-      result.fold((_) {}, (err) => _showError(err.toString()));
+      result.fold((_) {}, (err) {
+        final message = err.toString();
+        if (message.contains('cancelado') || message.contains('cancelled')) {
+          _showInfo('Inicio de sesión cancelado');
+        } else {
+          _showError(message);
+        }
+      });
     } catch (e) {
       _showError('Error inesperado: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _microsoftSignIn() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final result = await _authService.signInWithMicrosoft();
+      result.fold((_) {}, (err) {
+        final message = err.toString();
+        if (message.contains('cancelado') ||
+            message.contains('cancelled') ||
+            message.contains('web-context')) {
+          _showInfo('Inicio de sesión cancelado');
+        } else {
+          _showError(message);
+        }
+      });
+    } catch (e) {
+      _showError('Error inesperado: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showInfo(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: const Color(0xFF1E1E3A),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: _kGold.withOpacity(0.3)),
+        ),
+      ),
+    );
   }
 
   void _showError(String msg) {
@@ -261,20 +260,19 @@ class _LoginScreenState extends State<_LoginScreen>
   }
 
   void _resetPassword() {
-    final email = _emailCtrl.text.trim();
-    if (email.isEmpty) {
-      _showError('Ingresa tu email primero');
-      return;
-    }
-    showDialog(
-      context: context,
-      builder:
-          (_) => _ResetDialog(
-            email: email,
-            authService: _authService,
-            onError: _showError,
-          ),
-    );
+    _showError('Contacta a soporte para restablecer tu contraseña');
+  }
+
+  void _createAccount() {
+    _showError('Contacta a soporte para crear una cuenta');
+  }
+
+  void _signIn() {
+    _showError('Usa Google o Microsoft para iniciar sesión');
+  }
+
+  void _signUp() {
+    _showError('Usa Google o Microsoft para crear una cuenta');
   }
 
   // ══════════════════════════════════════════════════════════
@@ -342,28 +340,12 @@ class _LoginScreenState extends State<_LoginScreen>
                                   offset: Offset(_shakeX.value, 0),
                                   child: child,
                                 ),
-                            child: _FormCard(
-                              formKey: _formKey,
-                              emailCtrl: _emailCtrl,
-                              passwordCtrl: _passwordCtrl,
+                            child: _SocialLoginCard(
                               isLoading: _isLoading,
-                              obscurePass: _obscurePass,
                               errorMessage: _errorMessage,
-                              emailFocused: _emailFocused,
-                              passFocused: _passFocused,
                               shimmerCtrl: _shimmerCtrl,
-                              onTogglePass:
-                                  () => setState(
-                                    () => _obscurePass = !_obscurePass,
-                                  ),
-                              onEmailFocus:
-                                  (v) => setState(() => _emailFocused = v),
-                              onPassFocus:
-                                  (v) => setState(() => _passFocused = v),
-                              onSignIn: _signIn,
-                              onSignUp: _signUp,
                               onGoogle: _googleSignIn,
-                              onReset: _resetPassword,
+                              onMicrosoft: _microsoftSignIn,
                             ),
                           ),
                         ),
@@ -724,34 +706,22 @@ class _TitleWidget extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  CARD DEL FORMULARIO
 // ══════════════════════════════════════════════════════════════
-class _FormCard extends StatelessWidget {
-  final GlobalKey<FormState> formKey;
-  final TextEditingController emailCtrl, passwordCtrl;
-  final bool isLoading, obscurePass, emailFocused, passFocused;
+//  CARD DE LOGIN SOCIAL
+// ══════════════════════════════════════════════════════════════
+class _SocialLoginCard extends StatelessWidget {
+  final bool isLoading;
   final String? errorMessage;
   final AnimationController shimmerCtrl;
-  final VoidCallback onTogglePass, onSignIn, onSignUp, onGoogle, onReset;
-  final ValueChanged<bool> onEmailFocus, onPassFocus;
+  final VoidCallback onGoogle;
+  final VoidCallback onMicrosoft;
 
-  const _FormCard({
-    required this.formKey,
-    required this.emailCtrl,
-    required this.passwordCtrl,
+  const _SocialLoginCard({
     required this.isLoading,
-    required this.obscurePass,
     required this.errorMessage,
-    required this.emailFocused,
-    required this.passFocused,
     required this.shimmerCtrl,
-    required this.onTogglePass,
-    required this.onEmailFocus,
-    required this.onPassFocus,
-    required this.onSignIn,
-    required this.onSignUp,
     required this.onGoogle,
-    required this.onReset,
+    required this.onMicrosoft,
   });
 
   @override
@@ -779,180 +749,198 @@ class _FormCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Form(
-            key: formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ── Campo email ──────────────────────────────
-                _AnimatedField(
-                  controller: emailCtrl,
-                  label: 'Correo electrónico',
-                  icon: Icons.alternate_email_rounded,
-                  isFocused: emailFocused,
-                  onFocusChange: onEmailFocus,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Ingresa tu email';
-                    if (!v.contains('@')) return 'Email no válido';
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                // ── Campo contraseña ─────────────────────────
-                _AnimatedField(
-                  controller: passwordCtrl,
-                  label: 'Contraseña',
-                  icon: Icons.lock_outline_rounded,
-                  isFocused: passFocused,
-                  onFocusChange: onPassFocus,
-                  obscureText: obscurePass,
-                  suffixIcon: GestureDetector(
-                    onTap: onTogglePass,
-                    child: Icon(
-                      obscurePass
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      color: _kHint,
-                      size: 20,
-                    ),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Ingresa tu contraseña';
-                    if (v.length < 6) return 'Mínimo 6 caracteres';
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // ── Mensaje de error ─────────────────────────
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutCubic,
-                  child:
-                      errorMessage != null
-                          ? Container(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 11,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Mensaje de error ─────────────────────────
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                child:
+                    errorMessage != null
+                        ? Container(
+                          margin: const EdgeInsets.only(bottom: 20),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 11,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.red.withOpacity(0.25),
                             ),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.red.withOpacity(0.25),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline_rounded,
+                                color: Colors.red[300],
+                                size: 16,
                               ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.error_outline_rounded,
-                                  color: Colors.red[300],
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    errorMessage!,
-                                    style: TextStyle(
-                                      color: Colors.red[300],
-                                      fontSize: 13,
-                                    ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  errorMessage!,
+                                  style: TextStyle(
+                                    color: Colors.red[300],
+                                    fontSize: 13,
                                   ),
                                 ),
-                              ],
-                            ),
-                          )
-                          : const SizedBox.shrink(),
+                              ),
+                            ],
+                          ),
+                        )
+                        : const SizedBox.shrink(),
+              ),
+
+              // ── Título ───────────────────────────────────
+              Text(
+                'Bienvenido',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _kGold.withOpacity(0.9),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
                 ),
-
-                // ── Botón INICIAR SESIÓN (shimmer) ───────────
-                _ShimmerButton(
-                  label: 'INICIAR SESIÓN',
-                  isLoading: isLoading,
-                  shimmerCtrl: shimmerCtrl,
-                  onTap: onSignIn,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Selecciona un método para continuar',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _kHint,
+                  fontSize: 13,
+                  letterSpacing: 0.3,
                 ),
+              ),
 
-                const SizedBox(height: 12),
+              const SizedBox(height: 28),
 
-                // ── Botón CREAR CUENTA (outline) ─────────────
-                _OutlineActionButton(
-                  label: 'CREAR CUENTA',
-                  isLoading: isLoading,
-                  onTap: onSignUp,
+              // ── Botón Google ─────────────────────────────
+              _GoogleButton(isLoading: isLoading, onTap: onGoogle),
+
+              const SizedBox(height: 14),
+
+              // ── Botón Microsoft ──────────────────────────
+              _MicrosoftButton(isLoading: isLoading, onTap: onMicrosoft),
+
+              const SizedBox(height: 20),
+
+              // ── Términos ─────────────────────────────────
+              Text(
+                'Al continuar, aceptas nuestros\nTérminos y Condiciones',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _kHint.withOpacity(0.7),
+                  fontSize: 11,
+                  letterSpacing: 0.2,
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-                const SizedBox(height: 22),
+// ══════════════════════════════════════════════════════════════
+//  BOTÓN MICROSOFT
+// ══════════════════════════════════════════════════════════════
+class _MicrosoftButton extends StatefulWidget {
+  final bool isLoading;
+  final VoidCallback onTap;
+  const _MicrosoftButton({required this.isLoading, required this.onTap});
 
-                // ── Separador ────────────────────────────────
-                Row(
+  @override
+  State<_MicrosoftButton> createState() => _MicrosoftButtonState();
+}
+
+class _MicrosoftButtonState extends State<_MicrosoftButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder:
+            (_, __) => Transform.scale(
+              scale: _scale.value,
+              child: Container(
+                height: 60,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0E0E1E),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: _kGold.withOpacity(0.3 + (_ctrl.value * 0.4)),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _kGold.withOpacity(0.08 + (_ctrl.value * 0.12)),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: Container(
-                        height: 1,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.transparent, _kBorder],
-                          ),
+                    if (widget.isLoading)
+                      const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(_kGold),
                         ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Text(
-                        'o continúa con',
-                        style: TextStyle(
-                          color: _kHint,
-                          fontSize: 12,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        height: 1,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [_kBorder, Colors.transparent],
-                          ),
-                        ),
+                      )
+                    else
+                      const Icon(Icons.window_rounded, color: _kGold, size: 24),
+                    const SizedBox(width: 14),
+                    Text(
+                      'Microsoft',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 18),
-
-                // ── Botón Google ─────────────────────────────
-                _GoogleButton(isLoading: isLoading, onTap: onGoogle),
-
-                const SizedBox(height: 18),
-
-                // ── Olvidé contraseña ─────────────────────────
-                Center(
-                  child: GestureDetector(
-                    onTap: isLoading ? null : onReset,
-                    child: Text(
-                      '¿Olvidaste tu contraseña?',
-                      style: TextStyle(
-                        color: _kGold.withOpacity(0.75),
-                        fontSize: 13,
-                        decoration: TextDecoration.underline,
-                        decorationColor: _kGold.withOpacity(0.35),
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
       ),
     );
   }
@@ -1388,35 +1376,45 @@ class _GoogleButtonState extends State<_GoogleButton>
             (_, __) => Transform.scale(
               scale: _scale.value,
               child: Container(
-                height: 50,
+                height: 60,
                 decoration: BoxDecoration(
                   color: const Color(0xFF0E0E1E),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: _kBorder, width: 1.2),
+                  border: Border.all(
+                    color: _kGold.withOpacity(0.3 + (_ctrl.value * 0.4)),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _kGold.withOpacity(0.08 + (_ctrl.value * 0.12)),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     SizedBox(
-                      width: 22,
-                      height: 22,
+                      width: 24,
+                      height: 24,
                       child: Image.asset(
                         'assets/images/google_logo.png',
                         errorBuilder:
                             (_, __, ___) => const Icon(
                               Icons.g_mobiledata_rounded,
                               color: _kGold,
-                              size: 22,
+                              size: 24,
                             ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     const Text(
-                      'Continuar con Google',
+                      'Google',
                       style: TextStyle(
                         color: Colors.white70,
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: 16,
                       ),
                     ),
                   ],

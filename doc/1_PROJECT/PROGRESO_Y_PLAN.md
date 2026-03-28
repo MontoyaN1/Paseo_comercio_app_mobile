@@ -26,12 +26,12 @@
 1. ✅ **CacheService** - Caché local con Hive (TTL, estadísticas)
 2. ✅ **ConnectivityService** - Monitoreo de estado de red
 3. ✅ **ImageService** - Multi-CDN (Cloudflare R2 → S3 → Supabase Storage)
-4. ✅ **AuthService** - Autenticación Firebase Auth + Google Sign In
-5. ✅ **AppConfig** - Gestión centralizada de variables de entorno
+ 4. ✅ **AuthService** - Autenticación Firebase Auth + Google Sign In + Microsoft Sign In
+ 5. ✅ **AppConfig** - Gestión centralizada de variables de entorno
 
 ### 📱 PANTALLAS PRINCIPALES (100%)
 - ✅ **SplashPage** - Pantalla de carga inicial
-- ✅ **LoginPage** - Autenticación con Firebase + Google Sign In
+- ✅ **LoginPage** - Autenticación con Firebase + Google Sign In + Microsoft Sign In
 - ✅ **ProfilePage** - Perfil de usuario completo
 - ✅ **TiendaDetailPage** - Detalle de tienda con productos, galería, horarios
 - ✅ **ProductoDetailPage** - Detalle de producto con imágenes, precio, valoraciones

@@ -36,6 +36,9 @@ class FirebaseAuthService {
   // Flag para indicar que estamos en proceso de logout
   bool _isSigningOut = false;
 
+  // Flag para indicar que estamos en proceso de login con Microsoft
+  bool _isSigningInWithMicrosoft = false;
+
   /// Stream que emite cuando el perfil cambia (para rebuild de widgets)
   final StreamController<void> _profileChangedController =
       StreamController<void>.broadcast();
@@ -45,6 +48,9 @@ class FirebaseAuthService {
 
   /// Indica si el servicio está en proceso de cierre de sesión
   bool get isSigningOut => _isSigningOut;
+
+  /// Indica si hay un login de Microsoft en progreso
+  bool get isSigningInWithMicrosoft => _isSigningInWithMicrosoft;
 
   // Usuario actual
   User? _currentUser;
@@ -141,30 +147,36 @@ class FirebaseAuthService {
   }
 
   /// Obtener URL de imagen del usuario actual
-  /// Primero verifica Supabase (avatar personalizado), luego Firebase (Google)
+  /// Primero verifica Supabase (avatar personalizado), luego Firebase (Google o Microsoft)
   String? get currentUserImageUrl {
     final supabaseAvatar = _userProfile?['avatar_url'];
     final firebaseAvatar = _currentUser?.photoURL;
 
-    // Si hay un avatar personalizado en Supabase (no de Google), usarlo
+    // Si hay un avatar personalizado en Supabase (no de Google ni Microsoft), usarlo
     if (supabaseAvatar != null && supabaseAvatar.isNotEmpty) {
-      // Verificar que no sea una URL de Google (en caso de que se haya guardado antes)
+      // Verificar que no sea una URL de Google o Microsoft
       if (!supabaseAvatar.toString().contains('googleusercontent.com') &&
           !supabaseAvatar.toString().contains('googlesyndication') &&
-          !supabaseAvatar.toString().contains('google.com')) {
+          !supabaseAvatar.toString().contains('google.com') &&
+          !supabaseAvatar.toString().contains('live.com') &&
+          !supabaseAvatar.toString().contains('microsoftonline.com') &&
+          !supabaseAvatar.toString().contains('microsoft.com')) {
         return supabaseAvatar;
       }
     }
 
     // Si hay avatar de Firebase, verificar si es migrable a R2
     if (firebaseAvatar != null && firebaseAvatar.isNotEmpty) {
-      if (firebaseAvatar.contains('googleusercontent.com')) {
+      if (firebaseAvatar.contains('googleusercontent.com') ||
+          firebaseAvatar.contains('live.com') ||
+          firebaseAvatar.contains('microsoftonline.com') ||
+          firebaseAvatar.contains('microsoft.com')) {
         // Retornar el de Firebase para mostrar mientras se migra
         return firebaseAvatar;
       }
     }
 
-    // Retornar el de Supabase (puede ser de Google si no se ha migrado)
+    // Retornar el de Supabase (puede ser de Google/Microsoft si no se ha migrado)
     return supabaseAvatar ?? firebaseAvatar;
   }
 
@@ -463,6 +475,118 @@ class FirebaseAuthService {
           cause: error,
         ),
       );
+    }
+  }
+
+  /// Iniciar sesión con Microsoft usando Firebase MicrosoftAuthProvider
+  Future<Result<void, Exception>> signInWithMicrosoft() async {
+    // Verificar si ya hay un login en progreso
+    if (_isSigningInWithMicrosoft) {
+      if (kDebugMode) {
+        print('FirebaseAuthService: Ya hay un login de Microsoft en progreso');
+      }
+      return Result.error(
+        AuthException(message: 'Ya hay un inicio de sesión en progreso'),
+      );
+    }
+
+    _isSigningInWithMicrosoft = true;
+
+    try {
+      if (kDebugMode) {
+        print('FirebaseAuthService: Iniciando autenticación con Microsoft...');
+      }
+
+      // Crear proveedor de Microsoft con scopes básicos
+      final microsoftProvider = MicrosoftAuthProvider();
+      microsoftProvider.addScope('email');
+      microsoftProvider.addScope('profile');
+      microsoftProvider.addScope('openid');
+
+      if (kDebugMode) {
+        print('FirebaseAuthService: Abriendo login de Microsoft...');
+      }
+
+      // Usar signInWithProvider que funciona en móvil
+      final userCredential = await _auth.signInWithProvider(microsoftProvider);
+
+      if (userCredential.user != null) {
+        if (kDebugMode) {
+          print(
+            'FirebaseAuthService: Usuario Microsoft autenticado: ${userCredential.user!.uid}',
+          );
+          print('FirebaseAuthService: Email: ${userCredential.user!.email}');
+          print(
+            'FirebaseAuthService: Nombre: ${userCredential.user!.displayName}',
+          );
+          print(
+            'FirebaseAuthService: Foto URL: ${userCredential.user!.photoURL}',
+          );
+        }
+
+        // Sincronizar usuario con Supabase
+        await _syncUserWithSupabase(userCredential.user!);
+
+        await _loadUserProfile(userCredential.user!.uid);
+
+        // Actualizar estado de autenticación explícitamente
+        _currentUser = userCredential.user;
+        await _updateAuthState(AuthState.authenticated);
+
+        if (kDebugMode) {
+          print('FirebaseAuthService: Perfil Microsoft sincronizado');
+        }
+
+        return Result.success(null);
+      } else {
+        if (kDebugMode) {
+          print('FirebaseAuthService: Error: userCredential.user es nulo');
+        }
+        return Result.error(
+          AuthException(
+            message:
+                'Error al iniciar sesión con Microsoft - usuario no creado',
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (kDebugMode) {
+        print('FirebaseAuthService: FirebaseAuthException capturada:');
+        print('FirebaseAuthService: Código: ${e.code}');
+        print('FirebaseAuthService: Mensaje: ${e.message}');
+      }
+
+      // Manejar error de contexto web (usuario canceló o volvió)
+      if (e.code == 'web-context-canceled' ||
+          e.code == 'web-context-already-presented' ||
+          e.code == 'cancelled' ||
+          e.code == 'user-cancelled') {
+        if (kDebugMode) {
+          print(
+            'FirebaseAuthService: Usuario canceló o cerró el login de Microsoft',
+          );
+        }
+        return Result.error(
+          AuthException(message: 'Proceso cancelado por el usuario'),
+        );
+      }
+
+      return Result.error(_handleFirebaseAuthError(e));
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        print('FirebaseAuthService: Error general en signInWithMicrosoft:');
+        print('FirebaseAuthService: Error: $error');
+        print('FirebaseAuthService: StackTrace: $stackTrace');
+      }
+      return Result.error(
+        AuthException(
+          message: 'Error al iniciar sesión con Microsoft: $error',
+          cause: error,
+        ),
+      );
+    } finally {
+      // Siempre resetting el flag al terminar
+      _isSigningInWithMicrosoft = false;
     }
   }
 
