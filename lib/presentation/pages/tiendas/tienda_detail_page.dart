@@ -20,7 +20,11 @@ import 'package:paseo_del_comercio/di/service_locator.dart';
 import 'package:paseo_del_comercio/domain/entities/tienda.dart';
 
 import 'package:paseo_del_comercio/presentation/blocs/tienda/tienda_bloc.dart';
+import 'package:paseo_del_comercio/presentation/blocs/favorito/favorito_bloc.dart';
+import 'package:paseo_del_comercio/presentation/blocs/favorito/favorito_event.dart';
+import 'package:paseo_del_comercio/presentation/blocs/favorito/favorito_state.dart';
 import 'package:paseo_del_comercio/presentation/widgets/producto/producto_card.dart';
+import 'package:paseo_del_comercio/presentation/widgets/favorite_button.dart';
 import '../../widgets/profile_floating_button.dart';
 
 /// Extrae el código de país de un número de teléfono
@@ -825,6 +829,23 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
                 ),
               ),
               _GoldIconButton(icon: Icons.share_rounded, onTap: _onShareTienda),
+              const SizedBox(width: 4),
+              BlocBuilder<FavoritoBloc, FavoritoState>(
+                builder: (context, state) {
+                  final isFav =
+                      state is FavoritosLoaded
+                          ? state.isTiendaFavorita(tienda['id'] as int)
+                          : false;
+                  return FavoriteButton(
+                    isFavorite: isFav,
+                    onTap: () {
+                      context.read<FavoritoBloc>().add(
+                        ToggleTiendaFavorito(tiendaId: tienda['id'] as int),
+                      );
+                    },
+                  );
+                },
+              ),
               const SizedBox(width: 8),
             ],
           ),

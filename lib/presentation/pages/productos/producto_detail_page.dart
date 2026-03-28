@@ -19,6 +19,10 @@ import 'package:paseo_del_comercio/core/utils/share_service.dart';
 import 'package:paseo_del_comercio/data/datasources/remote/supabase_client.dart';
 import 'package:paseo_del_comercio/di/service_locator.dart';
 import 'package:paseo_del_comercio/presentation/blocs/producto/producto_bloc.dart';
+import 'package:paseo_del_comercio/presentation/blocs/favorito/favorito_bloc.dart';
+import 'package:paseo_del_comercio/presentation/blocs/favorito/favorito_event.dart';
+import 'package:paseo_del_comercio/presentation/blocs/favorito/favorito_state.dart';
+import 'package:paseo_del_comercio/presentation/widgets/favorite_button.dart';
 import '../../widgets/profile_floating_button.dart';
 import '../../widgets/tienda/tienda_card.dart';
 
@@ -947,6 +951,25 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
                 icon: Icons.share_rounded,
                 onTap: _onShareProducto,
               ),
+              const SizedBox(width: 4),
+              BlocBuilder<FavoritoBloc, FavoritoState>(
+                builder: (context, state) {
+                  final isFav =
+                      state is FavoritosLoaded
+                          ? state.isProductoFavorito(producto['id'] as int)
+                          : false;
+                  return FavoriteButton(
+                    isFavorite: isFav,
+                    onTap: () {
+                      context.read<FavoritoBloc>().add(
+                        ToggleProductoFavorito(
+                          productoId: producto['id'] as int,
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
               const SizedBox(width: 8),
             ],
           ),
@@ -1382,7 +1405,7 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
               tienda: tienda,
               onTap: _onTiendaTap,
               showDetails: true,
-              showFavoriteButton: false,
+              showFavoriteButton: true,
             ),
             const SizedBox(height: 16),
           ],

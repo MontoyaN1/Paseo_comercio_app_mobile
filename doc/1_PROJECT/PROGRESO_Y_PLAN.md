@@ -52,6 +52,7 @@
 ### 🎨 WIDGETS REUTILIZABLES
 - ✅ **TiendaCard** - Tarjeta profesional con botón favorito animado
 - ✅ **ProductoCard** - Tarjeta profesional con botón favorito animado
+- ✅ **FavoriteButton** - Botón de favorito reutilizable (glassmorphism + animaciones)
 - ✅ **ProfileFloatingButton** - FAB con logout funcional y glassmorphism
 - ✅ **CustomAppBar** - AppBar con menú de perfil
 - ✅ **GlassContainer** - Widgets con glassmorphism

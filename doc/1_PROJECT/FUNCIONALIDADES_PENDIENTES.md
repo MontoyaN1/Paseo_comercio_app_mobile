@@ -127,6 +127,38 @@ MICROSOFT_REDIRECT_URI=msauth://com.example.paseo_del_comercio/rdlatGzYybgBxHGQR
 
 ---
 
+### 1.6 Botón de Favorito en Detalles de Tienda y Producto
+**Estado:** ✅ Implementado | ⚠️ Pendiente testing
+
+**Fecha de implementación:** Marzo 2026
+
+**Funcionalidad:** Botón de favorito en las vistas de detalle de tienda y producto, junto al botón de compartir.
+
+**Problema resuelto:**
+- En `TiendaDetailPage` no había botón de favorito en el AppBar
+- En `ProductoDetailPage` no había botón de favorito en el AppBar
+- La `TiendaCard` dentro de `ProductoDetailPage` tenía `showFavoriteButton: false`
+
+**Implementación:**
+- Widget reutilizable `FavoriteButton` creado en `lib/presentation/widgets/favorite_button.dart`
+- Diseño glassmorphism con animaciones (mismo estilo que `_FavButton` en cards)
+- `BlocBuilder<FavoritoBloc, FavoritoState>` para obtener estado actual
+- `ToggleTiendaFavorito` y `ToggleProductoFavorito` para manejar toggles
+
+**Cambios en archivos:**
+- `lib/presentation/widgets/favorite_button.dart` - **NUEVO** widget reutilizable
+- `lib/presentation/pages/tiendas/tienda_detail_page.dart` - Botón favorito en AppBar
+- `lib/presentation/pages/productos/producto_detail_page.dart` - Botón favorito en AppBar + TiendaCard habilitada
+
+**Validación requerida:**
+- [ ] TiendaDetailPage: tocar botón de favorito y verificar que se guarda
+- [ ] TiendaDetailPage: verificar que el estado se refleja inmediatamente
+- [ ] ProductoDetailPage: tocar botón de favorito del producto
+- [ ] ProductoDetailPage: verificar que la TiendaCard muestra el botón de favorito
+- [ ] Navegar entre páginas y volver - verificar que estado persiste
+
+---
+
 ### 1.5 Botón "Ver Mapa" en Tiendas
 **Estado:** ✅ Implementado | ⚠️ Pendiente testing
 
