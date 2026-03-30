@@ -2134,7 +2134,7 @@ class _GoldIconButton extends StatelessWidget {
             color: _kSurface.withAlpha((0.5 * 255).toInt()),
             border: Border.all(color: _kBorder),
           ),
-          child: Icon(icon, color: Colors.white, size: 20),
+          child: Icon(icon, color: _kGold, size: 20),
         ),
       ),
     );

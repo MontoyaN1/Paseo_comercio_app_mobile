@@ -2063,7 +2063,7 @@ class _GoldIconButtonState extends State<_GoldIconButton>
             shape: BoxShape.circle,
             border: Border.all(color: _kBorder),
           ),
-          child: Icon(widget.icon, size: 20, color: Colors.white),
+          child: Icon(widget.icon, size: 20, color: _kGold),
         ),
       ),
     );
