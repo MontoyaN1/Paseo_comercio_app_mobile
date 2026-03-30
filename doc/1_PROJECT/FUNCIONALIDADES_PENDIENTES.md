@@ -208,26 +208,32 @@ Funcionalidades planificadas que **aún no tienen código activo**.
 
 **Descripción:** Permitir que links compartidos abran directamente la app.
 
+**Estado:** ✅ **IMPLEMENTADO** - Pendiente Testing
+
 **Documentación completa:** `doc/DEEP_LINKS_IMPLEMENTATION.md`
 
 **Opciones técnicas:**
-| Opción | Plataforma | Costo | Complejidad |
-|--------|-----------|-------|-------------|
-| Firebase Dynamic Links | iOS + Android | Gratis hasta 500K/month | Media |
-| App Links (Android) | Solo Android | Gratis | Baja |
-| Universal Links (iOS) | Solo iOS | Gratis | Baja |
+| Opción | Plataforma | Costo | Complejidad | Estado |
+|--------|-----------|-------|-------------|--------|
+| Firebase Dynamic Links | iOS + Android | ~~Gratis~~ | ~~Media~~ | ⚠️ **DEPRECATED (cerró 2025)** |
+| App Links (Android) | Solo Android | Gratis | Baja | ✅ Implementado |
+| Universal Links (iOS) | Solo iOS | Gratis | Baja | ❌ Pendiente |
 
-**Implementación sugerida:**
-1. Configurar Firebase Dynamic Links en Firebase Console
-2. Agregar `app_links` package
-3. Configurar Android App Links en `AndroidManifest.xml`
-4. Configurar iOS Universal Links en Xcode
-5. Manejar link routing en `AppRouter`
+**Implementación Android:**
+1. Configurar Android App Links en `AndroidManifest.xml`
+2. Crear keystore dedicado para same SHA256 en debug y release
+3. Subir `assetlinks.json` al servidor
+4. GoRouter maneja routing automáticamente
 
-**Pendiente por confirmar:**
-- [ ] Decidir qué tipo de deep links implementar
-- [ ] Configurar dominios (paseodelcomercio.com)
-- [ ] Implementar routing para cada tipo de contenido
+**Rutas implementadas:**
+- `/store/:id` → TiendaDetailPage
+- `/producto/:id` → ProductoDetailPage
+- `/plazoleta/:slug` → PlazoletaDetailPage
+- `/organizacion/:id` → OrganizacionDetailPage
+
+**Pendiente:**
+- [ ] Testing en producción (Play Store con App Signing)
+- [ ] iOS Universal Links
 
 ---
 
@@ -391,7 +397,7 @@ PlatformException: flutter_inappwebview - unregistered platform view type
 ### Corto Plazo (Post-MVP)
 | Feature | Prioridad | Esfuerzo |
 |---------|-----------|----------|
-| Deep Links | Media | Medio |
+| Deep Links | ~~Media~~ | ~~Medio~~ | ✅ Implementado (pendiente testing) |
 | Google Maps SDK | Media | Medio |
 | Historial de Visitas | Baja | Bajo (ya está listo) |
 | Notificaciones Push | Baja | Medio |

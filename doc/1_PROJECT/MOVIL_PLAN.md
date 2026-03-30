@@ -409,7 +409,7 @@ test/presentation/widgets/favorite_button_test.dart
 
 | Feature | Prioridad | Notas |
 |---------|-----------|-------|
-| Deep links | Media | App Links (Android) + Universal Links (iOS) - **Guía en `doc/DEEP_LINKS_IMPLEMENTATION.md`** |
+| Deep links | ~~Media~~ | ✅ **IMPLEMENTADO** - Android App Links listo, pendiente testing |
 | Push notifications | Baja | Firebase Cloud Messaging |
 | Geolocator | Baja | Tiendas cercanas, costos envío |
 | Pasarela de pagos | Alta | **Futuro app emprendedores** |
@@ -417,10 +417,10 @@ test/presentation/widgets/favorite_button_test.dart
 | Multi-idioma | Baja | i18n |
 | Coordenadas exactas | Media | Por ahora funciona con dirección texto |
 
-**Por ahora:**
-- Compartir genera URL web
-- Si la app está abierta, funciona con la URL
-- Si no, el usuario abre la web
+**Por ahora (Deep Links):**
+- App Links para `paseodelcomercio.com` ✅
+- Custom scheme `paseodelcomercio://` ✅
+- Pendiente: iOS Universal Links
 
 ---
 

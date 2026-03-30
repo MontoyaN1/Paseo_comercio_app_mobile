@@ -309,7 +309,7 @@ PlatformException(error, java.lang.IllegalStateException: Trying to create a pla
 
 | Feature | Prioridad | Notas |
 |---------|-----------|-------|
-| Deep links | Media | **POSTERGADO** - Guía completa en `doc/DEEP_LINKS_IMPLEMENTATION.md` |
+| Deep links | Media | **✅ COMPLETADO** - Android App Links implementado, pendiente testing en producción |
 | Tema oscuro/claro | ~~Media~~ | **POSTERGADO** - Requiere refactorización de colores hardcodeados en 20+ archivos |
 | Historial de visitas | ~~Media~~ | **POSTERGADO** - Código preparado pero botón removido de ProfilePage |
 | Notificaciones (Push) | ~~Media~~ | **POSTERGADO** - Sección completa comentada en Settings; requiere FCM |
@@ -319,7 +319,6 @@ PlatformException(error, java.lang.IllegalStateException: Trying to create a pla
 | Eliminar cuenta | Baja | Requiere flujo especial |
 | Multi-idioma | Baja | i18n |
 | Coordenadas exactas | Media | Por ahora funciona con dirección texto |
-| Deep links | Media | Firebase Dynamic Links o App Links |
 | Google Maps SDK | Media | **Futuro: migrar de WebView a SDK** |
 
 ---

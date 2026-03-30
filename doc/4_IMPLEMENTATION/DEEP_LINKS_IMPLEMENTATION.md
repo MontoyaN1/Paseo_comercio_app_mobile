@@ -1,67 +1,58 @@
 # Deep Links Implementation Guide
 
-**Fecha:** Marzo 2026  
-**Estado:** PENDIENTE - Para implementar post-launch  
-**Objetivo:** Abrir la app directamente desde enlaces compartidos
+**Fecha:** Marzo 2026
+**Estado:** ✅ COMPLETADO - Pendiente Testing en producción
+**Última actualización:** Marzo 2026
 
 ---
 
-## CONTEXTO
+## RESUMEN EJECUTIVO
 
-### ¿Qué son Deep Links?
-Deep Links permiten que al tocar un enlace como `https://paseodelcomercio.com/store/123`:
-1. Si la app está instalada → abre directamente TiendaDetailPage con ID 123
-2. Si NO está instalada → abre la página web
+Deep Links implementados para Android usando **App Links** (`paseodelcomercio.com`) y custom scheme (`paseodelcomercio://`).
 
-### Estado Actual
-- Dominio existente: `paseodelcomercio.com` con CloudFlare ✅
-- GoRouter configurado con rutas: `/plazoletas/:id`, `/tiendas/:id`, `/productos/:id`, `/organizaciones/:id` ✅
-- ShareService genera enlaces web ✅
-- **Deep links NO implementados** ❌
+### Enlaces soportados:
 
----
+| Enlace | Ruta | Página |
+|--------|------|--------|
+| `https://paseodelcomercio.com/store/74` | Legacy | TiendaDetailPage |
+| `https://paseodelcomercio.com/producto/258` | Legacy | ProductoDetailPage |
+| `https://paseodelcomercio.com/plazoleta/artesanias` | Legacy | PlazoletaDetailPage (por slug) |
+| `https://paseodelcomercio.com/organizacion/43` | Legacy | OrganizacionDetailPage |
+| `paseodelcomercio://app/store/74` | Custom | TiendaDetailPage |
+| `paseodelcomercio://app/producto/258` | Custom | ProductoDetailPage |
 
-## OPCIONES DE IMPLEMENTACIÓN
-
-| Opción | Costo | Complejidad | Notas |
-|--------|-------|-------------|-------|
-| App Links (Android) + Universal Links (iOS) | Gratis | Media-Alta | **Recomendada** |
-| Firebase Dynamic Links | - | - | ⚠️ DEPRECATED (cerró en 2025) |
-| URL Scheme (`paseo://`) | Gratis | Baja | No tiene fallback a web |
+**Nota:** Las rutas legacy de ShareService (`/store/:id`, `/producto/:id`, etc.) fueron agregadas a GoRouter para mantener compatibilidad con enlaces compartidos previamente.
 
 ---
 
-## ARQUITECTURA DE DEEP LINKS
+## CONFIGURACIÓN IMPLEMENTADA
 
-### Flujo de un Deep Link
+### 1. AndroidManifest.xml
 
+**Ubicación:** `android/app/src/main/AndroidManifest.xml`
+
+```xml
+<!-- Custom Scheme (funciona inmediatamente, sin verificación) -->
+<intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="paseodelcomercio" android:host="app" />
+</intent-filter>
+
+<!-- App Links - Android (paseodelcomercio.com) -->
+<intent-filter android:autoVerify="true">
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="https" android:host="paseodelcomercio.com" />
+</intent-filter>
 ```
-Usuario toca enlace
-        ↓
-Sistema operativo verifica si hay app que maneja el enlace
-        ↓
-[Android] Google verifica domain ownership → App Links
-[iOS] Apple verifica domain ownership → Universal Links
-        ↓
-App recibe el enlace → GoRouter parsea y navega
-```
 
-### Archivos de Verificación Requeridos
+### 2. assetlinks.json (Servidor)
 
-| Plataforma | Archivo | Ubicación |
-|------------|---------|-----------|
-| Android | `assetlinks.json` | `https://paseodelcomercio.com/.well-known/assetlinks.json` |
-| iOS | `apple-app-site-association` | `https://paseodelcomercio.com/.well-known/apple-app-site-association` |
+**Ubicación:** `https://paseodelcomercio.com/.well-known/assetlinks.json`
 
----
-
-## PASO 1: CLOUDLFARE / HOSTING
-
-**No se requiere cambiar DNS.** Solo subir archivos al servidor.
-
-### Archivos a crear en el servidor
-
-#### 1.1 assetlinks.json (Android)
 ```json
 [
   {
@@ -70,358 +61,225 @@ App recibe el enlace → GoRouter parsea y navega
       "namespace": "android_app",
       "package_name": "com.paseodelcomercio.app",
       "sha256_cert_fingerprints": [
-        "RELEASE_SHA256_FINGERPRINT",
-        "DEBUG_SHA256_FINGERPRINT"
+        "21:57:21:64:E3:3F:9F:44:97:74:7A:DF:96:16:65:12:AA:07:B8:4F:D0:D6:82:B3:45:B8:A8:7A:B2:DA:2D:ED"
       ]
     }
   }
 ]
 ```
 
-**Para obtener las huellas SHA256:**
+### 3. Keystore Configuration
 
-```bash
-# Huella de release (keystore de producción)
-keytool -list -v -keystore your-release-keystore.jks -alias your-alias
+**Archivo:** `android/app/build.gradle.kts`
 
-# Huella de debug (ubicación típica en Linux/macOS)
-keytool -list -v -keystore ~/.android/debug.keystore
-```
-
-#### 1.2 apple-app-site-association (iOS)
-```json
-{
-  "applinks": {
-    "details": [
-      {
-        "appID": "TEAM_ID.BUNDLE_IDENTIFIER",
-        "paths": ["*"]
-      }
-    ]
-  }
-}
-```
-
-**Para obtener los valores:**
-- `TEAM_ID`: Apple Developer Portal → Membership → Team ID
-- `BUNDLE_IDENTIFIER`: Proyecto iOS → Runner → General → Bundle Identifier
-
----
-
-## PASO 2: ANDROID (App Links)
-
-### 2.1 Modificar AndroidManifest.xml
-
-Ubicación: `android/app/src/main/AndroidManifest.xml`
-
-```xml
-<manifest ...>
-    <application ...>
-        <activity ...>
-            <!-- App Links - abrir enlaces de paseodelcomercio.com -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="paseodelcomercio.com" />
-            </intent-filter>
-            
-            <!-- Custom Scheme (alternativo, fallback) -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="paseo"
-                    android:host="app" />
-            </intent-filter>
-        </activity>
-    </application>
-</manifest>
-```
-
-### 2.2 Verificar minSdk
-
-El intent-filter con `autoVerify` requiere **API level 23+** (Android 6.0+).
-
-Verificar en `android/app/build.gradle.kts`:
 ```kotlin
-defaultConfig {
-    minSdk = 23  // Asegurar que sea 23 o mayor
+signingConfigs {
+    create("release") {
+        storeFile = file("debug_release.keystore")
+        storePassword = project.property("KEYSTORE_STORE_PASSWORD") as String
+        keyAlias = project.property("KEYSTORE_ALIAS") as String
+        keyPassword = project.property("KEYSTORE_KEY_PASSWORD") as String
+    }
+}
+
+buildTypes {
+    debug {
+        signingConfig = signingConfigs.getByName("release")  // Usa el mismo keystore
+    }
+    release {
+        signingConfig = signingConfigs.getByName("release")
+    }
 }
 ```
 
-### 2.3 Verificar assetlinks.json
+**Propiedades:** `android/gradle.properties`
 
-Después de subir `assetlinks.json`, verificar en:
 ```
-https://paseodelcomercio.com/.well-known/assetlinks.json
+KEYSTORE_STORE_PASSWORD=***REMOVED***
+KEYSTORE_KEY_PASSWORD=***REMOVED***
+KEYSTORE_ALIAS=my_key
 ```
 
 ---
 
-## PASO 3: iOS (Universal Links)
+## ARCHIVOS MODIFICADOS
 
-### 3.1 Crear archivo entitlements
-
-Crear: `ios/Runner/Runner.entitlements`
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>com.apple.developer.associated-domains</key>
-    <array>
-        <string>applinks:paseodelcomercio.com</string>
-    </array>
-</dict>
-</plist>
-```
-
-### 3.2 Modificar Info.plist
-
-Ubicación: `ios/Runner/Info.plist`
-
-```xml
-<key>FlutterDeepLinkingEnabled</key>
-<true/>
-```
-
-### 3.3 Modificar AppDelegate.swift
-
-Ubicación: `ios/Runner/AppDelegate.swift`
-
-```swift
-import Flutter
-import UIKit
-
-@main
-@objc class AppDelegate: FlutterAppDelegate {
-  override func application(
-    _ application: UIApplication,
-    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
-  ) -> Bool {
-    // Handle universal links when app is launched
-    if let url = launchOptions?[.url] {
-      self.handleDeepLink(url: url)
-    }
-    
-    GeneratedPluginRegistrant.register(with: self)
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
-  }
-  
-  // iOS 9.x support
-  func application(
-    _ application: UIApplication, 
-    open url: URL, 
-    sourceApplication: String?, 
-    annotation: Any
-  ) -> Bool {
-    return handleDeepLink(url: url)
-  }
-  
-  // iOS 13+ support
-  func application(
-    _ application: UIApplication, 
-    continue userActivity: NSUserActivity, 
-    restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
-  ) -> Bool {
-    guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-          let url = userActivity.webpageURL else {
-      return false
-    }
-    return handleDeepLink(url: url)
-  }
-  
-  private func handleDeepLink(url: URL) -> Bool {
-    guard let controller = window?.rootViewController as? FlutterViewController else {
-      return false
-    }
-    // GoRouter maneja la navegación
-    let route = url.path
-    if !route.isEmpty {
-      controller.setInitialRoute(route)
-    }
-    return true
-  }
-}
-```
-
-### 3.4 Configurar en Xcode
-
-1. Abrir `ios/Runner.xcworkspace` en Xcode
-2. Seleccionar target **Runner**
-3. Ir a **Signing & Capabilities**
-4. Agregar **Associated Domains**
-5. Agregar: `applinks:paseodelcomercio.com`
-
-### 3.5 Subir apple-app-site-association
-
-Subir a: `https://paseodelcomercio.com/.well-known/apple-app-site-association`
-
-**Nota:** Este archivo NO tiene extensión `.json`
+| Archivo | Cambio |
+|---------|--------|
+| `android/app/src/main/AndroidManifest.xml` | Agregado intent-filter App Links + Custom Scheme, removido Dynamic Links legacy |
+| `android/app/build.gradle.kts` | Configurado signing con keystore dedicado para debug y release |
+| `android/gradle.properties` | Agregadas variables de keystore (NO commit) |
+| `android/debug_release.keystore` | Keystore creado (NO commit) |
+| `lib/core/routing/app_router.dart` | Agregadas rutas legacy (`/store/:id`, `/producto/:id`, `/plazoleta/:slug`, `/organizacion/:id`) |
+| `lib/presentation/pages/plazoletas/plazoleta_detail_page.dart` | Soporte para slug en deep links, `didUpdateWidget` para recarga |
+| `lib/presentation/pages/tiendas/tienda_detail_page.dart` | `didUpdateWidget` para recarga en deep links |
+| `lib/presentation/pages/productos/producto_detail_page.dart` | `didUpdateWidget` para recarga en deep links |
+| `lib/presentation/pages/organizaciones/organizacion_detail_page.dart` | `didUpdateWidget` para recarga en deep links |
+| `lib/presentation/blocs/plazoleta/plazoleta_bloc.dart` | Evento `LoadPlazoletaBySlug`, guards para cancelar eventos pendientes |
+| `lib/presentation/blocs/plazoleta/plazoleta_event.dart` | Evento `LoadPlazoletaBySlug` |
+| `lib/domain/repositories/plazoleta_repository_interface.dart` | Interface `getPlazoletaBySlug` |
+| `lib/data/repositories/plazoleta_repository.dart` | Implementación `getPlazoletaBySlug`, guards en queries |
 
 ---
 
-## PASO 4: GOROUTER
+## FUNCIONALIDAD IMPLEMENTADA
 
-### Verificar app_router.dart
-
-El GoRouter actual debería manejar deep links automáticamente si las rutas están definidas correctamente.
-
-Verificar que las rutas usen path parameters:
+### Rutas Legacy en GoRouter
 
 ```dart
-// Ejemplo de ruta actual en app_router.dart
+// Legacy: /store/:id -> misma página que /tiendas/:id
 GoRoute(
-  path: '/tiendas/:id',
-  name: 'tienda-detail',
-  builder: (context, state) {
-    final id = int.parse(state.pathParameters['id']!);
-    return TiendaDetailPage(tiendaId: id);
+  path: '/store/:id',
+  name: 'tienda_detail_legacy',
+  pageBuilder: (context, state) {
+    final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+    return MaterialPage<void>(
+      key: ValueKey('tienda_detail_$id'),
+      child: TiendaDetailPage(tiendaId: id),
+    );
+  },
+),
+
+// Legacy: /plazoleta/:slug -> misma página que /plazoletas/:id
+GoRoute(
+  path: '/plazoleta/:slug',
+  name: 'plazoleta_detail_legacy',
+  pageBuilder: (context, state) {
+    final slug = state.pathParameters['slug'] ?? '';
+    return MaterialPage<void>(
+      key: ValueKey('plazoleta_detail_slug_$slug'),
+      child: PlazoletaDetailPage(plazoletaId: 0, slug: slug),
+    );
   },
 ),
 ```
 
-### Configuración recomendada
+### Cancelación de Eventos Pendientes
+
+Para evitar que al navegar rápidamente entre deep links se muestre información incorrecta, se implementó un contador de requests en el BLoC:
 
 ```dart
-final GoRouter router = GoRouter(
-  debugLogDiagnostics: true,
-  initialLocation: '/',
-  routes: [/* ... */],
-  // GoRouter maneja deep links automáticamente 
-  // cuando la plataforma está configurada correctamente
-);
+int _loadRequestId = 0;
+
+Future<void> _onLoadPlazoletaBySlug(...) async {
+  final requestId = ++_loadRequestId;
+  // ... después de cada operación async:
+  if (requestId != _loadRequestId) {
+    _logger.w('Request cancelled - newer request pending');
+    return;
+  }
+}
 ```
 
----
+### didUpdateWidget para Recarga
 
-## PASO 5: TESTING
+Las páginas de detalle detectan cambios en parámetros y recargan:
 
-### Testing Android
-
-```bash
-# Instalar APK de release
-adb install app-release.apk
-
-# Simular deep link
-adb shell am start -W -a android.intent.action.VIEW \
-  -d "https://paseodelcomercio.com/tiendas/123" com.paseodelcomercio.app
+```dart
+@override
+void didUpdateWidget(TiendaDetailPage oldWidget) {
+  super.didUpdateWidget(oldWidget);
+  if (oldWidget.tiendaId != widget.tiendaId) {
+    _hasLoaded = false;
+    _tiendaData = null;
+    _productos = [];
+    _horarios = [];
+    setState(() {});
+    _loadTienda();
+  }
+}
 ```
-
-### Testing iOS
-
-1. Abrir Xcode
-2. Seleccionar device real (no simulador)
-3. Run
-4. En Safari del dispositivo, tocar:
-   ```
-   https://paseodelcomercio.com/tiendas/123
-   ```
-
-### Verificación de archivos
-
-Verificar que los archivos de verificación estén accesibles:
-
-```bash
-# Android
-curl -s https://paseodelcomercio.com/.well-known/assetlinks.json | jq
-
-# iOS  
-curl -s https://paseodelcomercio.com/.well-known/apple-app-site-association | jq
-```
-
----
-
-## LINKS QUE FUNCIONARÁN
-
-| Enlace | Ruta | Página |
-|--------|------|--------|
-| `https://paseodelcomercio.com/` | `/` | PlazoletaListPage |
-| `https://paseodelcomercio.com/plazoletas` | `/plazoletas` | PlazoletaListPage |
-| `https://paseodelcomercio.com/plazoletas/123` | `/plazoletas/123` | PlazoletaDetailPage |
-| `https://paseodelcomercio.com/tiendas/456` | `/tiendas/456` | TiendaDetailPage |
-| `https://paseodelcomercio.com/productos/789` | `/productos/789` | ProductoDetailPage |
-| `https://paseodelcomercio.com/organizaciones/101` | `/organizaciones/101` | OrganizacionDetailPage |
-
-**Custom scheme (alternativo):**
-| Enlace | Ruta |
-|--------|------|
-| `paseo://app/plazoletas/123` | `/plazoletas/123` |
-
----
-
-## TIEMPO ESTIMADO
-
-| Componente | Complejidad | Tiempo |
-|------------|------------|--------|
-| Hosting archivos JSON | Baja | 30 min |
-| Android App Links | Media | 2-3 horas |
-| iOS Universal Links | Media | 2-3 horas |
-| GoRouter | Baja | 1 hora |
-| Testing | Media | 2-3 horas |
-
-**Total: 8-12 horas**
-
----
-
-## ARCHIVOS A MODIFICAR
-
-| Archivo | Cambio |
-|---------|--------|
-| `android/app/src/main/AndroidManifest.xml` | Agregar intent-filter con autoVerify |
-| `android/app/build.gradle.kts` | Verificar minSdk = 23 |
-| `ios/Runner/Info.plist` | Agregar FlutterDeepLinkingEnabled |
-| `ios/Runner/AppDelegate.swift` | Handle universal links |
-| `ios/Runner/Runner.entitlements` | Crear con Associated Domains |
-| `pubspec.yaml` | No requiere cambios |
 
 ---
 
 ## NOTAS IMPORTANTES
 
-1. **HTTPS es obligatorio** - Tanto App Links como Universal Links requieren HTTPS
+### Desarrollo vs Producción
 
-2. **Los fingerprints SHA cambian** - Cuando generes un nuevo keystore de release, debes actualizar `assetlinks.json`
+| Escenario | Comportamiento |
+|-----------|----------------|
+| `flutter run` | Requiere agregar manualmente el dominio en "Open by Default" en Settings del dispositivo |
+| Play Store (App Signing) | Google habilita App Links automáticamente |
 
-3. **Testing en dispositivos reales** - Los deep links no funcionan bien en emuladores/simuladores
+### Limitación Durante Desarrollo
 
-4. **Auth redirects** - Los redirects de auth en GoRouter seguirán funcionando con deep links
+- Al instalar con `flutter run`, Android no auto-verifica App Links
+- Se requiere configuración manual una vez por instalación
+- Es una limitación de seguridad de Android, no hay manera de evitarla
 
-5. **GoRouter v17+** - Maneja deep links nativamente a través de la configuración de plataforma
+### Keystore
+
+- El keystore `debug_release.keystore` se usa para **debug** y **release**
+- Permite que `flutter run` tenga el mismo SHA256 que release
+- **NO commitear** el keystore ni `gradle.properties` al repositorio
+
+### Firebase Dynamic Links
+
+- Firebase Dynamic Links está **DEPRECATED** (cerró en 2025)
+- Se removió el intent-filter de `paseodelcomercio.page.link`
+- Solo se usa App Links (`paseodelcomercio.com`)
+
+---
+
+## TESTING
+
+### Testing Manual - Desarrollo
+
+1. `flutter run` para instalar la app
+2. Abrir Settings > Apps > Paseo del Comercio > Open by default
+3. Agregar `paseodelcomercio.com` si no aparece
+4. Probar enlaces:
+   - `https://paseodelcomercio.com/plazoleta/organicos`
+   - `https://paseodelcomercio.com/store/74`
+   - `https://paseodelcomercio.com/producto/258`
+
+### Testing Manual - Producción
+
+1. Subir a Play Store con App Signing
+2. Google verificará automáticamente el dominio
+3. Usuarios NO necesitan configuración manual
+
+### Verificar assetlinks.json
+
+```bash
+curl https://paseodelcomercio.com/.well-known/assetlinks.json
+```
+
+### Simular Deep Link (Android)
+
+```bash
+adb shell am start -W -a android.intent.action.VIEW \
+  -d "https://paseodelcomercio.com/plazoleta/organicos" com.paseodelcomercio.app
+```
 
 ---
 
 ## COMANDOS ÚTILES
 
 ```bash
-# Obtener fingerprint SHA256 del keystore de debug
-keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey
+# Obtener SHA256 del keystore
+keytool -list -v -keystore android/app/debug_release.keystore -alias my_key -storepass ***REMOVED***
 
-# Obtener fingerprint SHA256 del keystore de release
-keytool -list -v -keystore path/to/your-release-keystore.jks -alias your-alias
+# Verificar assetlinks.json
+curl -s https://paseodelcomercio.com/.well-known/assetlinks.json | jq
 
-# Verificar archivo assetlinks.json
-curl -s https://paseodelcomercio.com/.well-known/assetlinks.json | python3 -m json.tool
-
-# Verificar apple-app-site-association
-curl -s https://paseodelcomercio.com/.well-known/apple-app-site-association | python3 -m json.tool
+# Reinstalar y probar
+flutter uninstall
+flutter clean
+flutter pub get
+flutter run
 ```
 
 ---
 
-## REFERENCIAS
+## PENDIENTE
 
-- [Android App Links Documentation](https://developer.android.com/training/app-links)
-- [iOS Universal Links Documentation](https://developer.apple.com/documentation/xcode/supporting-associated-domains)
-- [GoRouter Deep Linking](https://goriverv.dev/--docs/uri-based-routing)
-- [Digital Asset Links Tool](https://developers.google.com/digital-asset-links/tools_and_resources)
+- [ ] Testing en dispositivo real con instalación fresca
+- [ ] Testing de todos los tipos de deep links
+- [ ] Verificar funcionamiento después de subir a Play Store
+- [ ] iOS Universal Links (pendiente implementación)
 
 ---
 
-**Documento creado:** Marzo 2026  
-**Última actualización:** Marzo 2026  
-**Estado:** PENDIENTE - Para implementar post-launch
+**Documento actualizado:** Marzo 2026
+**Estado:** COMPLETADO - Pendiente Testing
