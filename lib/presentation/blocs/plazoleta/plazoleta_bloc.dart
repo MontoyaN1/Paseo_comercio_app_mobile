@@ -25,6 +25,9 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
   bool _hasMore = true;
   Map<String, dynamic>? _currentFilters;
 
+  // Contador para cancelar eventos pendientes
+  int _loadRequestId = 0;
+
   PlazoletaBloc({required PlazoletaRepositoryInterface plazoletaRepository})
     : _plazoletaRepository = plazoletaRepository,
       _logger = Logger(
@@ -40,6 +43,7 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
       super(const PlazoletaInitial()) {
     on<LoadPlazoletasActivas>(_onLoadPlazoletasActivas);
     on<LoadPlazoletaById>(_onLoadPlazoletaById);
+    on<LoadPlazoletaBySlug>(_onLoadPlazoletaBySlug);
     on<LoadPlazoletasPopulares>(_onLoadPlazoletasPopulares);
     on<LoadPlazoletasDisponibles>(_onLoadPlazoletasDisponibles);
     on<SearchPlazoletas>(_onSearchPlazoletas);
@@ -198,6 +202,9 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
     LoadPlazoletaById event,
     Emitter<PlazoletaState> emit,
   ) async {
+    final requestId = ++_loadRequestId;
+    final requestedId = event.id;
+
     try {
       emit(
         PlazoletaDetailLoading(
@@ -209,6 +216,13 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
       try {
         final plazoleta = await _plazoletaRepository.getPlazoletaById(event.id);
 
+        if (requestId != _loadRequestId) {
+          _logger.w(
+            'LoadPlazoletaById($requestedId) cancelled - newer request pending',
+          );
+          return;
+        }
+
         // Cargar imágenes de la plazoleta
         List<ImagenBase> imagenes = [];
         try {
@@ -218,6 +232,13 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
             'Error al cargar imágenes de la plazoleta, continuando sin imágenes: $e',
           );
           // Continuamos sin imágenes si hay error
+        }
+
+        if (requestId != _loadRequestId) {
+          _logger.w(
+            'LoadPlazoletaById($requestedId) cancelled after imagenes - newer request pending',
+          );
+          return;
         }
 
         // Cargar productos de la plazoleta
@@ -233,6 +254,13 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
           // Continuamos sin productos si hay error
         }
 
+        if (requestId != _loadRequestId) {
+          _logger.w(
+            'LoadPlazoletaById($requestedId) cancelled after productos - newer request pending',
+          );
+          return;
+        }
+
         // Cargar tiendas de la plazoleta
         List<Tienda> tiendas = [];
         try {
@@ -242,6 +270,13 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
             'Error al cargar tiendas de la plazoleta, continuando sin tiendas: $e',
           );
           // Continuamos sin tiendas si hay error
+        }
+
+        if (requestId != _loadRequestId) {
+          _logger.w(
+            'LoadPlazoletaById($requestedId) cancelled after tiendas - newer request pending',
+          );
+          return;
         }
 
         if (state is PlazoletaLoaded) {
@@ -283,6 +318,131 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
       emit(
         PlazoletaDetailError(
           plazoletaId: event.id,
+          message: 'Error al cargar plazoleta: $e',
+          stackTrace: stackTrace,
+          isRefreshing: event.forceRefresh,
+        ),
+      );
+    }
+  }
+
+  /// Cargar una plazoleta por slug (para deep links)
+  Future<void> _onLoadPlazoletaBySlug(
+    LoadPlazoletaBySlug event,
+    Emitter<PlazoletaState> emit,
+  ) async {
+    final requestId = ++_loadRequestId;
+    final requestedSlug = event.slug;
+
+    try {
+      emit(
+        PlazoletaDetailLoading(
+          plazoletaId: 0,
+          isRefreshing: event.forceRefresh,
+        ),
+      );
+
+      try {
+        final plazoleta = await _plazoletaRepository.getPlazoletaBySlug(
+          event.slug,
+        );
+
+        if (requestId != _loadRequestId) {
+          _logger.w(
+            'LoadPlazoletaBySlug($requestedSlug) cancelled - newer request pending',
+          );
+          return;
+        }
+
+        if (plazoleta == null) {
+          emit(
+            PlazoletaDetailError(
+              plazoletaId: 0,
+              message: 'No se encontró plazoleta con slug "${event.slug}"',
+              isRefreshing: event.forceRefresh,
+            ),
+          );
+          return;
+        }
+
+        if (plazoleta.id <= 0) {
+          emit(
+            PlazoletaDetailError(
+              plazoletaId: 0,
+              message:
+                  'Plazoleta con slug "${event.slug}" tiene ID inválido: ${plazoleta.id}',
+              isRefreshing: event.forceRefresh,
+            ),
+          );
+          return;
+        }
+
+        final imagenes = await _plazoletaRepository.getImagenesPlazoleta(
+          plazoleta.id,
+        );
+
+        if (requestId != _loadRequestId) {
+          _logger.w(
+            'LoadPlazoletaBySlug($requestedSlug) cancelled after imagenes - newer request pending',
+          );
+          return;
+        }
+
+        final productos = await _plazoletaRepository.getProductosPorPlazoleta(
+          plazoleta.id,
+        );
+
+        if (requestId != _loadRequestId) {
+          _logger.w(
+            'LoadPlazoletaBySlug($requestedSlug) cancelled after productos - newer request pending',
+          );
+          return;
+        }
+
+        final tiendas = await _plazoletaRepository.getTiendasPlazoleta(
+          plazoleta.id,
+        );
+
+        if (requestId != _loadRequestId) {
+          _logger.w(
+            'LoadPlazoletaBySlug($requestedSlug) cancelled after tiendas - newer request pending',
+          );
+          return;
+        }
+
+        emit(
+          PlazoletaLoaded(
+            plazoletas: [],
+            plazoletaSeleccionada: plazoleta,
+            imagenesPlazoleta: imagenes,
+            productosPlazoleta: productos,
+            tiendasPlazoleta: tiendas,
+          ),
+        );
+      } catch (e) {
+        if (requestId != _loadRequestId) {
+          _logger.w(
+            'LoadPlazoletaBySlug($requestedSlug) cancelled due to error - newer request pending',
+          );
+          return;
+        }
+        emit(
+          PlazoletaDetailError(
+            plazoletaId: 0,
+            message: 'Error al cargar plazoleta: $e',
+            isRefreshing: event.forceRefresh,
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      _logger.e(
+        'Error en _onLoadPlazoletaBySlug: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(
+        PlazoletaDetailError(
+          plazoletaId: 0,
           message: 'Error al cargar plazoleta: $e',
           stackTrace: stackTrace,
           isRefreshing: event.forceRefresh,
@@ -419,6 +579,13 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
     LoadImagenesPlazoleta event,
     Emitter<PlazoletaState> emit,
   ) async {
+    if (event.plazoletaId <= 0) {
+      _logger.w(
+        'Ignorando LoadImagenesPlazoleta con plazoletaId inválido: ${event.plazoletaId}',
+      );
+      return;
+    }
+
     // Guardar el estado actual si es PlazoletaLoaded
     final currentState = state;
     PlazoletaLoaded? savedState =
@@ -533,6 +700,13 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
     LoadProductosPlazoleta event,
     Emitter<PlazoletaState> emit,
   ) async {
+    if (event.plazoletaId <= 0) {
+      _logger.w(
+        'Ignorando LoadProductosPlazoleta con plazoletaId inválido: ${event.plazoletaId}',
+      );
+      return;
+    }
+
     final previousState = state;
 
     // Si ya tenemos un estado cargado, mantenerlo durante la carga
@@ -624,6 +798,13 @@ class PlazoletaBloc extends Bloc<PlazoletaEvent, PlazoletaState> {
     LoadTiendasPlazoleta event,
     Emitter<PlazoletaState> emit,
   ) async {
+    if (event.plazoletaId <= 0) {
+      _logger.w(
+        'Ignorando LoadTiendasPlazoleta con plazoletaId inválido: ${event.plazoletaId}',
+      );
+      return;
+    }
+
     final previousState = state;
 
     // Si ya tenemos un estado cargado, mantenerlo durante la carga

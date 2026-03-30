@@ -927,7 +927,13 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
               const SizedBox(width: 8),
               _GoldIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
-                onTap: () => context.pop(),
+                onTap: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    Future.microtask(() => context.go('/plazoletas'));
+                  }
+                },
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -2010,6 +2016,20 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
       if (_hasLoaded && _productoData != null) {
         _procesarProducto(_productoData!);
       }
+    }
+  }
+
+  @override
+  void didUpdateWidget(ProductoDetailPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.productoId != widget.productoId) {
+      _hasLoaded = false;
+      _productoData = null;
+      _tiendaData = null;
+      _valoracionesLoaded = false;
+      _valoraciones = [];
+      _loadProducto();
+      setState(() {});
     }
   }
 }

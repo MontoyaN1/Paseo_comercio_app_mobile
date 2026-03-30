@@ -259,22 +259,6 @@ class _LoginScreenState extends State<_LoginScreen>
     _shakeCtrl.forward(from: 0);
   }
 
-  void _resetPassword() {
-    _showError('Contacta a soporte para restablecer tu contraseña');
-  }
-
-  void _createAccount() {
-    _showError('Contacta a soporte para crear una cuenta');
-  }
-
-  void _signIn() {
-    _showError('Usa Google o Microsoft para iniciar sesión');
-  }
-
-  void _signUp() {
-    _showError('Usa Google o Microsoft para crear una cuenta');
-  }
-
   // ══════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
@@ -955,21 +939,12 @@ class _AnimatedField extends StatefulWidget {
   final IconData icon;
   final bool isFocused;
   final ValueChanged<bool> onFocusChange;
-  final bool obscureText;
-  final Widget? suffixIcon;
-  final TextInputType? keyboardType;
-  final String? Function(String?)? validator;
-
   const _AnimatedField({
     required this.controller,
     required this.label,
     required this.icon,
     required this.isFocused,
     required this.onFocusChange,
-    this.obscureText = false,
-    this.suffixIcon,
-    this.keyboardType,
-    this.validator,
   });
 
   @override
@@ -1027,9 +1002,6 @@ class _AnimatedFieldState extends State<_AnimatedField>
         onFocusChange: widget.onFocusChange,
         child: TextFormField(
           controller: widget.controller,
-          obscureText: widget.obscureText,
-          keyboardType: widget.keyboardType,
-          validator: widget.validator,
           style: const TextStyle(color: Colors.white, fontSize: 15),
           decoration: InputDecoration(
             labelText: widget.label,
@@ -1049,13 +1021,6 @@ class _AnimatedFieldState extends State<_AnimatedField>
               minWidth: 0,
               minHeight: 0,
             ),
-            suffixIcon:
-                widget.suffixIcon != null
-                    ? Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: widget.suffixIcon,
-                    )
-                    : null,
             filled: true,
             fillColor: Colors.black.withOpacity(0.28),
             border: OutlineInputBorder(
@@ -1422,88 +1387,6 @@ class _GoogleButtonState extends State<_GoogleButton>
               ),
             ),
       ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  DIÁLOGO RESET PASSWORD
-// ══════════════════════════════════════════════════════════════
-class _ResetDialog extends StatelessWidget {
-  final String email;
-  final FirebaseAuthService authService;
-  final ValueChanged<String> onError;
-
-  const _ResetDialog({
-    required this.email,
-    required this.authService,
-    required this.onError,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: _kSurface,
-      surfaceTintColor: _kGold,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Row(
-        children: [
-          const Icon(Icons.lock_reset_rounded, color: _kGold, size: 20),
-          const SizedBox(width: 10),
-          const Text(
-            'Restablecer contraseña',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-      content: Text(
-        '¿Enviar email de restablecimiento a\n$email?',
-        style: const TextStyle(color: _kHint, fontSize: 14, height: 1.5),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar', style: TextStyle(color: _kHint)),
-        ),
-        TextButton(
-          onPressed: () async {
-            Navigator.pop(context);
-            try {
-              final result = await authService.resetPassword(email);
-              result.fold((_) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: _kGold,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      content: const Text(
-                        'Email enviado ✓',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  );
-                }
-              }, (err) => onError(err.toString()));
-            } catch (e) {
-              onError('Error: $e');
-            }
-          },
-          child: const Text(
-            'Enviar',
-            style: TextStyle(color: _kGold, fontWeight: FontWeight.w700),
-          ),
-        ),
-      ],
     );
   }
 }

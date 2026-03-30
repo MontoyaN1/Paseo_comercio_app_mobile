@@ -33,7 +33,8 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
        _connectivityService = connectivityService,
        _cacheService = cacheService,
        _appConfig = AppConfig(),
-       _logger = Logger(level: Level.warning, 
+       _logger = Logger(
+         level: Level.warning,
          printer: PrettyPrinter(
            methodCount: 0,
            errorMethodCount: 3,
@@ -239,6 +240,52 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         (error) =>
             throw Exception('Error al obtener plazoleta del caché: $error'),
       );
+    }
+  }
+
+  @override
+  Future<Plazoleta?> getPlazoletaBySlug(String slug) async {
+    try {
+      _logger.i('Consultando plazoleta con slug "$slug" desde Supabase');
+
+      // Verificar conectividad
+      final hasConnection = await _connectivityService.hasConnection();
+      if (!hasConnection) {
+        _logger.w('Sin conexión a internet');
+        return null;
+      }
+
+      // Consultar plazoleta por slug
+      final response =
+          await _supabaseClient.client
+              .from('plazoleta')
+              .select()
+              .eq('slug', slug)
+              .maybeSingle();
+
+      if (response == null) {
+        _logger.w('No se encontró plazoleta con slug "$slug"');
+        return null;
+      }
+
+      // Convertir respuesta a objeto Plazoleta
+      final plazoleta = Plazoleta.fromSupabaseJson(response);
+
+      if (plazoleta.id <= 0) {
+        _logger.e(
+          'La plazoleta con slug "$slug" tiene ID inválido: ${plazoleta.id}',
+        );
+        return null;
+      }
+
+      _logger.i(
+        'Plazoleta encontrada por slug: ${plazoleta.nombre}, ID: ${plazoleta.id}',
+      );
+
+      return plazoleta;
+    } catch (e) {
+      _logger.e('Error al obtener plazoleta con slug "$slug"', error: e);
+      return null;
     }
   }
 
@@ -901,7 +948,14 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
             await _supabaseClient.plazoletas
                 .select('nombre, categoria_principal_id')
                 .eq('id', plazoletaId)
-                .single();
+                .maybeSingle();
+
+        if (plazoletaResponse == null) {
+          _logger.w(
+            'No se encontró plazoleta con ID $plazoletaId para obtener productos',
+          );
+          return [];
+        }
 
         final plazoletaNombre = plazoletaResponse['nombre'] as String;
         final categoriaPrincipalId =
@@ -1178,7 +1232,14 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
             await _supabaseClient.plazoletas
                 .select('nombre, categoria_principal_id')
                 .eq('id', plazoletaId)
-                .single();
+                .maybeSingle();
+
+        if (plazoletaResponse == null) {
+          _logger.w(
+            'No se encontró plazoleta con ID $plazoletaId para obtener tiendas',
+          );
+          return [];
+        }
 
         final plazoletaNombre = plazoletaResponse['nombre'] as String;
         final categoriaPrincipalId =

@@ -7,9 +7,6 @@ import '../../di/service_locator.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const Color _kGold = Color(0xFFD4AF37);
-const Color _kGoldLight = Color(0xFFFFE082);
-const Color _kSurface = Color(0xFF0F0F1E);
-const Color _kBorder = Color(0xFF1E1E3A);
 
 // ══════════════════════════════════════════════════════════════
 //  BOTÓN COMPARTIR

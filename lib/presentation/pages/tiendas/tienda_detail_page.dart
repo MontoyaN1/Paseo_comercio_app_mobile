@@ -262,6 +262,21 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
     }
   }
 
+  @override
+  void didUpdateWidget(TiendaDetailPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tiendaId != widget.tiendaId) {
+      _hasLoaded = false;
+      _tiendaData = null;
+      _productos = [];
+      _horarios = [];
+      _productosPage = 1;
+      _hasMoreProductos = true;
+      _loadTienda();
+      setState(() {});
+    }
+  }
+
   /// Registrar visita a la tienda
   Future<void> _registrarVisitaTienda() async {
     try {
@@ -727,7 +742,13 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
                         const SizedBox(height: 20),
                         _GoldOutlineButton(
                           label: 'Volver',
-                          onTap: () => context.pop(),
+                          onTap: () {
+                            if (context.canPop()) {
+                              context.pop();
+                            } else {
+                              context.go('/plazoletas');
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -808,7 +829,13 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
               const SizedBox(width: 8),
               _GoldIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
-                onTap: () => context.pop(),
+                onTap: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    Future.microtask(() => context.go('/plazoletas'));
+                  }
+                },
               ),
               const SizedBox(width: 12),
               Expanded(

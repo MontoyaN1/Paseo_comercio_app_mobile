@@ -24,6 +24,9 @@ abstract class PlazoletaRepositoryInterface {
   /// Obtener una plazoleta por ID
   Future<Plazoleta> getPlazoletaById(int id);
 
+  /// Obtener una plazoleta por slug (para deep links)
+  Future<Plazoleta?> getPlazoletaBySlug(String slug);
+
   /// Obtener plazoletas por IDs
   Future<List<Plazoleta>> getPlazoletasByIds(List<int> ids);
 

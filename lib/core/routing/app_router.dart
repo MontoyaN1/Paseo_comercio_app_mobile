@@ -238,8 +238,32 @@ class AppRouter {
           final id = state.pathParameters['id'] ?? '';
           final plazoletaId = int.tryParse(id) ?? 0;
           return MaterialPage<void>(
-            key: state.pageKey,
+            key: ValueKey('plazoleta_detail_$plazoletaId'),
             child: PlazoletaDetailPage(plazoletaId: plazoletaId),
+          );
+        },
+      ),
+
+      // Ruta legacy de plazoleta (para deep links de ShareService - usa slug)
+      GoRoute(
+        path: '/plazoleta/:slug',
+        name: 'plazoleta_detail_legacy',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          if (user == null) {
+            return '/login';
+          }
+
+          return null;
+        },
+        pageBuilder: (context, state) {
+          final slug = state.pathParameters['slug'] ?? '';
+          debugPrint('🔄 ROUTER: /plazoleta/:slug pageBuilder - slug=$slug');
+          return MaterialPage<void>(
+            key: ValueKey('plazoleta_detail_slug_$slug'),
+            child: PlazoletaDetailPage(plazoletaId: 0, slug: slug),
           );
         },
       ),
@@ -248,6 +272,19 @@ class AppRouter {
       GoRoute(
         path: '/tiendas/:id',
         name: 'tienda_detail',
+        pageBuilder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return MaterialPage<void>(
+            key: state.pageKey,
+            child: TiendaDetailPage(tiendaId: id),
+          );
+        },
+      ),
+
+      // Ruta legacy de tienda (para deep links de ShareService)
+      GoRoute(
+        path: '/store/:id',
+        name: 'tienda_detail_legacy',
         pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
           return MaterialPage<void>(
@@ -313,10 +350,57 @@ class AppRouter {
         },
       ),
 
+      // Ruta legacy de organización (para deep links de ShareService)
+      GoRoute(
+        path: '/organizacion/:id',
+        name: 'organizacion_detail_legacy',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          if (user == null) {
+            return '/login';
+          }
+
+          return null;
+        },
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          final organizacionId = int.tryParse(id) ?? 0;
+          final organizacion = state.extra as Organizacion?;
+
+          return MaterialPage<void>(
+            key: state.pageKey,
+            child: OrganizacionDetailPage(
+              organizacionId: organizacionId,
+              organizacion: organizacion,
+            ),
+          );
+        },
+      ),
+
       // Detalle de producto
       GoRoute(
         path: '/productos/:id',
         name: 'producto_detail',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          final productoId = int.tryParse(id) ?? 0;
+          final producto = state.extra as Map<String, dynamic>?;
+          return MaterialPage<void>(
+            key: state.pageKey,
+            child: ProductoDetailPage(
+              productoId: productoId,
+              producto: producto,
+            ),
+          );
+        },
+      ),
+
+      // Ruta legacy de producto (para deep links de ShareService)
+      GoRoute(
+        path: '/producto/:id',
+        name: 'producto_detail_legacy',
         pageBuilder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
           final productoId = int.tryParse(id) ?? 0;

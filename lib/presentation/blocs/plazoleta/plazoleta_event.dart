@@ -60,6 +60,17 @@ class LoadPlazoletaById extends PlazoletaEvent {
   List<Object?> get props => [id, forceRefresh];
 }
 
+/// Cargar una plazoleta por slug (para deep links)
+class LoadPlazoletaBySlug extends PlazoletaEvent {
+  final String slug;
+  final bool forceRefresh;
+
+  const LoadPlazoletaBySlug({required this.slug, this.forceRefresh = false});
+
+  @override
+  List<Object?> get props => [slug, forceRefresh];
+}
+
 /// Cargar plazoletas populares
 class LoadPlazoletasPopulares extends PlazoletaEvent {
   final int? limit;

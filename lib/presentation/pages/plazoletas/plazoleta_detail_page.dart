@@ -49,8 +49,9 @@ const _kHint = Color(0xFF6B6B8A);
 // ══════════════════════════════════════════════════════════════
 class PlazoletaDetailPage extends StatefulWidget {
   final int plazoletaId;
+  final String? slug;
 
-  const PlazoletaDetailPage({super.key, required this.plazoletaId});
+  const PlazoletaDetailPage({super.key, required this.plazoletaId, this.slug});
 
   @override
   State<PlazoletaDetailPage> createState() => _PlazoletaDetailPageState();
@@ -83,6 +84,9 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
   @override
   void initState() {
     super.initState();
+    debugPrint(
+      '🔄 PlazoletaDetailPage.initState - plazoletaId=${widget.plazoletaId}, slug=${widget.slug}',
+    );
     WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_onTabChanged);
@@ -127,6 +131,10 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
 
     // Cargar plazoleta al iniciar (productos y tiendas se cargan automáticamente)
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        debugPrint('🔄 _loadPlazoleta - widget unmounted, skipping');
+        return;
+      }
       _loadPlazoleta();
     });
 
@@ -135,11 +143,6 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
     });
     Future.delayed(const Duration(milliseconds: 380), () {
       if (mounted) _contentCtrl.forward();
-    });
-
-    // Cargar plazoleta al iniciar
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadPlazoleta();
     });
   }
 
@@ -165,6 +168,18 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
     }
   }
 
+  @override
+  void didUpdateWidget(PlazoletaDetailPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.slug != widget.slug ||
+        oldWidget.plazoletaId != widget.plazoletaId) {
+      _plazoleta = null;
+      _currentTabIndex = 0;
+      setState(() {});
+      _loadPlazoleta();
+    }
+  }
+
   // ── Tab change ────────────────────────────────────────────
   void _onTabChanged() {
     if (_tabController.indexIsChanging) {
@@ -174,28 +189,48 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
   }
 
   void _loadPlazoleta() {
+    debugPrint(
+      '🔄 _loadPlazoleta called - slug=${widget.slug}, id=${widget.plazoletaId}',
+    );
     try {
       final bloc = context.read<PlazoletaBloc>();
+      debugPrint('🔄 _loadPlazoleta - bloc found, isClosed=${bloc.isClosed}');
       if (!bloc.isClosed) {
-        bloc.add(LoadPlazoletaById(id: widget.plazoletaId, forceRefresh: true));
+        if (widget.slug != null && widget.slug!.isNotEmpty) {
+          debugPrint(
+            '🔄 _loadPlazoleta - adding LoadPlazoletaBySlug: ${widget.slug}',
+          );
+          bloc.add(LoadPlazoletaBySlug(slug: widget.slug!, forceRefresh: true));
+        } else {
+          debugPrint(
+            '🔄 _loadPlazoleta - adding LoadPlazoletaById: ${widget.plazoletaId}',
+          );
+          bloc.add(
+            LoadPlazoletaById(id: widget.plazoletaId, forceRefresh: true),
+          );
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('🔄 _loadPlazoleta - ERROR: $e');
+    }
   }
 
   void _loadTabData(int tabIndex) {
     if (!mounted) return;
+    final effectiveId = _plazoleta?.id ?? widget.plazoletaId;
+    if (effectiveId == 0) return;
     try {
       final bloc = context.read<PlazoletaBloc>();
       if (bloc.isClosed) return;
       switch (tabIndex) {
         case 0:
-          bloc.add(LoadImagenesPlazoleta(plazoletaId: widget.plazoletaId));
+          bloc.add(LoadImagenesPlazoleta(plazoletaId: effectiveId));
           break;
         case 1:
-          bloc.add(LoadProductosPlazoleta(plazoletaId: widget.plazoletaId));
+          bloc.add(LoadProductosPlazoleta(plazoletaId: effectiveId));
           break;
         case 2:
-          bloc.add(LoadTiendasPlazoleta(plazoletaId: widget.plazoletaId));
+          bloc.add(LoadTiendasPlazoleta(plazoletaId: effectiveId));
           break;
       }
     } catch (_) {}

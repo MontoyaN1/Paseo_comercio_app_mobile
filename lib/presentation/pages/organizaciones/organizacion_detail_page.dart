@@ -190,6 +190,24 @@ class _OrganizacionDetailPageState extends State<OrganizacionDetailPage>
     }
   }
 
+  @override
+  void didUpdateWidget(OrganizacionDetailPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.organizacionId != widget.organizacionId) {
+      _hasLoaded = false;
+      final bloc = context.read<OrganizacionBloc>();
+      if (!bloc.isClosed) {
+        bloc.add(
+          LoadOrganizacionById(
+            organizacionId: widget.organizacionId,
+            loadTiendas: true,
+            loadMiembros: true,
+          ),
+        );
+      }
+    }
+  }
+
   // ── Helpers ───────────────────────────────────────────────
   Future<void> _onShareOrganizacion() async {
     if (_organizacion == null) return;
