@@ -13,7 +13,6 @@
 //  • Estado sin sesión: pantalla de invitación elegante
 // ────────────────────────────────────────────────────────────
 
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -25,117 +24,18 @@ import 'package:paseo_del_comercio/core/utils/firebase_auth_service.dart';
 import 'package:paseo_del_comercio/presentation/providers/avatar_provider.dart';
 import 'package:paseo_del_comercio/presentation/blocs/auth/auth_bloc.dart';
 import 'package:paseo_del_comercio/core/errors/app_exceptions.dart';
-import 'package:paseo_del_comercio/core/utils/result.dart';
 import 'package:paseo_del_comercio/data/datasources/remote/supabase_client.dart';
+import 'package:paseo_del_comercio/presentation/widgets/profile/profile_bg_painter.dart';
+import 'package:paseo_del_comercio/presentation/widgets/profile/profile_components.dart';
+import 'package:paseo_del_comercio/presentation/widgets/profile/profile_edit_dialog.dart';
+import 'package:paseo_del_comercio/presentation/widgets/profile/profile_buttons.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const Color _kGold = Color(0xFFD4AF37);
-
-// Extensión para capitalizar strings
-extension StringExtension on String {
-  String capitalize() {
-    if (isEmpty) return this;
-    return '${this[0].toUpperCase()}${substring(1).toLowerCase()}';
-  }
-}
-
-/// Extrae el código de país de un número de teléfono
-String? extractCountryCode(String phoneNumber) {
-  if (phoneNumber.startsWith('+')) {
-    final plusIndex = phoneNumber.indexOf('+');
-    final spaceIndex = phoneNumber.indexOf(' ');
-    if (spaceIndex > plusIndex) {
-      return phoneNumber.substring(plusIndex, spaceIndex);
-    } else {
-      // Buscar donde terminan los dígitos del código
-      int i = 1;
-      while (i < phoneNumber.length &&
-          phoneNumber[i].contains(RegExp(r'[0-9]'))) {
-        i++;
-      }
-      return phoneNumber.substring(0, i);
-    }
-  }
-  return null;
-}
-
-/// Obtiene la bandera emoji para un código de país dado
-String? getFlagForCountryCode(String countryCode) {
-  // Mapa para búsquedas más eficientes
-  final Map<String, String> countryCodeToFlag = {
-    '+57': '🇨🇴',
-    '+34': '🇪🇸',
-    '+1': '🇺🇸',
-    '+52': '🇲🇽',
-    '+54': '🇦🇷',
-    '+56': '🇨🇱',
-    '+51': '🇵🇪',
-    '+58': '🇻🇪',
-    '+55': '🇧🇷',
-    '+44': '🇬🇧',
-    '+33': '🇫🇷',
-    '+49': '🇩🇪',
-    '+39': '🇮🇹',
-    '+81': '🇯🇵',
-    '+86': '🇨🇳',
-    '+91': '🇮🇳',
-    '+7': '🇷🇺',
-    '+61': '🇦🇺',
-    '+64': '🇳🇿',
-    '+27': '🇿🇦',
-  };
-  return countryCodeToFlag[countryCode];
-}
-
-/// Extrae solo el número sin el código de país
-String extractPhoneWithoutCode(String phoneNumber) {
-  if (phoneNumber.startsWith('+')) {
-    final plusIndex = phoneNumber.indexOf('+');
-    final spaceIndex = phoneNumber.indexOf(' ');
-    if (spaceIndex > plusIndex) {
-      return phoneNumber.substring(spaceIndex + 1);
-    } else {
-      // Buscar donde terminan los dígitos del código
-      int i = 1;
-      while (i < phoneNumber.length &&
-          phoneNumber[i].contains(RegExp(r'[0-9]'))) {
-        i++;
-      }
-      return phoneNumber.substring(i);
-    }
-  }
-  return phoneNumber;
-}
-
-// Lista de países con códigos comunes
-const List<Map<String, String>> _countryCodes = [
-  {'code': '+57', 'name': 'Colombia', 'flag': '🇨🇴'},
-  {'code': '+34', 'name': 'España', 'flag': '🇪🇸'},
-  {'code': '+1', 'name': 'Estados Unidos', 'flag': '🇺🇸'},
-  {'code': '+52', 'name': 'México', 'flag': '🇲🇽'},
-  {'code': '+54', 'name': 'Argentina', 'flag': '🇦🇷'},
-  {'code': '+56', 'name': 'Chile', 'flag': '🇨🇱'},
-  {'code': '+51', 'name': 'Perú', 'flag': '🇵🇪'},
-  {'code': '+58', 'name': 'Venezuela', 'flag': '🇻🇪'},
-  {'code': '+55', 'name': 'Brasil', 'flag': '🇧🇷'},
-  {'code': '+44', 'name': 'Reino Unido', 'flag': '🇬🇧'},
-  {'code': '+33', 'name': 'Francia', 'flag': '🇫🇷'},
-  {'code': '+49', 'name': 'Alemania', 'flag': '🇩🇪'},
-  {'code': '+39', 'name': 'Italia', 'flag': '🇮🇹'},
-  {'code': '+81', 'name': 'Japón', 'flag': '🇯🇵'},
-  {'code': '+86', 'name': 'China', 'flag': '🇨🇳'},
-  {'code': '+91', 'name': 'India', 'flag': '🇮🇳'},
-  {'code': '+7', 'name': 'Rusia', 'flag': '🇷🇺'},
-  {'code': '+61', 'name': 'Australia', 'flag': '🇦🇺'},
-  {'code': '+64', 'name': 'Nueva Zelanda', 'flag': '🇳🇿'},
-  {'code': '+27', 'name': 'Sudáfrica', 'flag': '🇿🇦'},
-];
-
 const _kGoldLight = Color(0xFFFFE082);
 const _kGoldDeep = Color(0xFF9C7A1A);
 const _kBg = Color(0xFF07070F);
 const _kSurface = Color(0xFF0F0F1E);
-const _kSurfaceCard = Color(0xFF12121F);
 const _kBorder = Color(0xFF1E1E3A);
 const _kHint = Color(0xFF6B6B8A);
 
@@ -235,7 +135,10 @@ class _ProfilePageState extends State<ProfilePage>
             builder:
                 (_, __) => CustomPaint(
                   size: MediaQuery.of(context).size,
-                  painter: _BgPainter(_bgCtrl.value),
+                  painter: ProfileBgPainter(
+                    _bgCtrl.value,
+                    Theme.of(context).brightness,
+                  ),
                 ),
           ),
 
@@ -264,7 +167,10 @@ class _ProfilePageState extends State<ProfilePage>
                       if (user != null) {
                         return _buildProfileContent(context, user);
                       } else {
-                        return _buildSignedOutContent(context);
+                        return ProfileSignedOutContent(
+                          onSignIn: () => Navigator.pop(context),
+                          onContinueAsGuest: () => Navigator.pop(context),
+                        );
                       }
                     },
                   ),
@@ -279,30 +185,36 @@ class _ProfilePageState extends State<ProfilePage>
 
   // ── AppBar glassmorphism ──────────────────────────────────
   Widget _buildAppBar(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor =
+        isDark
+            ? _kSurface.withValues(alpha: 0.82)
+            : Colors.white.withValues(alpha: 0.90);
+    final borderColor = isDark ? _kBorder : Colors.grey.shade300;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
     return ClipRect(
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           height: kToolbarHeight,
           decoration: BoxDecoration(
-            color: _kSurface.withOpacity(0.82),
-            border: Border(bottom: BorderSide(color: _kBorder, width: 1)),
+            color: surfaceColor,
+            border: Border(bottom: BorderSide(color: borderColor, width: 1)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
-              _GoldIconButton(
+              ProfileIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
                 onTap: () {
                   try {
                     if (context.canPop()) {
                       context.pop();
                     } else {
-                      // Si no hay páginas en la pila, navegar a la página principal (plazoletas)
                       Future.microtask(() => context.go('/plazoletas'));
                     }
                   } catch (e) {
-                    // En caso de error, navegar a la raíz
                     Future.microtask(() => context.go('/'));
                   }
                 },
@@ -314,10 +226,10 @@ class _ProfilePageState extends State<ProfilePage>
                       (b) => const LinearGradient(
                         colors: [_kGoldDeep, _kGold, _kGoldLight],
                       ).createShader(b),
-                  child: const Text(
+                  child: Text(
                     'Perfil',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: textColor,
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
@@ -325,7 +237,6 @@ class _ProfilePageState extends State<ProfilePage>
                   ),
                 ),
               ),
-              // Placeholder para simetría
               const SizedBox(width: 38),
             ],
           ),
@@ -376,7 +287,7 @@ class _ProfilePageState extends State<ProfilePage>
                 const SizedBox(height: 16),
                 _buildActionsSection(context),
                 const SizedBox(height: 28),
-                _LogoutButton(onLogout: () => _performLogout(context)),
+                ProfileLogoutButton(onLogout: () => _performLogout(context)),
               ],
             ),
           ),
@@ -391,6 +302,7 @@ class _ProfilePageState extends State<ProfilePage>
     final avatarProvider = getIt<AvatarProvider>();
     final displayName = authService.currentUserName;
     final email = authService.currentUserEmail;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       children: [
@@ -411,8 +323,8 @@ class _ProfilePageState extends State<ProfilePage>
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: _kGold.withOpacity(
-                              0.20 * _avatarPulse.value,
+                            color: _kGold.withValues(
+                              alpha: 0.20 * _avatarPulse.value,
                             ),
                             blurRadius: 30 * _avatarPulse.value,
                             spreadRadius: 6 * _avatarPulse.value,
@@ -428,9 +340,9 @@ class _ProfilePageState extends State<ProfilePage>
                         shape: BoxShape.circle,
                         gradient: SweepGradient(
                           colors: [
-                            _kGold.withOpacity(0.80),
-                            _kGoldLight.withOpacity(0.30),
-                            _kGold.withOpacity(0.80),
+                            _kGold.withValues(alpha: 0.80),
+                            _kGoldLight.withValues(alpha: 0.30),
+                            _kGold.withValues(alpha: 0.80),
                           ],
                         ),
                       ),
@@ -441,8 +353,11 @@ class _ProfilePageState extends State<ProfilePage>
                       height: 104,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _kSurface,
-                        border: Border.all(color: _kBg, width: 3),
+                        color: isDark ? _kSurface : Colors.grey.shade200,
+                        border: Border.all(
+                          color: isDark ? _kBg : Colors.grey.shade400,
+                          width: 3,
+                        ),
                       ),
                       child: ClipOval(
                         child: ListenableBuilder(
@@ -476,7 +391,10 @@ class _ProfilePageState extends State<ProfilePage>
                         decoration: BoxDecoration(
                           color: _kGold,
                           shape: BoxShape.circle,
-                          border: Border.all(color: _kBg, width: 2),
+                          border: Border.all(
+                            color: isDark ? _kBg : Colors.white,
+                            width: 2,
+                          ),
                         ),
                         child: const Icon(
                           Icons.camera_alt,
@@ -492,17 +410,16 @@ class _ProfilePageState extends State<ProfilePage>
 
         const SizedBox(height: 18),
 
-        // Nombre
+        // Nombre con degradado dorado
         ShaderMask(
           shaderCallback:
               (b) => const LinearGradient(
-                colors: [Colors.white, _kGoldLight],
-                stops: [0.5, 1.0],
+                colors: [_kGoldDeep, _kGold, _kGoldLight],
               ).createShader(b),
           child: Text(
             displayName ?? 'Usuario',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.white,
               fontSize: 24,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.3,
@@ -516,7 +433,10 @@ class _ProfilePageState extends State<ProfilePage>
         // Email
         Text(
           email ?? '',
-          style: TextStyle(color: _kHint, fontSize: 13),
+          style: TextStyle(
+            color: isDark ? _kHint : Colors.grey.shade600,
+            fontSize: 13,
+          ),
           textAlign: TextAlign.center,
         ),
 
@@ -526,9 +446,18 @@ class _ProfilePageState extends State<ProfilePage>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.10),
+            color:
+                isDark
+                    ? Colors.green.withValues(alpha: 0.15)
+                    : Colors.green.shade100,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.green.withOpacity(0.30), width: 1),
+            border: Border.all(
+              color:
+                  isDark
+                      ? Colors.green.withValues(alpha: 0.40)
+                      : Colors.green.shade400,
+              width: 1,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -536,16 +465,16 @@ class _ProfilePageState extends State<ProfilePage>
               Container(
                 width: 7,
                 height: 7,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.greenAccent,
+                  color: isDark ? Colors.greenAccent : Colors.green.shade700,
                 ),
               ),
               const SizedBox(width: 7),
-              const Text(
+              Text(
                 'Sesión activa',
                 style: TextStyle(
-                  color: Colors.greenAccent,
+                  color: isDark ? Colors.greenAccent : Colors.green.shade800,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
@@ -560,9 +489,14 @@ class _ProfilePageState extends State<ProfilePage>
 
   // ── Opciones para cambiar avatar ─────────────────────────────────
   void _showAvatarOptions() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark ? _kSurface : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final hintColor = isDark ? _kHint : Colors.grey.shade600;
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: _kSurface,
+      backgroundColor: surfaceColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -573,58 +507,55 @@ class _ProfilePageState extends State<ProfilePage>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Título
-                  const Text(
+                  Text(
                     'Cambiar foto de perfil',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: textColor,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // Opción: Cámara
                   ListTile(
                     leading: Container(
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: _kGold.withOpacity(0.2),
+                        color: _kGold.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.camera_alt, color: _kGold),
                     ),
-                    title: const Text(
+                    title: Text(
                       'Tomar foto',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(color: textColor),
                     ),
                     subtitle: Text(
                       'Usar la cámara',
-                      style: TextStyle(color: _kHint),
+                      style: TextStyle(color: hintColor),
                     ),
                     onTap: () {
                       Navigator.pop(context);
                       _cambiarAvatar(ImageSource.camera);
                     },
                   ),
-                  // Opción: Galería
                   ListTile(
                     leading: Container(
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: _kGold.withOpacity(0.2),
+                        color: _kGold.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.photo_library, color: _kGold),
                     ),
-                    title: const Text(
+                    title: Text(
                       'Elegir de galería',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(color: textColor),
                     ),
                     subtitle: Text(
                       'Seleccionar una imagen',
-                      style: TextStyle(color: _kHint),
+                      style: TextStyle(color: hintColor),
                     ),
                     onTap: () {
                       Navigator.pop(context);
@@ -756,7 +687,7 @@ class _ProfilePageState extends State<ProfilePage>
             ? '${registrationDate.day}/${registrationDate.month}/${registrationDate.year}'
             : 'No disponible';
 
-    return _GlassSection(
+    return ProfileGlassSection(
       title: 'Información de la cuenta',
       icon: Icons.badge_outlined,
       child: Column(
@@ -764,38 +695,43 @@ class _ProfilePageState extends State<ProfilePage>
           Row(
             children: [
               Expanded(
-                child: _GoldInfoRow(
+                child: ProfileGoldInfoRow(
                   icon: Icons.person_outline_rounded,
                   label: 'Nombre completo',
                   value: authService.currentUserName ?? 'No disponible',
                 ),
               ),
               const SizedBox(width: 8),
-              _GoldIconButton(
+              ProfileIconButton(
                 icon: Icons.edit_outlined,
                 onTap: () => _showEditProfileDialog(context, 'nombre'),
               ),
             ],
           ),
-          _SectionDivider(),
-          _GoldInfoRow(
+          ProfileSectionDivider(),
+          ProfileGoldInfoRow(
             icon: Icons.alternate_email_rounded,
             label: 'Email',
             value: authService.currentUserEmail ?? 'No disponible',
           ),
-          _SectionDivider(),
+          ProfileSectionDivider(),
           Row(
             children: [
-              Expanded(child: _buildPhoneInfoRow()),
+              Expanded(
+                child: ProfilePhoneInfoRow(
+                  phoneNumber:
+                      authService.currentUserPhoneNumber ?? 'No disponible',
+                ),
+              ),
               const SizedBox(width: 8),
-              _GoldIconButton(
+              ProfileIconButton(
                 icon: Icons.edit_outlined,
                 onTap: () => _showEditProfileDialog(context, 'telefono'),
               ),
             ],
           ),
-          _SectionDivider(),
-          _GoldInfoRow(
+          ProfileSectionDivider(),
+          ProfileGoldInfoRow(
             icon: Icons.calendar_today_outlined,
             label: 'Miembro desde',
             value: fechaCreacion,
@@ -807,28 +743,28 @@ class _ProfilePageState extends State<ProfilePage>
 
   // ── Sección de acciones ───────────────────────────────────
   Widget _buildActionsSection(BuildContext context) {
-    return _GlassSection(
+    return ProfileGlassSection(
       title: 'Mi cuenta',
       icon: Icons.dashboard_outlined,
       child: Column(
         children: [
-          _ActionTile(
+          ProfileActionTile(
             icon: Icons.favorite_outline_rounded,
             title: 'Favoritos',
             subtitle: 'Tiendas y productos guardados',
             onTap: () => context.push('/favoritos'),
           ),
-          _SectionDivider(),
+          ProfileSectionDivider(),
           // ⚠️ HISTORIAL - POSTERGADO
-          // _ActionTile(
+          // ProfileActionTile(
           //   icon: Icons.history_rounded,
           //   title: 'Historial',
           //   subtitle: 'Tu actividad reciente',
           //   onTap: () => context.push('/historial'),
           // ),
-          // _SectionDivider(),
-          _SectionDivider(),
-          _ActionTile(
+          // ProfileSectionDivider(),
+          ProfileSectionDivider(),
+          ProfileActionTile(
             icon: Icons.help_outline_rounded,
             title: 'Ayuda y soporte',
             subtitle: 'Preguntas frecuentes y contacto',
@@ -839,762 +775,83 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  // ── Información de teléfono ───────────────────────────────
-  Widget _buildPhoneInfoRow() {
-    final authService = getIt<FirebaseAuthService>();
-    final phoneNumber = authService.currentUserPhoneNumber ?? 'No disponible';
-    final countryCode = extractCountryCode(phoneNumber);
-    final phoneWithoutCode = extractPhoneWithoutCode(phoneNumber);
-    final countryFlag =
-        countryCode != null ? getFlagForCountryCode(countryCode) : null;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.phone_outlined, color: _kGold, size: 20),
-            const SizedBox(width: 12),
-            Text('Teléfono', style: TextStyle(color: _kHint, fontSize: 14)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (phoneNumber == 'No disponible')
-          Text(
-            'No disponible',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
-              fontSize: 16,
-            ),
-          )
-        else
-          Row(
-            children: [
-              if (countryCode != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _kGold.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: _kGold.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (countryFlag != null)
-                        Text(countryFlag, style: TextStyle(fontSize: 16)),
-                      if (countryFlag != null) const SizedBox(width: 4),
-                      Text(
-                        countryCode,
-                        style: TextStyle(
-                          color: _kGold,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (countryCode != null) const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  phoneWithoutCode,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-      ],
-    );
-  }
-
-  // ── Selector de país simple ──────────────────────────────────
-  Future<String?> _showSimpleCountryPicker(
-    BuildContext context,
-    String currentCode,
-  ) async {
-    return await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: _kSurface,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: _kBorder, width: 1),
-          ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.6,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _kSurface,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                    border: Border(
-                      bottom: BorderSide(color: _kBorder, width: 1),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.language, color: _kGold, size: 24),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Seleccionar país',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Lista de países
-                Expanded(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _countryCodes.length,
-                    itemBuilder: (context, index) {
-                      final country = _countryCodes[index];
-                      final isSelected = country['code'] == currentCode;
-
-                      return Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.pop(context, country['code']);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                                  isSelected
-                                      ? _kGold.withOpacity(0.1)
-                                      : Colors.transparent,
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: _kBorder.withOpacity(0.3),
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Text(
-                                  country['flag']!,
-                                  style: TextStyle(fontSize: 24),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        country['name']!,
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        country['code']!,
-                                        style: TextStyle(
-                                          color: _kHint,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (isSelected)
-                                  Icon(
-                                    Icons.check_circle,
-                                    color: _kGold,
-                                    size: 20,
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                // Footer
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _kSurfaceCard,
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(20),
-                      bottomRight: Radius.circular(20),
-                    ),
-                    border: Border(top: BorderSide(color: _kBorder, width: 1)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                        ),
-                        child: Text(
-                          'Cancelar',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // ── Logout ────────────────────────────────────────────────
   Future<void> _showEditProfileDialog(
     BuildContext context,
     String field,
   ) async {
     final authService = getIt<FirebaseAuthService>();
-    final TextEditingController controller = TextEditingController();
-    String currentValue = '';
-    final String label;
-    String selectedCountryCode = '+57'; // Código por defecto para Colombia
-    String currentPhoneWithoutCode = '';
-    bool countryChanged = false;
-
-    if (field == 'nombre') {
-      currentValue = authService.currentUserName ?? '';
-      label = 'Nombre completo';
-      controller.text = currentValue;
-    } else {
-      // Extraer código de país si existe en el número actual
-      final phoneValue = authService.currentUserPhoneNumber ?? '';
-      currentValue = phoneValue;
-      selectedCountryCode = extractCountryCode(phoneValue) ?? '+57';
-      currentPhoneWithoutCode = extractPhoneWithoutCode(phoneValue);
-      controller.text = currentPhoneWithoutCode;
-      label = 'Teléfono';
-    }
+    final currentValue =
+        field == 'nombre'
+            ? authService.currentUserName ?? ''
+            : authService.currentUserPhoneNumber ?? '';
 
     final result = await showDialog<String>(
       context: context,
       builder:
-          (dialogContext) => AlertDialog(
-            backgroundColor: _kSurface,
-            surfaceTintColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: _kBorder, width: 1),
-            ),
-            title: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: _kGold.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    field == 'nombre'
-                        ? Icons.person_outline
-                        : Icons.phone_outlined,
-                    color: _kGold,
-                    size: 20,
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    'Editar $label',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8),
-                if (field == 'telefono')
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () async {
-                              final newCode = await _showSimpleCountryPicker(
-                                context,
-                                selectedCountryCode,
-                              );
-                              if (newCode != null &&
-                                  newCode != selectedCountryCode) {
-                                selectedCountryCode = newCode;
-                                countryChanged = true;
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _kGold.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: _kGold.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    getFlagForCountryCode(
-                                          selectedCountryCode,
-                                        ) ??
-                                        '',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    selectedCountryCode,
-                                    style: TextStyle(
-                                      color: _kGold,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Icon(
-                                    Icons.arrow_drop_down_rounded,
-                                    color: _kGold,
-                                    size: 20,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextFormField(
-                              controller: controller,
-                              decoration: InputDecoration(
-                                labelText: 'Número de teléfono',
-                                labelStyle: TextStyle(color: _kHint),
-                                hintText: 'Ej: 3001234567',
-                                hintStyle: TextStyle(
-                                  color: _kHint.withOpacity(0.7),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: _kBorder),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: _kBorder),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: _kGold),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
-                              ),
-                              style: TextStyle(color: Colors.white),
-                              cursorColor: _kGold,
-                              keyboardType: TextInputType.phone,
-                              validator: (value) {
-                                if (value == null || value.isEmpty)
-                                  return 'Ingresa un número de teléfono';
-                                if (value.contains(' '))
-                                  return 'No incluyas espacios';
-                                if (value.contains('-'))
-                                  return 'No incluyas guiones';
-                                if (!RegExp(r'^[0-9]+$').hasMatch(value))
-                                  return 'Solo se permiten números';
-                                if (value.length < 7) return 'Mínimo 7 dígitos';
-                                return null;
-                              },
-                              autovalidateMode:
-                                  AutovalidateMode.onUserInteraction,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Formato: $selectedCountryCode + número (ej: 3001234567)',
-                        style: TextStyle(
-                          color: _kHint,
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  TextFormField(
-                    controller: controller,
-                    decoration: InputDecoration(
-                      labelText: label,
-                      labelStyle: TextStyle(color: _kHint),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: _kBorder),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: _kBorder),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: _kGold),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                    ),
-                    style: TextStyle(color: Colors.white),
-                    cursorColor: _kGold,
-                    keyboardType: TextInputType.text,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                  ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          backgroundColor: _kSurfaceCard,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: _kBorder),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: Text(
-                          'Cancelar',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _ShimmerButton(
-                        label: 'Guardar',
-                        onTap: () async {
-                          String newValue = controller.text.trim();
-                          if (field == 'telefono') {
-                            // Combinar código de país con número
-                            newValue = '$selectedCountryCode $newValue';
-                          }
-
-                          if (newValue.isNotEmpty) {
-                            // Para teléfono, permitir cambiar solo el código de país
-                            if (field == 'telefono') {
-                              final phoneOnly = controller.text.trim();
-                              // Permitir guardar si el número es igual pero el código de país cambió
-                              if (phoneOnly == currentPhoneWithoutCode) {
-                                if (!countryChanged) {
-                                  Navigator.of(
-                                    context,
-                                    rootNavigator: true,
-                                  ).pop();
-                                  return;
-                                } else {
-                                  // Mostrar mensaje informativo cuando solo se cambia el código de país
-                                  final flag = getFlagForCountryCode(
-                                    selectedCountryCode,
-                                  );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        flag != null
-                                            ? 'Código de país actualizado a $flag $selectedCountryCode'
-                                            : 'Código de país actualizado a $selectedCountryCode',
-                                      ),
-                                      backgroundColor: _kGold.withOpacity(0.9),
-                                      duration: const Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              }
-                            } else if (newValue == currentValue) {
-                              Navigator.of(context, rootNavigator: true).pop();
-                              return;
-                            }
-                            // Validar teléfono si es necesario
-                            if (field == 'telefono') {
-                              final phoneNumber = controller.text.trim();
-                              if (phoneNumber.isEmpty && !countryChanged) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Ingresa un número de teléfono',
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                                return;
-                              }
-                              if (phoneNumber.contains(' ')) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'No incluyas espacios en el número de teléfono',
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                                return;
-                              }
-                              if (phoneNumber.contains('-')) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'No incluyas guiones en el número de teléfono',
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                                return;
-                              }
-                              if (phoneNumber.isNotEmpty &&
-                                  !RegExp(r'^[0-9]+$').hasMatch(phoneNumber)) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Solo se permiten números en el teléfono',
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                                return;
-                              }
-                              // Validar longitud mínima del número de teléfono solo si hay número
-                              if (phoneNumber.isNotEmpty &&
-                                  phoneNumber.length < 7) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'El número de teléfono debe tener al menos 7 dígitos',
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                                return;
-                              }
-                            }
-
-                            // Cerrar diálogo primero con el resultado
-                            Navigator.pop(context, newValue);
-                          } else {
-                            Navigator.of(context, rootNavigator: true).pop();
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          (_) => ProfileEditDialog(
+            field: field,
+            currentValue: currentValue,
+            label: field == 'nombre' ? 'Nombre completo' : 'Teléfono',
+            onSave: (f, v) async {
+              await authService.updateProfile(nombre: v, telefono: v);
+            },
           ),
     );
 
-    // Procesar resultado después de cerrar el diálogo
-    if (result != null && result.isNotEmpty) {
-      // Para teléfono, permitir actualizar incluso si solo cambió el código de país
-      if (field == 'telefono') {
-        final phoneOnly = extractPhoneWithoutCode(result);
-        final currentPhoneOnly = extractPhoneWithoutCode(currentValue);
-        final resultCountryCode = extractCountryCode(result);
-        final currentCountryCode = extractCountryCode(currentValue);
-
-        // Actualizar si el número cambió O si el código de país cambió
-        if (phoneOnly != currentPhoneOnly ||
-            resultCountryCode != currentCountryCode) {
-          await _updateProfile(field, result);
-        }
-      } else if (result != currentValue) {
-        await _updateProfile(field, result);
-      }
+    if (result != null && result.isNotEmpty && result != currentValue) {
+      await _updateProfile(field, result);
     }
   }
 
   Future<void> _updateProfile(String field, String newValue) async {
-    BuildContext context = this.context;
-    print('_updateProfile: Iniciando actualización de $field a "$newValue"');
-    print('_updateProfile: Contexto montado inicialmente: ${context.mounted}');
-    // Verificar que el contexto esté montado antes de mostrar el diálogo
-    if (!context.mounted) {
-      print('_updateProfile: Contexto no montado, abortando actualización');
-      return;
-    }
+    if (!context.mounted) return;
+
+    final authService = getIt<FirebaseAuthService>();
+    final fieldLabel = field == 'nombre' ? 'Nombre' : 'Teléfono';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => const ProfileLoadingOverlay(),
+    );
 
     try {
-      // Mostrar overlay de carga
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        useRootNavigator: true,
-        builder: (context) => _LoadingOverlay(),
+      final result = await authService.updateProfile(
+        nombre: field == 'nombre' ? newValue : null,
+        telefono: field == 'telefono' ? newValue : null,
       );
 
-      // Obtener el servicio de autenticación
-      final authService = getIt<FirebaseAuthService>();
-      print('_updateProfile: AuthService obtenido');
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
 
-      // Actualizar el perfil según el campo
-      Result<void, Exception> result;
-      final String fieldLabel;
-      print('_updateProfile: Llamando a updateProfile para $field');
-      if (field == 'nombre') {
-        result = await authService.updateProfile(nombre: newValue);
-        fieldLabel = 'Nombre';
-      } else {
-        result = await authService.updateProfile(telefono: newValue);
-        fieldLabel = 'Teléfono';
-      }
-      print(
-        '_updateProfile: Resultado obtenido: ${result.isSuccess ? "éxito" : "error"}',
-      );
-
-      // Cerrar overlay primero, antes de mostrar snackbars
-      print(
-        '_updateProfile: Intentando cerrar diálogo de carga, contexto montado: ${context.mounted}',
-      );
-      if (context.mounted) {
-        try {
-          Navigator.of(context, rootNavigator: true).pop();
-        } catch (e) {
-          // Error al cerrar diálogo de carga
-        }
-      } else {
-        // Contexto no montado, no se puede cerrar diálogo
-      }
-
-      // Manejar el resultado con fold para obtener error específico
       result.fold(
         (_) {
-          // Éxito
           if (context.mounted) {
-            try {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: _kGold.withOpacity(0.9),
-                  content: Text(
-                    '$fieldLabel actualizado correctamente',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  duration: const Duration(seconds: 3),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              );
-            } catch (e) {
-              // Error al mostrar snackbar de éxito
-            }
-
-            // Recargar la página inmediatamente
-            try {
-              setState(() {});
-            } catch (e) {
-              // Error al recargar página
-            }
-          } else {
-            // Contexto no montado después de éxito, no se puede mostrar feedback
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: _kGold.withValues(alpha: 0.9),
+                content: Text('$fieldLabel actualizado correctamente'),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+            setState(() {});
           }
         },
         (error) {
-          // Error
-          String errorMessage = 'Error al actualizar $field';
+          String msg = 'Error al actualizar $field';
           if (error is AuthException) {
-            errorMessage = error.message;
-          } else if (error.toString().contains('NOT_FOUND') ||
-              error.toString().contains('database does not exist')) {
-            errorMessage =
-                'Base de datos no configurada. Contacta al administrador.';
-          } else if (error.toString().isNotEmpty) {
-            errorMessage = 'Error: ${error.toString()}';
+            msg = error.message;
           }
           if (context.mounted) {
-            try {
-              _showErrorSnackBar(context, errorMessage);
-            } catch (e) {
-              // Error al mostrar snackbar de error
-            }
-          } else {
-            // Contexto no montado, no se puede mostrar error al usuario
+            _showErrorSnackBar(context, msg);
           }
         },
       );
-    } catch (error) {
-      // Intentar cerrar el diálogo de carga si existe
+    } catch (e) {
       if (context.mounted) {
-        try {
-          Navigator.of(context, rootNavigator: true).pop();
-        } catch (e) {
-          // Error al cerrar diálogo después de excepción
-        }
-      }
-      // Mostrar error usando el contexto de la página
-      if (context.mounted) {
-        try {
-          _showErrorSnackBar(
-            context,
-            'Error al actualizar $field: ${error.toString()}',
-          );
-        } catch (e) {
-          // Error al mostrar error después de excepción
-        }
-      } else {
-        // Contexto no montado después de excepción, no se puede mostrar error
+        Navigator.of(context, rootNavigator: true).pop();
+        _showErrorSnackBar(context, 'Error: $e');
       }
     }
   }
@@ -1602,7 +859,7 @@ class _ProfilePageState extends State<ProfilePage>
   Future<void> _performLogout(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => _LogoutDialog(),
+      builder: (_) => ProfileLogoutDialog(),
     );
     if (confirm != true) return;
 
@@ -1612,7 +869,7 @@ class _ProfilePageState extends State<ProfilePage>
       context: context,
       barrierDismissible: false,
       useRootNavigator: true,
-      builder: (_) => const _LoadingOverlay(),
+      builder: (_) => const ProfileLoadingOverlay(),
     );
 
     try {
@@ -1673,866 +930,6 @@ class _ProfilePageState extends State<ProfilePage>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ── Estado sin sesión ─────────────────────────────────────
-  Widget _buildSignedOutContent(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Ícono grande con glow
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _kGold.withOpacity(0.07),
-                border: Border.all(color: _kGold.withOpacity(0.28), width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: _kGold.withOpacity(0.10),
-                    blurRadius: 24,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.person_outline_rounded,
-                size: 44,
-                color: _kGold,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ShaderMask(
-              shaderCallback:
-                  (b) => const LinearGradient(
-                    colors: [_kGoldDeep, _kGold, _kGoldLight],
-                  ).createShader(b),
-              child: const Text(
-                'Inicia sesión',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.3,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Accede a tus favoritos, historial\ny configuración personal',
-              style: TextStyle(color: _kHint, fontSize: 14, height: 1.6),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            // Botón principal
-            _ShimmerButton(
-              label: 'INICIAR SESIÓN',
-              onTap: () => Navigator.pop(context),
-            ),
-            const SizedBox(height: 14),
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Text(
-                'Continuar como invitado',
-                style: TextStyle(
-                  color: _kGold.withOpacity(0.70),
-                  fontSize: 14,
-                  decoration: TextDecoration.underline,
-                  decorationColor: _kGold.withOpacity(0.35),
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  FONDO ISOMÉTRICO (idéntico al sistema de diseño)
-// ══════════════════════════════════════════════════════════════
-class _BgPainter extends CustomPainter {
-  final double t;
-  _BgPainter(this.t);
-
-  static final _rng = math.Random(42);
-  static final _particles = List.generate(
-    60,
-    (i) => [
-      _rng.nextDouble(),
-      _rng.nextDouble(),
-      _rng.nextDouble() * 0.6 + 0.2,
-      _rng.nextDouble() * 2.5 + 0.5,
-      _rng.nextInt(3).toDouble(),
-    ],
-  );
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, w, h),
-      Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(0, -0.4),
-          radius: 1.0,
-          colors: [const Color(0xFF111128), const Color(0xFF09091A), _kBg],
-          stops: const [0.0, 0.55, 1.0],
-        ).createShader(Rect.fromLTWH(0, 0, w, h)),
-    );
-
-    final beamOp = math.sin(t * math.pi * 2) * 0.04 + 0.08;
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.35, 0)
-        ..lineTo(w * 0.65, 0)
-        ..lineTo(w * 0.80, h * 0.55)
-        ..lineTo(w * 0.20, h * 0.55)
-        ..close(),
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [_kGoldLight.withOpacity(beamOp), Colors.transparent],
-        ).createShader(Rect.fromLTWH(0, 0, w, h * 0.55)),
-    );
-
-    final tW = w * 0.18;
-    final tH = tW * 0.5;
-    for (int row = -1; row <= 14; row++) {
-      for (int col = -1; col <= 6; col++) {
-        final cx = (col - row) * tW / 2 + w * 0.5;
-        final cy = (col + row) * tH / 2 - t * tH * 0.5;
-        final pulse = math.sin(t * math.pi * 2 + col * 0.4 + row * 0.3) * 0.012;
-        final alpha = (0.05 + pulse).clamp(0.0, 0.10);
-        final path =
-            Path()
-              ..moveTo(cx, cy - tH / 2)
-              ..lineTo(cx + tW / 2, cy)
-              ..lineTo(cx, cy + tH / 2)
-              ..lineTo(cx - tW / 2, cy)
-              ..close();
-        canvas.drawPath(
-          path,
-          Paint()
-            ..color = _kGold.withOpacity(alpha)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 0.6,
-        );
-        if (row % 3 == 0) {
-          canvas.drawPath(
-            path,
-            Paint()..color = _kGold.withOpacity(alpha * 0.22),
-          );
-        }
-      }
-    }
-
-    const colors = [_kGold, _kGoldLight, Colors.white];
-    for (final p in _particles) {
-      final phase = (t + p[2]) % 1.0;
-      final op = math.sin(phase * math.pi) * 0.28;
-      if (op <= 0) continue;
-      canvas.drawCircle(
-        Offset(p[0] * w, p[1] * h - phase * h * 0.22),
-        p[3],
-        Paint()
-          ..color = colors[p[4].toInt()].withOpacity(op)
-          ..maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, p[3] * 1.2),
-      );
-    }
-
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, w, h),
-      Paint()
-        ..shader = RadialGradient(
-          center: Alignment.center,
-          radius: 0.78,
-          colors: [Colors.transparent, Colors.black.withOpacity(0.72)],
-          stops: const [0.5, 1.0],
-        ).createShader(Rect.fromLTWH(0, 0, w, h)),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_BgPainter o) => o.t != t;
-}
-
-// ══════════════════════════════════════════════════════════════
-//  SECCIÓN CON GLASSMORPHISM
-// ══════════════════════════════════════════════════════════════
-class _GlassSection extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Widget child;
-
-  const _GlassSection({
-    required this.title,
-    required this.icon,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
-          decoration: BoxDecoration(
-            color: _kSurfaceCard.withOpacity(0.90),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _kBorder, width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Encabezado
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _kGold.withOpacity(0.10),
-                        border: Border.all(
-                          color: _kGold.withOpacity(0.28),
-                          width: 1,
-                        ),
-                      ),
-                      child: Icon(icon, color: _kGold, size: 15),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Línea separadora dorada
-              Container(
-                height: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [_kGold.withOpacity(0.35), Colors.transparent],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                child: child,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  FILA DE INFORMACIÓN
-// ══════════════════════════════════════════════════════════════
-class _GoldInfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _GoldInfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: _kGold.withOpacity(0.08),
-          ),
-          child: Icon(icon, color: _kGold.withOpacity(0.80), size: 17),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: _kHint,
-                  fontSize: 11,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  TILE DE ACCIÓN
-// ══════════════════════════════════════════════════════════════
-class _ActionTile extends StatefulWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _ActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  State<_ActionTile> createState() => _ActionTileState();
-}
-
-class _ActionTileState extends State<_ActionTile>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _scale;
-  bool _pressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 110),
-    );
-    _scale = Tween<double>(
-      begin: 1.0,
-      end: 0.97,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        _ctrl.forward();
-        setState(() => _pressed = true);
-      },
-      onTapUp: (_) {
-        _ctrl.reverse();
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () {
-        _ctrl.reverse();
-        setState(() => _pressed = false);
-      },
-      child: AnimatedBuilder(
-        animation: _scale,
-        builder:
-            (_, __) => Transform.scale(
-              scale: _scale.value,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 130),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 2,
-                ),
-                decoration: BoxDecoration(
-                  color:
-                      _pressed ? _kGold.withOpacity(0.04) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _kGold.withOpacity(0.08),
-                        border: Border.all(
-                          color: _kGold.withOpacity(_pressed ? 0.40 : 0.18),
-                          width: 1,
-                        ),
-                      ),
-                      child: Icon(
-                        widget.icon,
-                        color: _pressed ? _kGold : _kGold.withOpacity(0.70),
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.1,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            widget.subtitle,
-                            style: const TextStyle(color: _kHint, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: _pressed ? _kGold : _kGold.withOpacity(0.40),
-                      size: 13,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  BOTÓN LOGOUT (outline rojo con press scale)
-// ══════════════════════════════════════════════════════════════
-class _LogoutButton extends StatefulWidget {
-  final VoidCallback onLogout;
-  const _LogoutButton({required this.onLogout});
-
-  @override
-  State<_LogoutButton> createState() => _LogoutButtonState();
-}
-
-class _LogoutButtonState extends State<_LogoutButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _scale;
-  bool _pressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 110),
-    );
-    _scale = Tween<double>(
-      begin: 1.0,
-      end: 0.96,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        _ctrl.forward();
-        setState(() => _pressed = true);
-      },
-      onTapUp: (_) {
-        _ctrl.reverse();
-        setState(() => _pressed = false);
-        widget.onLogout();
-      },
-      onTapCancel: () {
-        _ctrl.reverse();
-        setState(() => _pressed = false);
-      },
-      child: AnimatedBuilder(
-        animation: _scale,
-        builder:
-            (_, __) => Transform.scale(
-              scale: _scale.value,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                height: 52,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  color:
-                      _pressed
-                          ? Colors.red.withOpacity(0.10)
-                          : Colors.red.withOpacity(0.05),
-                  border: Border.all(
-                    color:
-                        _pressed
-                            ? Colors.red.withOpacity(0.55)
-                            : Colors.red.withOpacity(0.30),
-                    width: 1.5,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.logout_rounded,
-                      color: Colors.red[300],
-                      size: 18,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'CERRAR SESIÓN',
-                      style: TextStyle(
-                        color: Colors.red[300],
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  DIÁLOGO DE CONFIRMACIÓN LOGOUT
-// ══════════════════════════════════════════════════════════════
-class _LogoutDialog extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: _kSurface,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: _kBorder, width: 1),
-      ),
-      title: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.red.withOpacity(0.10),
-              border: Border.all(color: Colors.red.withOpacity(0.30), width: 1),
-            ),
-            child: Icon(Icons.logout_rounded, color: Colors.red[300], size: 16),
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            'Cerrar sesión',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-      content: const Text(
-        '¿Estás seguro de que quieres cerrar sesión?',
-        style: TextStyle(color: _kHint, fontSize: 14, height: 1.5),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text(
-            'Cancelar',
-            style: TextStyle(color: _kHint, fontWeight: FontWeight.w500),
-          ),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: Text(
-            'Cerrar sesión',
-            style: TextStyle(
-              color: Colors.red[300],
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  LOADING OVERLAY
-// ══════════════════════════════════════════════════════════════
-class _LoadingOverlay extends StatelessWidget {
-  const _LoadingOverlay();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black.withOpacity(0.55),
-      child: const Center(
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation(_kGold),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  SEPARADOR DE SECCIÓN
-// ══════════════════════════════════════════════════════════════
-class _SectionDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 1,
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.transparent, _kBorder, Colors.transparent],
-        ),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  BOTÓN ÍCONO DORADO
-// ══════════════════════════════════════════════════════════════
-class _GoldIconButton extends StatefulWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _GoldIconButton({required this.icon, required this.onTap});
-
-  @override
-  State<_GoldIconButton> createState() => _GoldIconButtonState();
-}
-
-class _GoldIconButtonState extends State<_GoldIconButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 110),
-    );
-    _scale = Tween<double>(
-      begin: 1.0,
-      end: 0.88,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _ctrl.forward(),
-      onTapUp: (_) {
-        _ctrl.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _ctrl.reverse(),
-      child: AnimatedBuilder(
-        animation: _scale,
-        builder:
-            (_, __) => Transform.scale(
-              scale: _scale.value,
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _kGold.withOpacity(0.07),
-                  border: Border.all(color: _kGold.withOpacity(0.28), width: 1),
-                ),
-                child: Icon(widget.icon, color: _kGold, size: 18),
-              ),
-            ),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  BOTÓN SHIMMER (estado sin sesión)
-// ══════════════════════════════════════════════════════════════
-class _ShimmerButton extends StatefulWidget {
-  final String label;
-  final VoidCallback onTap;
-  const _ShimmerButton({required this.label, required this.onTap});
-
-  @override
-  State<_ShimmerButton> createState() => _ShimmerButtonState();
-}
-
-class _ShimmerButtonState extends State<_ShimmerButton>
-    with TickerProviderStateMixin {
-  late final AnimationController _shimmerCtrl;
-  late final AnimationController _pressCtrl;
-  late final Animation<double> _pressScale;
-
-  @override
-  void initState() {
-    super.initState();
-    _shimmerCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
-    _pressCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 120),
-    );
-    _pressScale = Tween<double>(
-      begin: 1.0,
-      end: 0.96,
-    ).animate(CurvedAnimation(parent: _pressCtrl, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _shimmerCtrl.dispose();
-    _pressCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _pressCtrl.forward(),
-      onTapUp: (_) {
-        _pressCtrl.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _pressCtrl.reverse(),
-      child: AnimatedBuilder(
-        animation: Listenable.merge([_pressCtrl, _shimmerCtrl]),
-        builder:
-            (_, __) => Transform.scale(
-              scale: _pressScale.value,
-              child: Container(
-                width: double.infinity,
-                height: 54,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _kGold.withOpacity(0.38),
-                      blurRadius: 18,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Stack(
-                    children: [
-                      Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [_kGoldDeep, _kGold, _kGoldLight, _kGold],
-                            stops: [0.0, 0.35, 0.65, 1.0],
-                          ),
-                        ),
-                      ),
-                      Positioned.fill(
-                        child: AnimatedBuilder(
-                          animation: _shimmerCtrl,
-                          builder: (_, __) {
-                            final x = _shimmerCtrl.value * 2 - 0.5;
-                            return FractionallySizedBox(
-                              widthFactor: 0.35,
-                              alignment: Alignment(x * 2 - 1, 0),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.white.withOpacity(0),
-                                      Colors.white.withOpacity(0.22),
-                                      Colors.white.withOpacity(0),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      Center(
-                        child: Text(
-                          widget.label,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
       ),
     );
   }

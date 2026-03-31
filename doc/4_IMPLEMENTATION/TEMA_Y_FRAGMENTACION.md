@@ -1,7 +1,7 @@
 # Plan de Implementación: Fragmentación + Tema Oscuro/Claro
 
 **Fecha:** Marzo 2026  
-**Estado:** Fase 2 Completada - En implementación  
+**Estado:** Fase 6 En curso - profile_page + tema  
 **Proyecto:** Paseo del Comercio - Mobile App  
 
 ---
@@ -549,7 +549,7 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 - [x] organizacion_list_page fragmentado ✅
 - [x] organizacion_list_page theme fixes ✅
 - [x] login_page fragmentado ✅
-- [ ] profile_page fragmentado
+- [ ] profile_page fragmentado (en progreso)
 - [ ] Detail pages fragmentados
 - [ ] Análisis estático sin errores
 
