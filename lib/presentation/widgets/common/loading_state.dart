@@ -21,6 +21,7 @@ class LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: padding,
@@ -33,7 +34,7 @@ class LoadingState extends StatelessWidget {
                 height: progressSize,
                 child: CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    progressColor ?? Theme.of(context).primaryColor,
+                    progressColor ?? theme.colorScheme.primary,
                   ),
                   strokeWidth: 3.0,
                 ),
@@ -43,9 +44,9 @@ class LoadingState extends StatelessWidget {
             if (message.isNotEmpty)
               Text(
                 message,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
               ),
           ],
@@ -72,7 +73,10 @@ class SkeletonLoading extends StatelessWidget {
     this.itemPadding = const EdgeInsets.all(8),
   });
 
-  Widget _buildSkeletonItem() {
+  Widget _buildSkeletonItem(BuildContext context) {
+    final theme = Theme.of(context);
+    final skeletonColor = theme.colorScheme.surfaceContainerHighest;
+
     return Container(
       padding: itemPadding,
       child: Column(
@@ -81,7 +85,7 @@ class SkeletonLoading extends StatelessWidget {
           Container(
             height: itemHeight * 0.6,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: skeletonColor,
               borderRadius: BorderRadius.circular(8),
             ),
           ),
@@ -90,7 +94,7 @@ class SkeletonLoading extends StatelessWidget {
             height: 16,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: skeletonColor,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -99,7 +103,7 @@ class SkeletonLoading extends StatelessWidget {
             height: 12,
             width: 100,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: skeletonColor,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -120,14 +124,14 @@ class SkeletonLoading extends StatelessWidget {
           childAspectRatio: 0.8,
         ),
         itemCount: itemCount,
-        itemBuilder: (context, index) => _buildSkeletonItem(),
+        itemBuilder: (context, index) => _buildSkeletonItem(context),
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: itemCount,
-      itemBuilder: (context, index) => _buildSkeletonItem(),
+      itemBuilder: (context, index) => _buildSkeletonItem(context),
     );
   }
 }
@@ -136,15 +140,15 @@ class SkeletonLoading extends StatelessWidget {
 class ShimmerLoading extends StatefulWidget {
   final Widget child;
   final Duration duration;
-  final Color baseColor;
-  final Color highlightColor;
+  final Color? baseColor;
+  final Color? highlightColor;
 
   const ShimmerLoading({
     super.key,
     required this.child,
     this.duration = const Duration(milliseconds: 1500),
-    this.baseColor = const Color(0xFFE0E0E0),
-    this.highlightColor = const Color(0xFFF5F5F5),
+    this.baseColor,
+    this.highlightColor,
   });
 
   @override
@@ -168,19 +172,30 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
     super.dispose();
   }
 
+  Color _getBaseColor(BuildContext context) {
+    if (widget.baseColor != null) return widget.baseColor!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE0E0E0);
+  }
+
+  Color _getHighlightColor(BuildContext context) {
+    if (widget.highlightColor != null) return widget.highlightColor!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? const Color(0xFF3A3A3A) : const Color(0xFFF5F5F5);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final baseColor = _getBaseColor(context);
+    final highlightColor = _getHighlightColor(context);
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
         return ShaderMask(
           shaderCallback: (bounds) {
             return LinearGradient(
-              colors: [
-                widget.baseColor,
-                widget.highlightColor,
-                widget.baseColor,
-              ],
+              colors: [baseColor, highlightColor, baseColor],
               stops: const [0.0, 0.5, 1.0],
               begin: Alignment(-1.0 + (_controller.value * 2), 0.0),
               end: Alignment(1.0 + (_controller.value * 2), 0.0),
@@ -198,7 +213,7 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
 class LoadingOverlay extends StatelessWidget {
   final bool isLoading;
   final String message;
-  final Color backgroundColor;
+  final Color? backgroundColor;
   final double opacity;
   final Widget child;
 
@@ -207,27 +222,30 @@ class LoadingOverlay extends StatelessWidget {
     required this.isLoading,
     required this.child,
     this.message = 'Cargando...',
-    this.backgroundColor = Colors.black,
+    this.backgroundColor,
     this.opacity = 0.7,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bgColor = backgroundColor ?? theme.colorScheme.surface;
+
     return Stack(
       children: [
         child,
         if (isLoading)
           Container(
-            color: backgroundColor.withOpacity(opacity),
+            color: bgColor.withValues(alpha: opacity),
             child: Center(
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: theme.colorScheme.shadow.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -236,11 +254,13 @@ class LoadingOverlay extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(),
+                    CircularProgressIndicator(color: theme.colorScheme.primary),
                     const SizedBox(height: 16),
                     Text(
                       message,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
                   ],
                 ),
@@ -263,15 +283,19 @@ class TiendaSkeletonLoading extends StatelessWidget {
     this.isGrid = false,
   });
 
-  Widget _buildTiendaSkeletonItem() {
+  Widget _buildTiendaSkeletonItem(BuildContext context) {
+    final theme = Theme.of(context);
+    final skeletonColor = theme.colorScheme.surfaceContainerHighest;
+    final cardColor = theme.colorScheme.surface;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: theme.colorScheme.shadow.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -280,18 +304,16 @@ class TiendaSkeletonLoading extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Imagen skeleton
           Container(
             height: 160,
             decoration: BoxDecoration(
-              color: Colors.grey[200],
+              color: skeletonColor,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
               ),
             ),
           ),
-          // Contenido skeleton
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -301,7 +323,7 @@ class TiendaSkeletonLoading extends StatelessWidget {
                   height: 20,
                   width: 200,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: skeletonColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -310,7 +332,7 @@ class TiendaSkeletonLoading extends StatelessWidget {
                   height: 16,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: skeletonColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -319,7 +341,7 @@ class TiendaSkeletonLoading extends StatelessWidget {
                   height: 16,
                   width: 150,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: skeletonColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -331,7 +353,7 @@ class TiendaSkeletonLoading extends StatelessWidget {
                       height: 20,
                       width: 80,
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: skeletonColor,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -339,7 +361,7 @@ class TiendaSkeletonLoading extends StatelessWidget {
                       height: 20,
                       width: 60,
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: skeletonColor,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -365,14 +387,14 @@ class TiendaSkeletonLoading extends StatelessWidget {
           childAspectRatio: 0.75,
         ),
         itemCount: itemCount,
-        itemBuilder: (context, index) => _buildTiendaSkeletonItem(),
+        itemBuilder: (context, index) => _buildTiendaSkeletonItem(context),
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: itemCount,
-      itemBuilder: (context, index) => _buildTiendaSkeletonItem(),
+      itemBuilder: (context, index) => _buildTiendaSkeletonItem(context),
     );
   }
 }
@@ -388,15 +410,19 @@ class ProductoSkeletonLoading extends StatelessWidget {
     this.isGrid = false,
   });
 
-  Widget _buildProductoSkeletonItem() {
+  Widget _buildProductoSkeletonItem(BuildContext context) {
+    final theme = Theme.of(context);
+    final skeletonColor = theme.colorScheme.surfaceContainerHighest;
+    final cardColor = theme.colorScheme.surface;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: theme.colorScheme.shadow.withValues(alpha: 0.05),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -405,18 +431,16 @@ class ProductoSkeletonLoading extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Imagen skeleton
           Container(
             height: 120,
             decoration: BoxDecoration(
-              color: Colors.grey[200],
+              color: skeletonColor,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
                 topRight: Radius.circular(12),
               ),
             ),
           ),
-          // Contenido skeleton
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -426,7 +450,7 @@ class ProductoSkeletonLoading extends StatelessWidget {
                   height: 16,
                   width: 150,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: skeletonColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -435,7 +459,7 @@ class ProductoSkeletonLoading extends StatelessWidget {
                   height: 14,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: skeletonColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -444,7 +468,7 @@ class ProductoSkeletonLoading extends StatelessWidget {
                   height: 14,
                   width: 100,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: skeletonColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -456,7 +480,7 @@ class ProductoSkeletonLoading extends StatelessWidget {
                       height: 20,
                       width: 60,
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: skeletonColor,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -464,7 +488,7 @@ class ProductoSkeletonLoading extends StatelessWidget {
                       height: 20,
                       width: 40,
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: skeletonColor,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -490,14 +514,14 @@ class ProductoSkeletonLoading extends StatelessWidget {
           childAspectRatio: 0.65,
         ),
         itemCount: itemCount,
-        itemBuilder: (context, index) => _buildProductoSkeletonItem(),
+        itemBuilder: (context, index) => _buildProductoSkeletonItem(context),
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: itemCount,
-      itemBuilder: (context, index) => _buildProductoSkeletonItem(),
+      itemBuilder: (context, index) => _buildProductoSkeletonItem(context),
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
 
 import 'presentation/blocs/image/image_bloc.dart';
 import 'presentation/blocs/auth/auth_bloc.dart';
@@ -12,12 +13,14 @@ import 'presentation/blocs/tienda/tienda_bloc.dart';
 import 'presentation/blocs/producto/producto_bloc.dart';
 import 'presentation/blocs/organizacion/organizacion_bloc.dart';
 import 'presentation/blocs/favorito/favorito_bloc.dart';
+import 'presentation/providers/theme_provider.dart';
 
 import 'core/utils/firebase_config_loader.dart';
 
 import 'core/routing/app_router.dart';
 import 'di/service_locator.dart';
 import 'core/app/app_config.dart';
+import 'core/theme/app_theme.dart';
 
 void main() async {
   // Asegurar que Flutter esté inicializado
@@ -42,8 +45,17 @@ void main() async {
     // Inicializar inyección de dependencias
     await setupServiceLocator(appConfig);
 
+    // Inicializar ThemeProvider
+    final themeProvider = ThemeProvider();
+    await themeProvider.initialize();
+
     // Ejecutar aplicación
-    runApp(const PaseoDelComercioApp());
+    runApp(
+      ChangeNotifierProvider<ThemeProvider>.value(
+        value: themeProvider,
+        child: const PaseoDelComercioApp(),
+      ),
+    );
   } catch (e) {
     // Manejar errores de inicialización
     runApp(
@@ -136,11 +148,18 @@ class PaseoDelComercioApp extends StatelessWidget {
         BlocProvider<OrganizacionBloc>.value(value: getIt<OrganizacionBloc>()),
         BlocProvider<FavoritoBloc>.value(value: getIt<FavoritoBloc>()),
       ],
-      child: MaterialApp.router(
-        debugShowCheckedModeBanner: false,
-        title: AppConfig().appName,
-        locale: const Locale('es', 'ES'),
-        routerConfig: AppRouter.router,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return MaterialApp.router(
+            debugShowCheckedModeBanner: false,
+            title: AppConfig().appName,
+            locale: const Locale('es', 'ES'),
+            routerConfig: AppRouter.router,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
+          );
+        },
       ),
     );
   }

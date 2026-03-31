@@ -4,10 +4,12 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../../di/service_locator.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../../core/app/app_config.dart';
+import '../../providers/theme_provider.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const Color _kGold = Color(0xFFD4AF37);
@@ -41,9 +43,8 @@ class SettingsPage extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
                     children: [
                       const SizedBox(height: 20),
-                      // ⚠️ PREFERENCIAS - POSTERGADO
-                      // _buildPreferencesSection(context),
-                      // const SizedBox(height: 16),
+                      _buildPreferencesSection(context),
+                      const SizedBox(height: 16),
                       _buildAboutSection(context),
                       const SizedBox(height: 16),
                       _buildAccountSection(context),
@@ -113,41 +114,32 @@ class SettingsPage extends StatelessWidget {
   }
 
   // ── Sección de Preferencias ──────────────────────────────
-  // ⚠️ NOTIFICACIONES - POSTERGADO
-  // Widget _buildPreferencesSection(BuildContext context) {
-  //   return _GlassSection(
-  //     title: 'Preferencias',
-  //     icon: Icons.tune_rounded,
-  //     child: Column(
-  //       children: [
-  //         _SettingsTile(
-  //           icon: Icons.notifications_outlined,
-  //           title: 'Notificaciones',
-  //           subtitle: 'Recibe alertas y actualizaciones',
-  //           trailing: Switch(
-  //             value: false,
-  //             onChanged: (_) {
-  //               ScaffoldMessenger.of(context).showSnackBar(
-  //                 SnackBar(
-  //                   content: const Text('Notificaciones en desarrollo'),
-  //                   backgroundColor: _kSurface,
-  //                   behavior: SnackBarBehavior.floating,
-  //                   shape: RoundedRectangleBorder(
-  //                     borderRadius: BorderRadius.circular(12),
-  //                     side: BorderSide(color: _kBorder),
-  //                   ),
-  //                 ),
-  //               );
-  //             },
-  //             activeColor: _kGold,
-  //             inactiveThumbColor: _kHint,
-  //             inactiveTrackColor: _kBorder,
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
+  Widget _buildPreferencesSection(BuildContext context) {
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        return _GlassSection(
+          title: 'Preferencias',
+          icon: Icons.tune_rounded,
+          child: Column(
+            children: [
+              _SettingsTile(
+                icon: Icons.dark_mode_outlined,
+                title: 'Tema oscuro',
+                subtitle: themeProvider.isDarkMode ? 'Activado' : 'Desactivado',
+                trailing: Switch(
+                  value: themeProvider.isDarkMode,
+                  onChanged: (_) => themeProvider.toggleTheme(),
+                  activeColor: _kGold,
+                  inactiveThumbColor: _kHint,
+                  inactiveTrackColor: _kBorder,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   // ── Sección de Acerca ─────────────────────────────────────
   Widget _buildAboutSection(BuildContext context) {

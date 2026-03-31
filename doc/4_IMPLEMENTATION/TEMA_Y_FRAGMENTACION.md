@@ -1,7 +1,7 @@
 # Plan de Implementación: Fragmentación + Tema Oscuro/Claro
 
 **Fecha:** Marzo 2026  
-**Estado:** Planificado - Pendiente de implementación  
+**Estado:** Fase 2 Completada - En implementación  
 **Proyecto:** Paseo del Comercio - Mobile App  
 
 ---
@@ -618,12 +618,12 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 
 ### Checklist de Implementación
 
-- [ ] `app_colors.dart` creado con todos los colores
-- [ ] `app_theme.dart` creado con light/dark ThemeData
-- [ ] `main.dart` integrado con tema
-- [ ] `ThemeProvider` con persistencia
-- [ ] Toggle en Settings funcionando
-- [ ] Widgets compartidos refactorizados
+- [x] `app_colors.dart` creado con todos los colores
+- [x] `app_theme.dart` creado con light/dark ThemeData
+- [x] `main.dart` integrado con tema
+- [x] `ThemeProvider` con persistencia
+- [x] Toggle en Settings funcionando
+- [x] Widgets compartidos refactorizados
 - [ ] plazoleta_list_page fragmentado
 - [ ] organizacion_list_page fragmentado
 - [ ] login_page fragmentado

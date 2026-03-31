@@ -32,32 +32,33 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // authStateChanges snapshot recibido
         final authService = getIt<FirebaseAuthService>();
         final isAuthenticated = snapshot.hasData && snapshot.data != null;
         final currentUser = snapshot.data;
 
         return AppBar(
-          backgroundColor: const Color(0xFF121212),
+          backgroundColor: theme.colorScheme.surface,
+          foregroundColor: theme.colorScheme.onSurface,
           elevation: 6,
           centerTitle: true,
           leading:
               showBackButton
                   ? IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: Icon(
+                      Icons.arrow_back,
+                      color: theme.colorScheme.onSurface,
+                    ),
                     onPressed:
                         onBackPressed ??
                         () {
-                          // Botón de volver presionado
                           if (context.canPop()) {
-                            // Haciendo pop...
                             context.pop();
                           } else {
-                            // No hay nada que hacer pop, redirigiendo a /plazoletas
-                            // Si no hay historial de navegación, ir a la página principal
                             context.go('/plazoletas');
                           }
                         },
@@ -67,30 +68,27 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               title != null
                   ? Text(
                     title!,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                       fontSize: 18,
                     ),
                   )
                   : Text(
                     AppConfig().appName,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                       fontSize: 18,
                     ),
                   ),
           actions: [
-            // Acciones adicionales proporcionadas
             ...?additionalActions,
-
-            // Botón de perfil (solo si está habilitado)
             if (showProfileButton) ...[
               if (isAuthenticated && currentUser != null)
-                _buildProfileMenu(context, authService, currentUser)
+                _buildProfileMenu(context, authService, currentUser, theme)
               else
-                _buildLoginButton(context),
+                _buildLoginButton(context, theme),
             ],
           ],
         );
@@ -98,11 +96,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  /// Construir botón de perfil con menú desplegable
   Widget _buildProfileMenu(
     BuildContext context,
     FirebaseAuthService authService,
     User currentUser,
+    ThemeData theme,
   ) {
     return PopupMenuButton<String>(
       icon: CircleAvatar(
@@ -111,20 +109,23 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             currentUser.photoURL != null
                 ? NetworkImage(currentUser.photoURL!)
                 : null,
-        backgroundColor: Colors.grey[700],
+        backgroundColor: theme.colorScheme.surfaceContainerHighest,
         child:
             currentUser.photoURL == null
-                ? const Icon(Icons.person, size: 18, color: Colors.white)
+                ? Icon(
+                  Icons.person,
+                  size: 18,
+                  color: theme.colorScheme.onSurface,
+                )
                 : null,
       ),
-      color: const Color(0xFF1E1E1E),
-      surfaceTintColor: const Color(0xFF1E1E1E),
+      color: theme.colorScheme.surface,
+      surfaceTintColor: theme.colorScheme.surface,
       onSelected: (value) {
         _handleMenuSelection(context, value, authService);
       },
       itemBuilder: (BuildContext context) {
         return [
-          // Información del usuario
           PopupMenuItem<String>(
             value: 'profile',
             enabled: false,
@@ -133,8 +134,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               children: [
                 Text(
                   currentUser.displayName ?? 'Usuario',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -142,45 +143,62 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 const SizedBox(height: 2),
                 Text(
                   currentUser.email ?? '',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          const PopupMenuDivider(),
-          // Opción de perfil
-          const PopupMenuItem<String>(
+          PopupMenuDivider(),
+          PopupMenuItem<String>(
             value: 'profile_page',
             child: Row(
               children: [
-                Icon(Icons.person, color: Colors.white, size: 20),
+                Icon(
+                  Icons.person,
+                  color: theme.colorScheme.onSurface,
+                  size: 20,
+                ),
                 SizedBox(width: 8),
-                Text('Mi perfil', style: TextStyle(color: Colors.white)),
+                Text(
+                  'Mi perfil',
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                ),
               ],
             ),
           ),
-          // Opción de configuración
-          const PopupMenuItem<String>(
+          PopupMenuItem<String>(
             value: 'settings',
             child: Row(
               children: [
-                Icon(Icons.settings, color: Colors.white, size: 20),
+                Icon(
+                  Icons.settings,
+                  color: theme.colorScheme.onSurface,
+                  size: 20,
+                ),
                 SizedBox(width: 8),
-                Text('Configuración', style: TextStyle(color: Colors.white)),
+                Text(
+                  'Configuración',
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                ),
               ],
             ),
           ),
-          const PopupMenuDivider(),
-          // Opción de cerrar sesión
-          const PopupMenuItem<String>(
+          PopupMenuDivider(),
+          PopupMenuItem<String>(
             value: 'logout',
             child: Row(
               children: [
-                Icon(Icons.logout, color: Colors.red, size: 20),
+                Icon(Icons.logout, color: theme.colorScheme.error, size: 20),
                 SizedBox(width: 8),
-                Text('Cerrar sesión', style: TextStyle(color: Colors.red)),
+                Text(
+                  'Cerrar sesión',
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
               ],
             ),
           ),
@@ -189,8 +207,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  /// Construir botón de iniciar sesión
-  Widget _buildLoginButton(BuildContext context) {
+  Widget _buildLoginButton(BuildContext context, ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: TextButton(
@@ -198,13 +215,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           context.go('/login');
         },
         style: TextButton.styleFrom(
-          foregroundColor: Colors.white,
+          foregroundColor: theme.colorScheme.onSurface,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         ),
-        child: const Text(
+        child: Text(
           'Iniciar sesión',
           style: TextStyle(
-            color: Colors.white,
+            color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.bold,
             fontSize: 14,
           ),
@@ -213,7 +230,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  /// Manejar selección del menú
   void _handleMenuSelection(
     BuildContext context,
     String value,
@@ -224,16 +240,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         context.push('/profile');
         break;
       case 'settings':
-        // TODO: Implementar página de configuración
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Configuración - En desarrollo'),
-            backgroundColor: Colors.blue,
-          ),
-        );
+        context.push('/settings');
         break;
       case 'logout':
-        // Delay para permitir que el menú popup se cierre completamente
         Future.microtask(() {
           _showLogoutConfirmation(context, authService);
         });
@@ -241,37 +250,37 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     }
   }
 
-  /// Mostrar diálogo de confirmación para cerrar sesión
   Future<void> _showLogoutConfirmation(
     BuildContext context,
     FirebaseAuthService authService,
   ) async {
+    final theme = Theme.of(context);
     final result = await showDialog<bool>(
       context: context,
       builder:
           (context) => AlertDialog(
-            backgroundColor: const Color(0xFF1E1E1E),
-            title: const Text(
+            backgroundColor: theme.colorScheme.surface,
+            title: Text(
               'Cerrar sesión',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: theme.colorScheme.onSurface),
             ),
-            content: const Text(
+            content: Text(
               '¿Estás seguro de que quieres cerrar sesión?',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text(
+                child: Text(
                   'Cancelar',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                 ),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text(
+                child: Text(
                   'Cerrar sesión',
-                  style: TextStyle(color: Colors.red),
+                  style: TextStyle(color: theme.colorScheme.error),
                 ),
               ),
             ],
@@ -283,20 +292,22 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     }
   }
 
-  /// Realizar cierre de sesión
   Future<void> _performLogout(
     BuildContext context,
     FirebaseAuthService authService,
   ) async {
     final authBloc = getIt<AuthBloc>();
+    final theme = Theme.of(context);
 
     try {
       showDialog(
         context: context,
         barrierDismissible: false,
         builder:
-            (context) => const Center(
-              child: CircularProgressIndicator(color: Colors.white),
+            (context) => Center(
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+              ),
             ),
       );
 
@@ -313,9 +324,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             if (context.mounted) {
               context.go('/login');
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Sesión cerrada correctamente'),
-                  backgroundColor: Colors.green,
+                SnackBar(
+                  content: const Text('Sesión cerrada correctamente'),
+                  backgroundColor: theme.colorScheme.primary,
                 ),
               );
             }
@@ -326,7 +337,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Error al cerrar sesión: ${state.message}'),
-                backgroundColor: Colors.red,
+                backgroundColor: theme.colorScheme.error,
               ),
             );
           }
@@ -339,7 +350,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error inesperado: ${error.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: theme.colorScheme.error,
           ),
         );
       }
@@ -398,21 +409,22 @@ class ListAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final actions = <Widget>[];
 
-    // Agregar botón de búsqueda si está habilitado
     if (showSearchButton) {
       actions.add(
         IconButton(
-          icon: const Icon(Icons.search, color: Colors.white),
+          icon: Icon(Icons.search, color: theme.colorScheme.onSurface),
           onPressed:
               onSearchPressed ??
               () {
-                // TODO: Implementar búsqueda
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad de búsqueda - En desarrollo'),
-                    backgroundColor: Colors.blue,
+                  SnackBar(
+                    content: const Text(
+                      'Funcionalidad de búsqueda - En desarrollo',
+                    ),
+                    backgroundColor: theme.colorScheme.primary,
                   ),
                 );
               },
@@ -420,7 +432,6 @@ class ListAppBar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
 
-    // Agregar acciones adicionales
     if (additionalActions != null) {
       actions.addAll(additionalActions!);
     }

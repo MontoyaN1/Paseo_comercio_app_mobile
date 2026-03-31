@@ -12,9 +12,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
-const _kBorder = Color(0xFF1E1E3A);
-const _kHint = Color(0xFF6B6B8A);
-
 class FavoriteButton extends StatefulWidget {
   final bool isFavorite;
   final VoidCallback? onTap;
@@ -67,6 +64,10 @@ class FavoriteButtonState extends State<FavoriteButton>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final borderColor = theme.colorScheme.outline;
+    final hintColor = theme.colorScheme.onSurfaceVariant;
+
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) {
@@ -94,14 +95,16 @@ class FavoriteButtonState extends State<FavoriteButton>
                     decoration: BoxDecoration(
                       color:
                           _localIsFavorite
-                              ? Colors.red.withOpacity(0.8)
-                              : Colors.black.withOpacity(0.45),
+                              ? theme.colorScheme.error.withValues(alpha: 0.8)
+                              : theme.colorScheme.surface.withValues(
+                                alpha: 0.45,
+                              ),
                       shape: BoxShape.circle,
                       border: Border.all(
                         color:
                             _localIsFavorite
-                                ? Colors.red.withOpacity(0.8)
-                                : _kBorder,
+                                ? theme.colorScheme.error.withValues(alpha: 0.8)
+                                : borderColor,
                         width: 1,
                       ),
                     ),
@@ -116,7 +119,10 @@ class FavoriteButtonState extends State<FavoriteButton>
                             : Icons.favorite_border_rounded,
                         key: ValueKey(_localIsFavorite),
                         size: widget.size * 0.5,
-                        color: _localIsFavorite ? Colors.white : _kHint,
+                        color:
+                            _localIsFavorite
+                                ? theme.colorScheme.onError
+                                : hintColor,
                       ),
                     ),
                   ),
