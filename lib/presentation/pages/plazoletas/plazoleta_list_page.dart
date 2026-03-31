@@ -491,7 +491,16 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
     );
   }
 
-  void _goToDetail(int id) => context.push('/plazoletas/$id');
+  void _goToDetail(int id) async {
+    await context.push('/plazoletas/$id');
+
+    // Al regresar, forzar recarga fresca
+    if (mounted) {
+      getIt<PlazoletaBloc>().add(
+        const LoadPlazoletasActivas(page: 1, limit: 20, forceRefresh: true),
+      );
+    }
+  }
 
   // ══════════════════════════════════════════════════════════
   @override

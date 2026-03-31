@@ -54,7 +54,6 @@ class _OrganizacionListPageState extends State<OrganizacionListPage>
   TipoOrganizacion? _selectedTipoFilter;
   int _currentPage = 1;
   final int _limit = 20;
-  DateTime? _lastResetAttempt;
   bool _isResetting = false;
 
   // ── Animaciones ───────────────────────────────────────────
@@ -68,13 +67,11 @@ class _OrganizacionListPageState extends State<OrganizacionListPage>
   void initState() {
     super.initState();
 
-    // Fondo continuo (idéntico al login)
     _bgCtrl = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 18),
     )..repeat();
 
-    // Shimmer de focus en búsqueda
     _searchFocusCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 280),
@@ -84,28 +81,16 @@ class _OrganizacionListPageState extends State<OrganizacionListPage>
       curve: Curves.easeOut,
     );
 
-    // Stagger entrada de la lista
     _listCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
 
     _scrollController.addListener(_onScroll);
+
+    // ✅ Siempre recargar al entrar/volver a esta vista
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _resetToInitial();
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Recargar automáticamente cuando la página se vuelve a mostrar
-    // (por ejemplo, al regresar de otra pantalla)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        // Usar lógica inteligente para recargar cuando sea necesario
-        _reloadOrganizationsIfNeeded();
-      }
     });
   }
 
@@ -167,8 +152,18 @@ class _OrganizacionListPageState extends State<OrganizacionListPage>
     }
   }
 
-  void _onOrganizacionTap(Organizacion organizacion) {
-    context.push('/organizaciones/${organizacion.id}', extra: organizacion);
+  void _onOrganizacionTap(Organizacion organizacion) async {
+    // Esperar a que el usuario regrese de la página de detalle
+    await context.push(
+      '/organizaciones/${organizacion.id}',
+      extra: organizacion,
+    );
+
+    // Cuando regresa, forzar recarga
+    if (mounted) {
+      _isResetting = false; // Limpiar el guard
+      _resetToInitial();
+    }
   }
 
   void _onRefresh() {
@@ -177,21 +172,7 @@ class _OrganizacionListPageState extends State<OrganizacionListPage>
   }
 
   void _resetToInitial() {
-    // Evitar múltiples reset en rápida sucesión (menos de 1 segundo)
-    if (_lastResetAttempt != null) {
-      final secondsSinceLastAttempt =
-          DateTime.now().difference(_lastResetAttempt!).inSeconds;
-      if (secondsSinceLastAttempt < 1) {
-        return;
-      }
-    }
-
-    // Evitar reset si ya se está ejecutando
-    if (_isResetting) {
-      return;
-    }
-
-    _lastResetAttempt = DateTime.now();
+    if (_isResetting) return;
     _isResetting = true;
 
     final bloc = context.read<OrganizacionBloc>();
@@ -200,18 +181,11 @@ class _OrganizacionListPageState extends State<OrganizacionListPage>
       return;
     }
 
-    // Siempre resetear cuando se llama a esta función
-    // Esto asegura que los datos se carguen frescos
     bloc.add(const ResetOrganizacionState());
     _currentPage = 1;
     _loadOrganizaciones();
 
-    // Resetear el flag después de un tiempo para permitir nuevas recargas
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        _isResetting = false;
-      }
-    });
+    // Flag se libera cuando el BLoC responda (en el listener)
   }
 
   void _reloadOrganizationsIfNeeded() {
@@ -293,12 +267,6 @@ class _OrganizacionListPageState extends State<OrganizacionListPage>
   Widget build(BuildContext context) {
     // Recargar automáticamente cuando la página se construye
     // Esto cubre el caso de volver desde otra página
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        // Al volver de otra página, verificar si necesitamos recargar
-        _reloadOrganizationsIfNeeded();
-      }
-    });
 
     return BlocConsumer<OrganizacionBloc, OrganizacionState>(
       listener: (context, state) {
@@ -574,15 +542,7 @@ class _OrganizacionListPageState extends State<OrganizacionListPage>
     // Si la lista está vacía, determinar si es por falta de datos o por búsqueda/filtro
     if (organizaciones.isEmpty) {
       // Distinguir entre diferentes casos de lista vacía
-      if (state is OrganizacionLoaded) {
-        // Lista vacía por falta de datos - recargar automáticamente
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _resetToInitial();
-          }
-        });
-        return const _GoldLoader();
-      } else if (state is OrganizacionSearchApplied ||
+      if (state is OrganizacionSearchApplied ||
           state is OrganizacionFilterApplied) {
         // Lista vacía por búsqueda o filtro - mostrar estado vacío apropiado
         return _buildEmptyState(isFiltered: true);

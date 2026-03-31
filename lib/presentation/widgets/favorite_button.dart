@@ -12,8 +12,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
-const _kGold = Color(0xFFD4AF37);
-const _kGoldLight = Color(0xFFFFE082);
 const _kBorder = Color(0xFF1E1E3A);
 const _kHint = Color(0xFF6B6B8A);
 

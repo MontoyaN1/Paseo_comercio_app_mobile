@@ -243,23 +243,28 @@ Funcionalidades **deliberadamente postergadas** para después del launch inicial
 
 ### 3.1 Tema Oscuro/Claro
 
-**Prioridad:** ~~Media~~ → Baja (postergado)  
-**Razón:** Requiere refactorización de ~20+ archivos con colores hardcodeados
+**Prioridad:** ~~Media~~ → ✅ **EN IMPLEMENTACIÓN**  
+**Estado:** Planificado - Ver [TEMA_Y_FRAGMENTACION.md](../4_IMPLEMENTATION/TEMA_Y_FRAGMENTACION.md)
+
+**Decisión de diseño:**
+- Se implementará solo en UI genérica (colores de superficie, texto, bordes)
+- Los painters isométricos (mall, login, etc.) permanecen como branding oscuro
+- Detección automática del tema del sistema + toggle manual en Settings
 
 **Estado actual:**
 - App usa tema oscuro hardcodeado
 - Toggle de tema fue removido de Settings
 - Código preparado en `lib/presentation/providers/theme_provider.dart` (no usado)
+- Plan completo documentado en `doc/4_IMPLEMENTATION/TEMA_Y_FRAGMENTACION.md`
 
-**Para implementar en el futuro:**
-```diff
-- Colores hardcodeados en cada widget
-+ Usar Theme.of(context).colorScheme
-+ Definir AppTheme con light/dark variants
-+ Refactorizar 20+ archivos
-```
+**Cambios planificados:**
+- Crear `lib/core/theme/app_colors.dart` - Colores para light/dark
+- Crear `lib/core/theme/app_theme.dart` - ThemeData.light/dark
+- Integrar en `main.dart` con `themeMode: ThemeMode.system`
+- Agregar toggle en Settings
+- Refactorizar ~17 archivos para usar `Theme.of(context)`
 
-**Esfuerzo estimado:** Alto (1-2 semanas de refactorización)
+**Esfuerzo estimado:** 6-8 sprints (incluye fragmentación de archivos)
 
 ---
 
@@ -398,6 +403,7 @@ PlatformException: flutter_inappwebview - unregistered platform view type
 | Feature | Prioridad | Esfuerzo |
 |---------|-----------|----------|
 | Deep Links | ~~Media~~ | ~~Medio~~ | ✅ Implementado (pendiente testing) |
+| **Tema claro/oscuro** | Media | **Alto** (ver doc) |
 | Google Maps SDK | Media | Medio |
 | Historial de Visitas | Baja | Bajo (ya está listo) |
 | Notificaciones Push | Baja | Medio |
@@ -405,7 +411,6 @@ PlatformException: flutter_inappwebview - unregistered platform view type
 ### Largo Plazo (Post-Launch)
 | Feature | Prioridad | Esfuerzo |
 |---------|-----------|----------|
-| Tema claro/oscuro | Baja | Alto |
 | Geolocator | Baja | Medio |
 | Eliminar cuenta | Baja | Medio |
 | Multi-idioma | Baja | Medio |
@@ -417,7 +422,8 @@ PlatformException: flutter_inappwebview - unregistered platform view type
 
 - `doc/PROGRESO_Y_PLAN.md` - Progreso general del proyecto
 - `doc/MOVIL_PLAN.md` - Plan de implementación móvil
-- `doc/DEEP_LINKS_IMPLEMENTATION.md` - Guía de deep links
+- `doc/4_IMPLEMENTATION/TEMA_Y_FRAGMENTACION.md` - Plan de tema + fragmentación
+- `doc/4_IMPLEMENTATION/DEEP_LINKS_IMPLEMENTATION.md` - Guía de deep links
 - `doc/AGENTS.md` - Guía para desarrolladores
 
 ---
