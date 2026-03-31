@@ -348,7 +348,7 @@ Widgets refactorizados:
 
 ---
 
-### Fase 3: Fragmentar `plazoleta_list_page.dart` + Aplicar Tema
+### Fase 3: Fragmentar `plazoleta_list_page.dart` + Aplicar Tema ✅ COMPLETADA
 
 **Objetivo:** Reducir de 3332 a ~600 líneas + reemplazar colores UI con tema.
 
@@ -406,7 +406,7 @@ Reemplazar colores en widgets de UI:
 
 ---
 
-### Fase 4: Fragmentar `organizacion_list_page.dart` + Aplicar Tema
+### Fase 4: Fragmentar `organizacion_list_page.dart` + Aplicar Tema ✅ COMPLETADA
 
 **Objetivo:** Reducir de 1471 a ~500 + reemplazar colores UI con tema.
 
@@ -544,8 +544,8 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 - [x] `ThemeProvider` con persistencia
 - [x] Toggle en Settings funcionando
 - [x] Widgets compartidos refactorizados
-- [ ] plazoleta_list_page fragmentado
-- [ ] organizacion_list_page fragmentado
+- [x] plazoleta_list_page fragmentado
+- [x] organizacion_list_page fragmentado
 - [ ] login_page fragmentado
 - [ ] profile_page fragmentado
 - [ ] Detail pages fragmentados
