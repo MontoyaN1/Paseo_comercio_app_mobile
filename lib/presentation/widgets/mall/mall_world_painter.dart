@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../domain/entities/enums.dart';
 import '../../../../domain/entities/plazoleta.dart';
-import '../plazoleta/plazoleta_detail_panel.dart' show MallSlot;
 
 // ══════════════════════════════════════════════════════════════
 //  PALETA DE LUJO

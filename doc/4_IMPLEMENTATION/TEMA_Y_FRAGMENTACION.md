@@ -544,9 +544,11 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 - [x] `ThemeProvider` con persistencia
 - [x] Toggle en Settings funcionando
 - [x] Widgets compartidos refactorizados
-- [x] plazoleta_list_page fragmentado
-- [x] organizacion_list_page fragmentado
-- [ ] login_page fragmentado
+- [x] plazoleta_list_page fragmentado ✅
+- [x] plazoleta_list_page theme fixes ✅
+- [x] organizacion_list_page fragmentado ✅
+- [x] organizacion_list_page theme fixes ✅
+- [x] login_page fragmentado ✅
 - [ ] profile_page fragmentado
 - [ ] Detail pages fragmentados
 - [ ] Análisis estático sin errores

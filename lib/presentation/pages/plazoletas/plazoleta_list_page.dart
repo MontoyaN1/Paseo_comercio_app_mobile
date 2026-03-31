@@ -25,11 +25,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../di/service_locator.dart';
 import '../../../domain/entities/plazoleta.dart';
-import '../../../domain/entities/enums.dart';
 import '../../blocs/plazoleta/plazoleta_bloc.dart';
 import '../../blocs/plazoleta/plazoleta_event.dart';
 import '../../blocs/plazoleta/plazoleta_state.dart';
@@ -717,16 +715,21 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
 
   Widget _mapControls() {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accentColor = isDark ? _kGold : const Color(0xFFB8860B);
     return Positioned(
       right: 14,
       top: MediaQuery.of(context).padding.top + 120,
       child: Container(
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(
-            alpha: 0.85,
-          ),
+          color:
+              isDark
+                  ? theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.85,
+                  )
+                  : Colors.white.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _kGold.withValues(alpha: 0.25)),
+          border: Border.all(color: accentColor.withValues(alpha: 0.25)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.3),
@@ -743,13 +746,13 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
             Container(
               width: 1,
               height: 24,
-              color: _kGold.withValues(alpha: 0.2),
+              color: accentColor.withValues(alpha: 0.2),
             ),
             _mapBtn(Icons.add, () => _animateZoom(_scale * 1.4)),
             Container(
               width: 1,
               height: 24,
-              color: _kGold.withValues(alpha: 0.2),
+              color: accentColor.withValues(alpha: 0.2),
             ),
             _mapBtn(
               Icons.center_focus_strong_rounded,
@@ -764,6 +767,8 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
 
   Widget _mapBtn(IconData icon, VoidCallback onTap, {bool accent = false}) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accentColor = isDark ? _kGold : const Color(0xFFB8860B);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -771,44 +776,40 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
         height: 40,
         decoration: BoxDecoration(
           color:
-              accent
-                  ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                  : Colors.transparent,
+              accent ? accentColor.withValues(alpha: 0.18) : Colors.transparent,
           borderRadius: accent ? BorderRadius.circular(8) : BorderRadius.zero,
           border: Border.all(
             color:
                 accent
-                    ? theme.colorScheme.primary.withValues(alpha: 0.4)
+                    ? accentColor.withValues(alpha: 0.55)
                     : Colors.transparent,
             width: accent ? 1 : 0,
           ),
         ),
-        child: Icon(
-          icon,
-          color:
-              accent ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-          size: 18,
-        ),
+        child: Icon(icon, color: accentColor, size: 18),
       ),
     );
   }
 
   Widget _iconBtn(IconData icon, VoidCallback onTap) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final iconColor = isDark ? _kGold : const Color(0xFFB8860B);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(9),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(
-            alpha: 0.88,
-          ),
+          color:
+              isDark
+                  ? theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.88,
+                  )
+                  : Colors.white.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(
-            color: theme.colorScheme.primary.withValues(alpha: 0.2),
-          ),
+          border: Border.all(color: iconColor.withValues(alpha: 0.30)),
         ),
-        child: Icon(icon, color: theme.colorScheme.onSurface, size: 18),
+        child: Icon(icon, color: iconColor, size: 18),
       ),
     );
   }
