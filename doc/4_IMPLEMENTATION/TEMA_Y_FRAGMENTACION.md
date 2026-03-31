@@ -134,18 +134,20 @@ MaterialApp.router(
 
 ## PARTE 4: FRAGMENTACIÓN DE ARCHIVOS
 
+> **NOTA IMPORTANTE:** Cada fase de fragmentación DEBE incluir la sustitución de colores de UI genéricos por `Theme.of(context)`. Los únicos colores que permanecen hardcodeados son los de branding ( painters, neons, oro decorativo).
+
 ### 4.1 Archivo Crítico: `plazoleta_list_page.dart` (3332 líneas)
 
 **ANTES:**
 ```
 lib/presentation/pages/plazoletas/
   plazoleta_list_page.dart  (3332 líneas)
-    - Constants de colores
+    - Constants de colores (_kBg, _kSurface, etc.)
     - Models _Slot, _Plaza
     - _PlazoletaListPageState (lógica)
-    - _MallBackground + _BgPainter (painter atmosférico)
-    - _WorldPainter (painter isométrico completo)
-    - _DetailPanel (panel de preview)
+    - _MallBackground + _BgPainter (painter - NO cambia con tema)
+    - _WorldPainter (painter isométrico - NO cambia con tema)
+    - _DetailPanel (panel de preview - USA tema)
 ```
 
 **DESPUÉS:**
@@ -154,25 +156,41 @@ lib/presentation/
   widgets/
     mall/
       mall_background.dart       (~150 líneas)
-        - _MallBackground (widget)
-        - _BgPainter (skylight, beams, ambient glow, bokeh)
+        - _MallBackground (widget - NO cambia con tema)
+        - _BgPainter (skylight, beams, ambient glow, bokeh - NO cambia)
       
       mall_world_painter.dart    (~1100 líneas)
-        - _WorldPainter (suelo mármol, columnas, tiendas, atrio)
+        - _WorldPainter (suelo mármol, columnas, tiendas, atrio - NO cambia)
         - Métodos helper de dibujo isométrico
         - _path4(), _iso() helpers
+        ⚠️ COLORES: Todos hardcodeados (branding isométrico)
       
     plazoleta/
       plazoleta_detail_panel.dart (~350 líneas)
         - _DetailPanel (panel de preview al tocar plaza)
+        ⚠️ COLORES: USA Theme.of(context) para background, bordes, texto
         
   pages/plazoletas/
     plazoleta_list_page.dart     (~600 líneas)
-      - Constants de colores (solo UI genéricos)
       - Models _Slot, _Plaza
       - _PlazoletaListPageState (lógica principal)
       - Integración de MallBackground
+      - Header glassmorphism con gradientes → USAR Theme.of(context)
 ```
+
+**Cambios de color requeridos en fragmentación:**
+| Antes (hardcoded) | Después (tema) |
+|-------------------|----------------|
+| `_kBg` (background) | `Theme.of(context).colorScheme.surface` |
+| `_kSurface` | `Theme.of(context).colorScheme.surfaceContainerHighest` |
+| `_kBorder` | `Theme.of(context).colorScheme.outline` |
+| `_kHint` | `Theme.of(context).colorScheme.onSurfaceVariant` |
+| Colores de texto blanco | `Theme.of(context).colorScheme.onSurface` |
+
+**QUE NO CAMBIA (branding):**
+- `_kGold`, `_kGoldGlow`, `_kGoldDeep` (orado decorativo)
+- Colores del painter (`_kNeonBlue`, `_kNeonPink`, etc.)
+- Gradientes del mall isométrico
 
 ---
 
@@ -182,10 +200,10 @@ lib/presentation/
 ```
 lib/presentation/pages/organizaciones/
   organizacion_list_page.dart  (1471 líneas)
-    - _BgPainter (partículas isométricas)
-    - _OrganizacionCard (card completa)
-    - _GoldFilterChip
-    - Filtros, búsqueda
+    - _BgPainter (partículas isométricas - NO cambia)
+    - _OrganizacionCard (card completa - USA tema)
+    - _GoldFilterChip (USA tema)
+    - Filtros, búsqueda (USA tema)
 ```
 
 **DESPUÉS:**
@@ -197,17 +215,21 @@ lib/presentation/
         - _OrganizacionCard
         - _TypeBadge
         - _GoldStatItem
+        ⚠️ COLORES: USA Theme.of(context)
       
       organizacion_filter_chip.dart   (~150 líneas)
         - _GoldFilterChip
+        ⚠️ COLORES: USA Theme.of(context)
       
       organizacion_bg_painter.dart    (~200 líneas)
-        - _BgPainter (partículas flotantes)
+        - _BgPainter (partículas flotantes - NO cambia)
+        ⚠️ COLORES: Todos hardcodeados (branding)
         
   pages/organizaciones/
     organizacion_list_page.dart       (~500 líneas)
       - Lógica principal
       - Filtros y búsqueda
+      - Integración de widgets
 ```
 
 ---
@@ -218,9 +240,9 @@ lib/presentation/
 ```
 lib/presentation/pages/auth/
   login_page.dart  (1416 líneas)
-    - _BgPainter (partículas + rayos de luz)
-    - Decorators de glassmorphism
-    - Login UI completa
+    - _BgPainter (partículas + rayos de luz - NO cambia)
+    - Decorators de glassmorphism (USA tema)
+    - Login UI completa (USA tema)
 ```
 
 **DESPUÉS:**
@@ -230,15 +252,17 @@ lib/presentation/
     auth/
       login_background.dart     (~200 líneas)
         - _BgPainter
-        - Partículas flotantes
+        ⚠️ COLORES: Todos hardcodeados (branding)
       
       login_decorators.dart     (~150 líneas)
         - Decorators glassmorphism
+        ⚠️ COLORES: USA Theme.of(context)
       
   pages/auth/
     login_page.dart             (~800 líneas)
       - UI de login
       - Integración con Firebase Auth
+      - Campos de texto, botones → USAR Theme.of(context)
 ```
 
 ---
@@ -249,10 +273,10 @@ lib/presentation/
 ```
 lib/presentation/pages/profile/
   profile_page.dart  (2539 líneas)
-    - Header con avatar
-    - Stats cards
-    - Menu items
-    - Dialogs
+    - Header con avatar (USA tema)
+    - Stats cards (USA tema)
+    - Menu items (USA tema)
+    - Dialogs (USA tema)
 ```
 
 **DESPUÉS:**
@@ -263,17 +287,21 @@ lib/presentation/
       profile_header.dart       (~300 líneas)
         - Avatar, nombre, email
         - Decorators
+        ⚠️ COLORES: USA Theme.of(context)
       
       profile_stats_card.dart   (~200 líneas)
         - Stats de usuario
+        ⚠️ COLORES: USA Theme.of(context)
       
       profile_menu_item.dart    (~150 líneas)
         - Items del menú
         - Iconos, acciones
+        ⚠️ COLORES: USA Theme.of(context)
       
   pages/profile/
     profile_page.dart          (~800 líneas)
       - Dialogs
+      - Lógica de estado
       - Integración de widgets
 ```
 
@@ -283,92 +311,46 @@ lib/presentation/
 
 | Archivo | Líneas | Acción Sugerida |
 |---------|--------|----------------|
-| `tienda_detail_page.dart` | 2210 | Extraer tabs, info widgets, reviews list |
-| `producto_detail_page.dart` | 2142 | Similar a tienda |
-| `plazoleta_detail_page.dart` | 1577 | Extraer widgets de detalle |
-| `settings_page.dart` | 695 | Agregar toggle de tema cuando se implemente |
-| `soporte_page.dart` | 649 | Mantener, ya está bien estructurado |
-| `historial_page.dart` | 627 | Mantener, está bien |
+| `tienda_detail_page.dart` | 2210 | Extraer tabs, info widgets, reviews list + USAR tema |
+| `producto_detail_page.dart` | 2142 | Similar a tienda + USAR tema |
+| `plazoleta_detail_page.dart` | 1577 | Extraer widgets de detalle + USAR tema |
+| `settings_page.dart` | 695 | Ya tiene toggle, mejorar colores UI con tema |
+| `soporte_page.dart` | 649 | Mantener, revisar colores con tema |
+| `historial_page.dart` | 627 | Mantener, revisar colores con tema |
 
 ---
 
 ## PARTE 5: FASES DE IMPLEMENTACIÓN
 
-### Fase 1: Sistema de Tema Base
+### Fase 1: Sistema de Tema Base ✅ COMPLETADA
 
 **Objetivo:** Crear infraestructura de temas sin afectar funcionalidad existente.
 
-#### 1.1 Crear sistema de colores
-```
-Crear: lib/core/theme/app_colors.dart
-  - Colores para light/dark
-  - Extensiones de ColorScheme
-```
-
-#### 1.2 Crear ThemeData
-```
-Crear: lib/core/theme/app_theme.dart
-  - ThemeData.light
-  - ThemeData.dark
-  - Extensiones de TextTheme
-```
-
-#### 1.3 Integrar en main.dart
-```
-Modificar: lib/main.dart
-  - Agregar theme: AppTheme.lightTheme
-  - Agregar darkTheme: AppTheme.darkTheme
-  - themeMode: ThemeMode.system (default)
-```
-
-#### 1.4 Agregar persistencia
-```
-Modificar: lib/presentation/providers/theme_provider.dart
-  - SharedPreferences para guardar preferencia
-  - Método para cargar preferencia al inicio
-```
-
-#### 1.5 Toggle en Settings
-```
-Modificar: lib/presentation/pages/settings/settings_page.dart
-  - Agregar sección de Tema
-  - Radio buttons o dropdown
-```
-
-**Archivos afectados:** 2 nuevos, 2 modificados  
-**Líneas de código:** ~300 nuevas
+#### 1.1-1.5 Completado
+- `app_colors.dart` creado
+- `app_theme.dart` creado
+- `main.dart` integrado
+- `ThemeProvider` con persistencia
+- Toggle en Settings
 
 ---
 
-### Fase 2: Widgets Compartidos con Tema
+### Fase 2: Widgets Compartidos con Tema ✅ COMPLETADA
 
 **Objetivo:** Aplicar tema a widgets reutilizables existentes.
 
-#### 2.1 Identificar widgets a modificar
-```
-- lib/presentation/widgets/common/loading_state.dart
-- lib/presentation/widgets/common/empty_state.dart
-- lib/presentation/widgets/common/error_state.dart
-- lib/presentation/widgets/custom_app_bar.dart
-- lib/presentation/widgets/favorite_button.dart
-```
-
-#### 2.2 Refactorizar para usar Theme
-```
-Cambiar colores hardcodeados por Theme.of(context)
-Ejemplo:
-  antes: Color(0xFF0A0A0F)
-  después: Theme.of(context).colorScheme.surface
-```
-
-**Archivos afectados:** ~6 widgets  
-**Líneas de código:** ~150 modificadas
+Widgets refactorizados:
+- `loading_state.dart` ✅
+- `empty_state.dart` ✅
+- `error_state.dart` ✅
+- `custom_app_bar.dart` ✅
+- `favorite_button.dart` ✅
 
 ---
 
-### Fase 3: Fragmentar `plazoleta_list_page.dart`
+### Fase 3: Fragmentar `plazoleta_list_page.dart` + Aplicar Tema
 
-**Objetivo:** Reducir de 3332 a ~600 líneas en page + ~1500 en widgets separados.
+**Objetivo:** Reducir de 3332 a ~600 líneas + reemplazar colores UI con tema.
 
 #### 3.1 Crear estructura de carpetas
 ```bash
@@ -379,78 +361,66 @@ mkdir -p lib/presentation/widgets/plazoleta
 #### 3.2 Extraer `mall_background.dart`
 ```
 Crear: lib/presentation/widgets/mall/mall_background.dart
-Mover:
-  - _MallBackground (widget Stateless)
-  - _BgPainter (CustomPainter)
+Mover: _MallBackground, _BgPainter
+⚠️ NOTA: Este archivo NO usa tema (branding isométrico)
 ```
 
 #### 3.3 Extraer `mall_world_painter.dart`
 ```
 Crear: lib/presentation/widgets/mall/mall_world_painter.dart
-Mover:
-  - _WorldPainter (CustomPainter principal)
-  - Métodos helper (_path4, _iso, etc.)
+Mover: _WorldPainter y helpers
+⚠️ NOTA: Este archivo NO usa tema (branding isométrico)
 ```
 
 #### 3.4 Extraer `plazoleta_detail_panel.dart`
 ```
 Crear: lib/presentation/widgets/plazoleta/plazoleta_detail_panel.dart
-Mover:
-  - _DetailPanel
+Mover: _DetailPanel
+⚠️ IMPORTANTE: Reemplazar colores hardcodeados por Theme.of(context):
+  - background → theme.colorScheme.surface
+  - bordes → theme.colorScheme.outline
+  - texto → theme.colorScheme.onSurface / onSurfaceVariant
 ```
 
-#### 3.5 Limpiar `plazoleta_list_page.dart`
+#### 3.5 Refactorizar `plazoleta_list_page.dart`
 ```
 Mantener:
-  - Constants de colores UI
   - Models _Slot, _Plaza
   - _PlazoletaListPageState
-  - Integración de widgets extraídos
+  - Integración de MallBackground
+
+Reemplazar colores en widgets de UI:
+  - Header glassmorphism → theme.colorScheme.surface
+  - Map controls → theme.colorScheme.surfaceContainerHighest
+  - Texto UI → theme.colorScheme.onSurface
+  - Bordes → theme.colorScheme.outline
 ```
+
+**Colores que PERMANECEN hardcoded (branding):**
+- `_kGold`, `_kGoldGlow`, `_kGoldDeep` - oro decorativo
+- `_kWarmLight`, `_kCoolLight`, `_kSkylight` - iluminación del painter
+- `_kNeonBlue`, `_kNeonPink`, etc. - neons del painter
 
 **Archivos afectados:** 1 modificado, 3 nuevos  
 **Líneas:** 3332 → ~600 (page) + ~1500 (widgets)
 
 ---
 
-### Fase 4: Fragmentar `organizacion_list_page.dart`
+### Fase 4: Fragmentar `organizacion_list_page.dart` + Aplicar Tema
 
-**Objetivo:** Reducir de 1471 a ~500 líneas en page + widgets separados.
+**Objetivo:** Reducir de 1471 a ~500 + reemplazar colores UI con tema.
 
-#### 4.1 Crear estructura de carpetas
-```bash
-mkdir -p lib/presentation/widgets/organizacion
+#### 4.1-4.4 Extraer widgets
 ```
-
-#### 4.2 Extraer `organizacion_card.dart`
-```
-Crear: lib/presentation/widgets/organizacion/organizacion_card.dart
-Mover:
-  - _OrganizacionCard
-  - _TypeBadge
-  - _GoldStatItem
+lib/presentation/widgets/organizacion/
+  organizacion_card.dart          (~400 líneas) → USA TEMA
+  organizacion_filter_chip.dart   (~150 líneas) → USA TEMA
+  organizacion_bg_painter.dart    (~200 líneas) → NO USA TEMA (branding)
 ```
 
-#### 4.3 Extraer `organizacion_filter_chip.dart`
+#### 4.5 Refactorizar page
 ```
-Crear: lib/presentation/widgets/organizacion/organizacion_filter_chip.dart
-Mover:
-  - _GoldFilterChip
-```
-
-#### 4.4 Extraer `organizacion_bg_painter.dart`
-```
-Crear: lib/presentation/widgets/organizacion/organizacion_bg_painter.dart
-Mover:
-  - _BgPainter
-```
-
-#### 4.5 Limpiar `organizacion_list_page.dart`
-```
-Mantener:
-  - Lógica de estado
-  - Búsqueda y filtros
-  - Integración de widgets
+Reemplazar colores hardcodeados por Theme.of(context)
 ```
 
 **Archivos afectados:** 1 modificado, 3 nuevos  
@@ -458,35 +428,15 @@ Mantener:
 
 ---
 
-### Fase 5: Fragmentar `login_page.dart`
+### Fase 5: Fragmentar `login_page.dart` + Aplicar Tema
 
-**Objetivo:** Reducir de 1416 a ~800 líneas + widgets separados.
+**Objetivo:** Reducir de 1416 a ~800 + reemplazar colores UI con tema.
 
-#### 5.1 Crear estructura de carpetas
-```bash
-mkdir -p lib/presentation/widgets/auth
+#### 5.1-5.4 Extraer widgets
 ```
-
-#### 5.2 Extraer `login_background.dart`
-```
-Crear: lib/presentation/widgets/auth/login_background.dart
-Mover:
-  - _BgPainter
-```
-
-#### 5.3 Extraer `login_decorators.dart`
-```
-Crear: lib/presentation/widgets/auth/login_decorators.dart
-Mover:
-  - Decorators glassmorphism
-```
-
-#### 5.4 Limpiar `login_page.dart`
-```
-Mantener:
-  - UI de login
-  - Métodos de autenticación
-  - Integración
+lib/presentation/widgets/auth/
+  login_background.dart     (~200 líneas) → NO USA TEMA (branding)
+  login_decorators.dart    (~150 líneas) → USA TEMA
 ```
 
 **Archivos afectados:** 1 modificado, 2 nuevos  
@@ -494,28 +444,16 @@ Mantener:
 
 ---
 
-### Fase 6: Fragmentar `profile_page.dart`
+### Fase 6: Fragmentar `profile_page.dart` + Aplicar Tema
 
-**Objetivo:** Reducir de 2539 a ~800 líneas + widgets separados.
+**Objetivo:** Reducir de 2539 a ~800 + reemplazar colores UI con tema.
 
-#### 6.1 Crear estructura de carpetas
-```bash
-mkdir -p lib/presentation/widgets/profile
+#### 6.1-6.3 Extraer widgets
 ```
-
-#### 6.2 Extraer widgets
-```
-Crear: lib/presentation/widgets/profile/profile_header.dart
-Crear: lib/presentation/widgets/profile/profile_stats_card.dart
-Crear: lib/presentation/widgets/profile/profile_menu_item.dart
-```
-
-#### 6.3 Limpiar `profile_page.dart`
-```
-Mantener:
-  - Dialogs
-  - Lógica de estado
-  - Integración
+lib/presentation/widgets/profile/
+  profile_header.dart       (~300 líneas) → USA TEMA
+  profile_stats_card.dart  (~200 líneas) → USA TEMA
+  profile_menu_item.dart   (~150 líneas) → USA TEMA
 ```
 
 **Archivos afectados:** 1 modificado, 3 nuevos  
@@ -523,44 +461,26 @@ Mantener:
 
 ---
 
-### Fase 7: Fragmentar Detalle Pages
+### Fase 7: Fragmentar Detalle Pages + Aplicar Tema
 
-**Objetivo:** Reducir páginas de detalle muy grandes.
+**Objetivo:** Reducir páginas de detalle + reemplazar colores UI con tema.
 
 #### 7.1 `tienda_detail_page.dart` (2210 líneas)
-```
-widgets/tienda/
-  tienda_info_section.dart     (~300 líneas)
-  tienda_reviews_list.dart    (~400 líneas)
-  tienda_tab_content.dart     (~200 líneas)
-
-pages/tiendas/
-  tienda_detail_page.dart     (~1000 líneas)
-```
-
 #### 7.2 `producto_detail_page.dart` (2142 líneas)
-```
-widgets/producto/
-  producto_info_section.dart   (~300 líneas)
-  producto_reviews_list.dart  (~400 líneas)
-
-pages/productos/
-  producto_detail_page.dart    (~1000 líneas)
-```
 
 ---
 
-## PARTE 6: ORDEN DE IMPLEMENTACIÓN SUGERIDO
+## PARTE 6: ORDEN DE IMPLEMENTACIÓN
 
 | Orden | Fase | Archivos | Esfuerzo | Dependencias |
 |-------|------|----------|----------|--------------|
-| 1 | Fase 1 | Sistema de tema base | Bajo | Ninguna |
-| 2 | Fase 2 | Widgets compartidos | Bajo | Fase 1 |
-| 3 | Fase 3 | plazoleta_list_page | Alto | Ninguna |
-| 4 | Fase 4 | organizacion_list_page | Medio | Fase 2 |
-| 5 | Fase 5 | login_page | Medio | Ninguna |
-| 6 | Fase 6 | profile_page | Medio | Fase 2 |
-| 7 | Fase 7 | detail pages | Alto | Fase 2 |
+| 1 | Fase 1 | Sistema de tema base ✅ | Bajo | Ninguna |
+| 2 | Fase 2 | Widgets compartidos ✅ | Bajo | Fase 1 |
+| 3 | Fase 3 | plazoleta_list_page + tema | Alto | Ninguna |
+| 4 | Fase 4 | organizacion_list_page + tema | Medio | Fase 2 |
+| 5 | Fase 5 | login_page + tema | Medio | Ninguna |
+| 6 | Fase 6 | profile_page + tema | Medio | Fase 2 |
+| 7 | Fase 7 | detail pages + tema | Alto | Fase 2 |
 
 **Total estimado:** 6-8 sprints de trabajo
 
