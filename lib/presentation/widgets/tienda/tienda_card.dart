@@ -275,6 +275,14 @@ class _TiendaCardState extends State<TiendaCard>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark ? _kSurfaceCard : Colors.white;
+    final borderColor = isDark ? _kBorder : Colors.grey.shade300;
+    final textColor = isDark ? Colors.white : Colors.black;
+    final hintColor = isDark ? _kHint : Colors.grey.shade600;
+    final shadowColor =
+        isDark ? Colors.black.withOpacity(0.50) : Colors.grey.withOpacity(0.30);
+
     final imageUrl = _getImage();
     final nombre = _getNombre();
     final badge = _getEstadoBadge();
@@ -303,7 +311,7 @@ class _TiendaCardState extends State<TiendaCard>
                       offset: const Offset(0, 4),
                     ),
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.50),
+                      color: shadowColor,
                       blurRadius: 14,
                       offset: const Offset(0, 3),
                     ),
@@ -318,14 +326,23 @@ class _TiendaCardState extends State<TiendaCard>
             filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
             child: Container(
               decoration: BoxDecoration(
-                color: _kSurfaceCard.withOpacity(0.92),
+                color: surfaceColor.withOpacity(0.92),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: _kBorder, width: 1),
+                border: Border.all(color: borderColor, width: 1),
               ),
               child:
                   widget.showDetails
-                      ? _buildFullCard(imageUrl, nombre, badge, categoria)
-                      : _buildCompactCard(imageUrl, nombre, badge),
+                      ? _buildFullCard(
+                        imageUrl,
+                        nombre,
+                        badge,
+                        categoria,
+                        isDark,
+                        textColor,
+                        hintColor,
+                        borderColor,
+                      )
+                      : _buildCompactCard(imageUrl, nombre, badge, textColor),
             ),
           ),
         ),
@@ -339,11 +356,16 @@ class _TiendaCardState extends State<TiendaCard>
     String nombre,
     _BadgeData badge,
     String? categoria,
+    bool isDark,
+    Color textColor,
+    Color hintColor,
+    Color borderColor,
   ) {
     final rating = _getRating();
     final ratingCnt = _getRatingCount();
     final visitas = _getVisitas();
     final descripcion = _getDescripcion();
+    final bgOverlay = isDark ? _kBg : Colors.grey.shade700;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -366,8 +388,8 @@ class _TiendaCardState extends State<TiendaCard>
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        _kBg.withOpacity(0.35),
-                        _kBg.withOpacity(0.80),
+                        bgOverlay.withOpacity(0.35),
+                        bgOverlay.withOpacity(0.80),
                       ],
                       stops: const [0.4, 0.72, 1.0],
                     ),
@@ -492,8 +514,8 @@ class _TiendaCardState extends State<TiendaCard>
               // Descripción
               Text(
                 descripcion,
-                style: const TextStyle(
-                  color: _kHint,
+                style: TextStyle(
+                  color: hintColor,
                   fontSize: 12,
                   height: 1.5,
                   letterSpacing: 0.1,
@@ -509,7 +531,11 @@ class _TiendaCardState extends State<TiendaCard>
                 height: 1,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.transparent, _kBorder, Colors.transparent],
+                    colors: [
+                      Colors.transparent,
+                      borderColor,
+                      Colors.transparent,
+                    ],
                   ),
                 ),
               ),
@@ -520,10 +546,10 @@ class _TiendaCardState extends State<TiendaCard>
               Row(
                 children: [
                   // Rating
-                  _buildRatingMini(rating, ratingCnt),
+                  _buildRatingMini(rating, ratingCnt, hintColor),
                   const SizedBox(width: 14),
                   // Visitas
-                  _buildVisitasMini(visitas),
+                  _buildVisitasMini(visitas, hintColor),
                   const Spacer(),
                   // Etiquetas si existen
                   if (widget.tienda['etiquetas'] != null) ..._buildEtiquetas(),
@@ -543,7 +569,12 @@ class _TiendaCardState extends State<TiendaCard>
   }
 
   // ── Tarjeta compacta (fila horizontal) ────────────────────
-  Widget _buildCompactCard(String? imageUrl, String nombre, _BadgeData badge) {
+  Widget _buildCompactCard(
+    String? imageUrl,
+    String nombre,
+    _BadgeData badge,
+    Color textColor,
+  ) {
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Row(
@@ -597,8 +628,8 @@ class _TiendaCardState extends State<TiendaCard>
               children: [
                 Text(
                   nombre,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: textColor,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -719,20 +750,20 @@ class _TiendaCardState extends State<TiendaCard>
   }
 
   // ── Rating mini ───────────────────────────────────────────
-  Widget _buildRatingMini(double rating, int count) {
+  Widget _buildRatingMini(double rating, int count, Color hintColor) {
     if (rating == 0) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.star_border_rounded,
-            size: 13,
-            color: _kHint.withOpacity(0.7),
-          ),
-          const SizedBox(width: 3),
-          Text(
+          const Icon(Icons.star_border_rounded, size: 16, color: _kGold),
+          const SizedBox(width: 4),
+          const Text(
             'Sin valorar',
-            style: TextStyle(fontSize: 10, color: _kHint.withOpacity(0.7)),
+            style: TextStyle(
+              fontSize: 12,
+              color: _kGold,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       );
@@ -740,39 +771,43 @@ class _TiendaCardState extends State<TiendaCard>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.star_rounded, size: 13, color: _kGold),
-        const SizedBox(width: 3),
+        const Icon(Icons.star_rounded, size: 16, color: _kGold),
+        const SizedBox(width: 4),
         Text(
           rating.toStringAsFixed(1),
           style: const TextStyle(
-            color: _kGoldLight,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
+            color: _kGold,
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
           ),
         ),
-        const SizedBox(width: 3),
+        const SizedBox(width: 4),
         Text(
           '($count)',
-          style: TextStyle(fontSize: 10, color: _kHint.withOpacity(0.8)),
+          style: const TextStyle(
+            fontSize: 11,
+            color: _kGoldLight,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
   }
 
   // ── Visitas mini ──────────────────────────────────────────
-  Widget _buildVisitasMini(int visitas) {
+  Widget _buildVisitasMini(int visitas, Color hintColor) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          Icons.visibility_rounded,
-          size: 12,
-          color: _kHint.withOpacity(0.8),
-        ),
+        const Icon(Icons.visibility_rounded, size: 15, color: _kGold),
         const SizedBox(width: 4),
         Text(
           '$visitas vistas',
-          style: TextStyle(fontSize: 10, color: _kHint.withOpacity(0.8)),
+          style: const TextStyle(
+            fontSize: 12,
+            color: _kGold,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );

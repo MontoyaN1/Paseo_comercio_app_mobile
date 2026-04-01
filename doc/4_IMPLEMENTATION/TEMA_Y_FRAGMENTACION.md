@@ -1,7 +1,7 @@
 # Plan de Implementación: Fragmentación + Tema Oscuro/Claro
 
 **Fecha:** Marzo 2026  
-**Estado:** Fase 6 En curso - profile_page + tema  
+**Estado:** Fase 7 En curso - detail pages + tema  
 **Proyecto:** Paseo del Comercio - Mobile App  
 
 ---
@@ -461,12 +461,35 @@ lib/presentation/widgets/profile/
 
 ---
 
-### Fase 7: Fragmentar Detalle Pages + Aplicar Tema
+### Fase 7: Fragmentar Detalle Pages + Aplicar Tema ✅ EN PROGRESO
 
 **Objetivo:** Reducir páginas de detalle + reemplazar colores UI con tema.
 
-#### 7.1 `tienda_detail_page.dart` (2210 líneas)
-#### 7.2 `producto_detail_page.dart` (2142 líneas)
+#### 7.1-7.2 Widgets Creados
+```
+lib/presentation/widgets/tienda/
+  tienda_bg_painter.dart    (136 líneas) → NO USA TEMA (branding)
+  tienda_components.dart    (435 líneas) → USA TEMA
+    - TiendaHeroStatPill
+    - TiendaGoldStatCard
+    - TiendaGoldInfoRow
+    - TiendaPhoneInfo
+    - TiendaGoldDivider
+    - TiendaIconButton
+    - TiendaActionButton
+    - TiendaOutlineButton
+
+lib/presentation/widgets/producto/
+  producto_bg_painter.dart  (127 líneas) → NO USA TEMA (branding)
+  producto_components.dart   (131 líneas) → USA TEMA
+    - ProductoPhoneInfo
+    - ProductoGoldStatCard
+    - ProductoIconButton
+```
+
+#### 7.3-7.4 Pages por actualizar
+- `tienda_detail_page.dart` (2210 líneas) → usar widgets
+- `producto_detail_page.dart` (2142 líneas) → usar widgets
 
 ---
 
@@ -549,8 +572,8 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 - [x] organizacion_list_page fragmentado ✅
 - [x] organizacion_list_page theme fixes ✅
 - [x] login_page fragmentado ✅
-- [ ] profile_page fragmentado (en progreso)
-- [ ] Detail pages fragmentados
+- [x] profile_page fragmentado ✅
+- [ ] Detail pages fragmentados (en progreso)
 - [ ] Análisis estático sin errores
 
 ### Testing Post-Implementación

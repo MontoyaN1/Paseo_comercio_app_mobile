@@ -65,8 +65,6 @@ class FavoriteButtonState extends State<FavoriteButton>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final borderColor = theme.colorScheme.outline;
-    final hintColor = theme.colorScheme.onSurfaceVariant;
 
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
@@ -95,7 +93,7 @@ class FavoriteButtonState extends State<FavoriteButton>
                     decoration: BoxDecoration(
                       color:
                           _localIsFavorite
-                              ? theme.colorScheme.error.withValues(alpha: 0.8)
+                              ? theme.colorScheme.error.withValues(alpha: 0.85)
                               : theme.colorScheme.surface.withValues(
                                 alpha: 0.45,
                               ),
@@ -103,8 +101,8 @@ class FavoriteButtonState extends State<FavoriteButton>
                       border: Border.all(
                         color:
                             _localIsFavorite
-                                ? theme.colorScheme.error.withValues(alpha: 0.8)
-                                : borderColor,
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.outline,
                         width: 1,
                       ),
                     ),
@@ -121,8 +119,8 @@ class FavoriteButtonState extends State<FavoriteButton>
                         size: widget.size * 0.5,
                         color:
                             _localIsFavorite
-                                ? theme.colorScheme.onError
-                                : hintColor,
+                                ? Colors.white
+                                : theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
