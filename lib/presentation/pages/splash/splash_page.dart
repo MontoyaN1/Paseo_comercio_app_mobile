@@ -39,7 +39,7 @@ class _SplashPageState extends State<SplashPage>
     );
 
     _colorAnimation = ColorTween(
-      begin: const Color(0xFFD4AF37).withOpacity(0.3),
+      begin: const Color(0xFFD4AF37).withValues(alpha: 0.3),
       end: const Color(0xFFD4AF37),
     ).animate(
       CurvedAnimation(
@@ -66,8 +66,11 @@ class _SplashPageState extends State<SplashPage>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: isDark ? Colors.black : theme.colorScheme.surface,
       body: Center(
         child: AnimatedBuilder(
           animation: _controller,
@@ -75,7 +78,6 @@ class _SplashPageState extends State<SplashPage>
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo animado redondeado
                 Transform.scale(
                   scale: _scaleAnimation.value,
                   child: Container(
@@ -83,9 +85,7 @@ class _SplashPageState extends State<SplashPage>
                     height: 140,
                     decoration: BoxDecoration(
                       color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(
-                        70,
-                      ), // Círculo perfecto
+                      borderRadius: BorderRadius.circular(70),
                       border: Border.all(
                         color: _colorAnimation.value ?? const Color(0xFFD4AF37),
                         width: 3,
@@ -94,7 +94,7 @@ class _SplashPageState extends State<SplashPage>
                         BoxShadow(
                           color: (_colorAnimation.value ??
                                   const Color(0xFFD4AF37))
-                              .withOpacity(0.3),
+                              .withValues(alpha: 0.3),
                           blurRadius: 20,
                           spreadRadius: 5,
                         ),
@@ -102,9 +102,7 @@ class _SplashPageState extends State<SplashPage>
                     ),
                     child: Center(
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(
-                          65,
-                        ), // Redondeado interno
+                        borderRadius: BorderRadius.circular(65),
                         child: Image.asset(
                           'assets/icons/favicon.jpeg',
                           width: 120,
@@ -125,13 +123,10 @@ class _SplashPageState extends State<SplashPage>
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // Texto animado con fuentes personalizadas
                 Opacity(
                   opacity: _fadeAnimation.value,
                   child: Column(
                     children: [
-                      // "Paseo" en Optima
                       Text(
                         'Paseo',
                         style: TextStyle(
@@ -142,13 +137,12 @@ class _SplashPageState extends State<SplashPage>
                           letterSpacing: 1,
                         ),
                       ),
-                      // "del comercio" en Poppins
                       Text(
                         'del comercio',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w300,
-                          color: Colors.grey[400],
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
                           fontFamily: 'Poppins',
                           letterSpacing: 1,
                         ),
@@ -158,24 +152,23 @@ class _SplashPageState extends State<SplashPage>
                         'Centro Comercial Virtual',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[500],
+                          color: isDark ? Colors.grey[500] : Colors.grey[500],
                           letterSpacing: 1,
                         ),
                       ),
                     ],
                   ),
                 ),
-
-                // Cargador animado
                 const SizedBox(height: 40),
                 Opacity(
                   opacity: _fadeAnimation.value,
                   child: SizedBox(
                     width: 100,
                     child: LinearProgressIndicator(
-                      backgroundColor: Colors.grey[800],
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        const Color(0xFFD4AF37),
+                      backgroundColor:
+                          isDark ? Colors.grey[800] : Colors.grey[300],
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFFD4AF37),
                       ),
                       minHeight: 2,
                     ),

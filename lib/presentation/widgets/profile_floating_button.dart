@@ -4,7 +4,7 @@
 // ────────────────────────────────────────────────────────────
 //  DISEÑO:
 //  • FAB: anillo dorado pulsante + avatar/inicial + glow
-//  • Bottom sheet: glassmorphism oscuro con header de usuario
+//  • Bottom sheet: glassmorphism con header de usuario
 //  • Opciones: tiles con ícono en círculo dorado + press scale
 //  • Logout: fila roja con diálogo coherente con el sistema
 //  • Animación de apertura: slide-up suave del sheet
@@ -20,18 +20,10 @@ import '../../di/service_locator.dart';
 import '../providers/avatar_provider.dart';
 import '../blocs/auth/auth_bloc.dart';
 
-// ── Paleta (idéntica al sistema de diseño) ────────────────────
 const _kGold = Color(0xFFD4AF37);
 const _kGoldLight = Color(0xFFFFE082);
 const _kGoldDeep = Color(0xFF9C7A1A);
-const _kBg = Color(0xFF07070F);
-const _kSurface = Color(0xFF0F0F1E);
-const _kBorder = Color(0xFF1E1E3A);
-const _kHint = Color(0xFF6B6B8A);
 
-// ══════════════════════════════════════════════════════════════
-//  BOTÓN FLOTANTE PRINCIPAL
-// ══════════════════════════════════════════════════════════════
 class ProfileFloatingButton extends StatefulWidget {
   final bool hideOrganizacionesOption;
   final bool hidePlazoletasOption;
@@ -70,7 +62,6 @@ class _ProfileFloatingButtonState extends State<ProfileFloatingButton>
     super.dispose();
   }
 
-  // ── Abre el bottom sheet de navegación ────────────────────
   void _openMenu(BuildContext context, User user) {
     showModalBottomSheet(
       context: context,
@@ -87,6 +78,8 @@ class _ProfileFloatingButtonState extends State<ProfileFloatingButton>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
@@ -99,7 +92,6 @@ class _ProfileFloatingButtonState extends State<ProfileFloatingButton>
               (_, child) => Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Anillo de glow exterior pulsante
                   Container(
                     width: 68,
                     height: 68,
@@ -107,7 +99,9 @@ class _ProfileFloatingButtonState extends State<ProfileFloatingButton>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: _kGold.withOpacity(0.28 * _pulseAnim.value),
+                          color: _kGold.withValues(
+                            alpha: 0.28 * _pulseAnim.value,
+                          ),
                           blurRadius: 22 * _pulseAnim.value,
                           spreadRadius: 4 * _pulseAnim.value,
                         ),
@@ -135,7 +129,7 @@ class _ProfileFloatingButtonState extends State<ProfileFloatingButton>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.50),
+                    color: Colors.black.withValues(alpha: 0.50),
                     blurRadius: 14,
                     offset: const Offset(0, 4),
                   ),
@@ -143,9 +137,9 @@ class _ProfileFloatingButtonState extends State<ProfileFloatingButton>
               ),
               padding: const EdgeInsets.all(2.5),
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _kBg,
+                  color: isDark ? const Color(0xFF07070F) : Colors.white,
                 ),
                 padding: const EdgeInsets.all(2),
                 child: ClipOval(
@@ -189,7 +183,7 @@ class _ProfileFloatingButtonState extends State<ProfileFloatingButton>
             ? user.email![0].toUpperCase()
             : '?';
     return Container(
-      color: _kGold.withOpacity(0.10),
+      color: _kGold.withValues(alpha: 0.10),
       child: Center(
         child: Text(
           initial,
@@ -205,7 +199,7 @@ class _ProfileFloatingButtonState extends State<ProfileFloatingButton>
 
   Widget _buildLoginIcon() {
     return Container(
-      color: _kGold.withOpacity(0.08),
+      color: _kGold.withValues(alpha: 0.08),
       child: const Center(
         child: Icon(Icons.login_rounded, color: _kGold, size: 22),
       ),
@@ -213,9 +207,6 @@ class _ProfileFloatingButtonState extends State<ProfileFloatingButton>
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  BOTTOM SHEET DE PERFIL Y NAVEGACIÓN
-// ══════════════════════════════════════════════════════════════
 class _ProfileSheet extends StatefulWidget {
   final User user;
   final bool hideOrganizacionesOption;
@@ -234,39 +225,41 @@ class _ProfileSheet extends StatefulWidget {
 class _ProfileSheetState extends State<_ProfileSheet> {
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor =
+        isDark
+            ? theme.colorScheme.surface.withValues(alpha: 0.95)
+            : Colors.white.withValues(alpha: 0.95);
+    final borderColor = theme.colorScheme.outline;
+
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: Container(
           decoration: BoxDecoration(
-            color: _kSurface.withOpacity(0.95),
+            color: surfaceColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border(top: BorderSide(color: _kBorder, width: 1)),
+            border: Border(top: BorderSide(color: borderColor, width: 1)),
           ),
           child: SafeArea(
             top: false,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ── Pill handle ────────────────────────────────
                 const SizedBox(height: 12),
                 Container(
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: _kBorder,
+                    color: borderColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // ── Header de usuario ──────────────────────────
                 _buildUserHeader(context),
-
                 const SizedBox(height: 16),
-
-                // ── Separador dorado ───────────────────────────
                 Container(
                   height: 1,
                   margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -274,16 +267,13 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                     gradient: LinearGradient(
                       colors: [
                         Colors.transparent,
-                        _kGold.withOpacity(0.35),
+                        _kGold.withValues(alpha: 0.35),
                         Colors.transparent,
                       ],
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
-                // ── Opciones de navegación ─────────────────────
                 _SheetTile(
                   icon: Icons.person_outline_rounded,
                   label: 'Mi perfil',
@@ -322,8 +312,6 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                     if (context.mounted) context.push('/settings');
                   },
                 ),
-
-                // ── Separador rojo ─────────────────────────────
                 Container(
                   height: 1,
                   margin: const EdgeInsets.symmetric(
@@ -334,21 +322,18 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                     gradient: LinearGradient(
                       colors: [
                         Colors.transparent,
-                        Colors.red.withOpacity(0.20),
+                        Colors.red.withValues(alpha: 0.20),
                         Colors.transparent,
                       ],
                     ),
                   ),
                 ),
-
-                // ── Logout ─────────────────────────────────────
                 _SheetTile(
                   icon: Icons.logout_rounded,
                   label: 'Cerrar sesión',
                   isDestructive: true,
                   onTap: () => _showLogoutConfirmationWithOverlay(context),
                 ),
-
                 const SizedBox(height: 16),
               ],
             ),
@@ -358,8 +343,9 @@ class _ProfileSheetState extends State<_ProfileSheet> {
     );
   }
 
-  // ── Header con avatar y datos ─────────────────────────────
   Widget _buildUserHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final avatarProvider = getIt<AvatarProvider>();
     final initial =
         (widget.user.displayName?.isNotEmpty == true)
@@ -372,7 +358,6 @@ class _ProfileSheetState extends State<_ProfileSheet> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          // Avatar con anillo dorado
           Container(
             width: 58,
             height: 58,
@@ -383,7 +368,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: _kGold.withOpacity(0.22),
+                  color: _kGold.withValues(alpha: 0.22),
                   blurRadius: 14,
                   spreadRadius: 2,
                 ),
@@ -391,9 +376,9 @@ class _ProfileSheetState extends State<_ProfileSheet> {
             ),
             padding: const EdgeInsets.all(2),
             child: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _kBg,
+                color: isDark ? const Color(0xFF07070F) : Colors.white,
               ),
               padding: const EdgeInsets.all(2),
               child: ClipOval(
@@ -417,10 +402,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
               ),
             ),
           ),
-
           const SizedBox(width: 14),
-
-          // Nombre y email
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,8 +415,8 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                       ).createShader(b),
                   child: Text(
                     widget.user.displayName ?? 'Usuario',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.2,
@@ -446,8 +428,8 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                 const SizedBox(height: 3),
                 Text(
                   widget.user.email ?? '',
-                  style: const TextStyle(
-                    color: _kHint,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant,
                     fontSize: 12,
                     letterSpacing: 0.2,
                   ),
@@ -457,15 +439,13 @@ class _ProfileSheetState extends State<_ProfileSheet> {
               ],
             ),
           ),
-
-          // Badge sesión activa
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.10),
+              color: Colors.green.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Colors.green.withOpacity(0.28),
+                color: Colors.green.withValues(alpha: 0.28),
                 width: 1,
               ),
             ),
@@ -481,10 +461,10 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                   ),
                 ),
                 const SizedBox(width: 5),
-                const Text(
+                Text(
                   'Activo',
                   style: TextStyle(
-                    color: Colors.greenAccent,
+                    color: isDark ? Colors.greenAccent : Colors.green.shade700,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -499,7 +479,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
 
   Widget _buildInitialWidget(String initial) {
     return Container(
-      color: _kGold.withOpacity(0.10),
+      color: _kGold.withValues(alpha: 0.10),
       child: Center(
         child: Text(
           initial,
@@ -514,17 +494,14 @@ class _ProfileSheetState extends State<_ProfileSheet> {
   }
 
   Future<void> _showLogoutConfirmationWithOverlay(BuildContext context) async {
-    // Obtener el overlay del root navigator ANTES de cerrar el BottomSheet
     final rootNavigator = Navigator.of(context, rootNavigator: true);
     final overlayContext = rootNavigator.overlay?.context;
 
     if (overlayContext == null || !overlayContext.mounted) {
-      // Fallback: usar el contexto actual
       _showLogoutConfirmationFallback(context);
       return;
     }
 
-    // Cerrar el BottomSheet primero y esperar a que complete
     Navigator.of(context).pop();
     await Future.delayed(const Duration(milliseconds: 50));
 
@@ -533,7 +510,6 @@ class _ProfileSheetState extends State<_ProfileSheet> {
       return;
     }
 
-    // Mostrar diálogo de confirmación usando el overlay context
     final result = await showDialog<bool>(
       context: overlayContext,
       useRootNavigator: true,
@@ -542,19 +518,16 @@ class _ProfileSheetState extends State<_ProfileSheet> {
     );
 
     if (result == true && overlayContext.mounted) {
-      // Realizar logout
       await _performLogout(overlayContext);
     }
   }
 
   void _showLogoutConfirmationFallback(BuildContext context) async {
-    // Cerrar el BottomSheet y esperar a que complete
     Navigator.of(context).pop();
     await Future.delayed(const Duration(milliseconds: 50));
 
     if (!context.mounted) return;
 
-    // Mostrar diálogo directamente usando el contexto después de un delay
     final result = await showDialog<bool>(
       context: context,
       useRootNavigator: true,
@@ -568,12 +541,14 @@ class _ProfileSheetState extends State<_ProfileSheet> {
   }
 
   Widget _buildLogoutDialog(BuildContext dialogContext) {
+    final theme = Theme.of(dialogContext);
+
     return AlertDialog(
-      backgroundColor: _kSurface,
+      backgroundColor: theme.colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: _kBorder, width: 1),
+        side: BorderSide(color: theme.colorScheme.outline, width: 1),
       ),
       title: Row(
         children: [
@@ -582,33 +557,43 @@ class _ProfileSheetState extends State<_ProfileSheet> {
             height: 32,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.red.withOpacity(0.10),
-              border: Border.all(color: Colors.red.withOpacity(0.30), width: 1),
+              color: Colors.red.withValues(alpha: 0.10),
+              border: Border.all(
+                color: Colors.red.withValues(alpha: 0.30),
+                width: 1,
+              ),
             ),
             child: Icon(Icons.logout_rounded, color: Colors.red[300], size: 16),
           ),
           const SizedBox(width: 12),
-          const Text(
+          Text(
             'Cerrar sesión',
             style: TextStyle(
-              color: Colors.white,
+              color: theme.colorScheme.onSurface,
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
           ),
         ],
       ),
-      content: const Text(
+      content: Text(
         '¿Estás seguro de que quieres cerrar sesión?',
-        style: TextStyle(color: _kHint, fontSize: 14, height: 1.5),
+        style: TextStyle(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontSize: 14,
+          height: 1.5,
+        ),
       ),
       actions: [
         TextButton(
           onPressed:
               () => Navigator.of(dialogContext, rootNavigator: true).pop(false),
-          child: const Text(
+          child: Text(
             'Cancelar',
-            style: TextStyle(color: _kHint, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         TextButton(
@@ -635,7 +620,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
         useRootNavigator: true,
         builder:
             (_) => Container(
-              color: Colors.black.withOpacity(0.55),
+              color: Colors.black.withValues(alpha: 0.55),
               child: const Center(
                 child: SizedBox(
                   width: 44,
@@ -651,7 +636,6 @@ class _ProfileSheetState extends State<_ProfileSheet> {
 
       authBloc.add(const AuthSignOutRequested());
 
-      // Wait for state change to AuthUnauthenticated
       await for (final state in authBloc.stream) {
         if (state is AuthUnauthenticated) {
           Navigator.of(context, rootNavigator: true).pop();
@@ -669,7 +653,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.red.withOpacity(0.35)),
+                  side: BorderSide(color: Colors.red.withValues(alpha: 0.35)),
                 ),
                 content: Row(
                   children: [
@@ -702,7 +686,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.red.withOpacity(0.35)),
+              side: BorderSide(color: Colors.red.withValues(alpha: 0.35)),
             ),
             content: Row(
               children: [
@@ -727,9 +711,6 @@ class _ProfileSheetState extends State<_ProfileSheet> {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  TILE DEL BOTTOM SHEET CON PRESS SCALE
-// ══════════════════════════════════════════════════════════════
 class _SheetTile extends StatefulWidget {
   final IconData icon;
   final String label;
@@ -774,16 +755,18 @@ class _SheetTileState extends State<_SheetTile>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final iconColor = widget.isDestructive ? Colors.red[300]! : _kGold;
-    final textColor = widget.isDestructive ? Colors.red[300]! : Colors.white;
+    final textColor =
+        widget.isDestructive ? Colors.red[300]! : theme.colorScheme.onSurface;
     final bgColor =
         widget.isDestructive
-            ? Colors.red.withOpacity(0.05)
-            : _kGold.withOpacity(0.05);
+            ? Colors.red.withValues(alpha: 0.05)
+            : _kGold.withValues(alpha: 0.05);
     final borderColor =
         widget.isDestructive
-            ? Colors.red.withOpacity(0.20)
-            : _kGold.withOpacity(0.15);
+            ? Colors.red.withValues(alpha: 0.20)
+            : _kGold.withValues(alpha: 0.15);
 
     return GestureDetector(
       onTapDown: (_) {
@@ -821,28 +804,28 @@ class _SheetTileState extends State<_SheetTile>
                 ),
                 child: Row(
                   children: [
-                    // Ícono en círculo
                     Container(
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: iconColor.withOpacity(0.09),
+                        color: iconColor.withValues(alpha: 0.09),
                         border: Border.all(
-                          color: iconColor.withOpacity(_pressed ? 0.38 : 0.18),
+                          color: iconColor.withValues(
+                            alpha: _pressed ? 0.38 : 0.18,
+                          ),
                           width: 1,
                         ),
                       ),
                       child: Icon(
                         widget.icon,
-                        color: iconColor.withOpacity(_pressed ? 1.0 : 0.75),
+                        color: iconColor.withValues(
+                          alpha: _pressed ? 1.0 : 0.75,
+                        ),
                         size: 18,
                       ),
                     ),
-
                     const SizedBox(width: 14),
-
-                    // Label
                     Expanded(
                       child: Text(
                         widget.label,
@@ -854,12 +837,10 @@ class _SheetTileState extends State<_SheetTile>
                         ),
                       ),
                     ),
-
-                    // Flecha (solo en opciones normales)
                     if (!widget.isDestructive)
                       Icon(
                         Icons.arrow_forward_ios_rounded,
-                        color: _kGold.withOpacity(_pressed ? 0.70 : 0.28),
+                        color: _kGold.withValues(alpha: _pressed ? 0.70 : 0.28),
                         size: 13,
                       ),
                   ],

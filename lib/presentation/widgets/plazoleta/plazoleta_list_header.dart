@@ -8,8 +8,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 const _kGold = Color(0xFFD4AF37);
-const _kGoldLight = Color(0xFFFFE082);
-const _kGoldDeep = Color(0xFF9C7A1A);
 
 class PlazoletaListHeader extends StatelessWidget {
   final int plazoletasCount;

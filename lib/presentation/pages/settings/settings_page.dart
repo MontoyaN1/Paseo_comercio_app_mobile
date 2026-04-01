@@ -11,26 +11,18 @@ import '../../blocs/auth/auth_bloc.dart';
 import '../../../core/app/app_config.dart';
 import '../../providers/theme_provider.dart';
 
-// ── Paleta (idéntica al sistema de diseño) ────────────────────
 const Color _kGold = Color(0xFFD4AF37);
 const Color _kGoldLight = Color(0xFFFFE082);
 const Color _kGoldDeep = Color(0xFF9C7A1A);
-const Color _kBg = Color(0xFF07070F);
-const Color _kSurface = Color(0xFF0F0F1E);
-const Color _kSurfaceCard = Color(0xFF12121F);
-const Color _kBorder = Color(0xFF1E1E3A);
-const Color _kHint = Color(0xFF6B6B8A);
 
-// ══════════════════════════════════════════════════════════════
-//  PÁGINA DE CONFIGURACIÓN
-// ══════════════════════════════════════════════════════════════
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: theme.colorScheme.surface,
       body: Stack(
         children: [
           SafeArea(
@@ -59,16 +51,24 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  // ── AppBar glassmorphism ──────────────────────────────────
   Widget _buildAppBar(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor =
+        isDark
+            ? theme.colorScheme.surface.withValues(alpha: 0.82)
+            : Colors.white.withValues(alpha: 0.90);
+
     return ClipRect(
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           height: kToolbarHeight,
           decoration: BoxDecoration(
-            color: _kSurface.withOpacity(0.82),
-            border: Border(bottom: BorderSide(color: _kBorder, width: 1)),
+            color: surfaceColor,
+            border: Border(
+              bottom: BorderSide(color: theme.colorScheme.outline, width: 1),
+            ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
@@ -94,10 +94,10 @@ class SettingsPage extends StatelessWidget {
                       (b) => const LinearGradient(
                         colors: [_kGoldDeep, _kGold, _kGoldLight],
                       ).createShader(b),
-                  child: const Text(
+                  child: Text(
                     'Configuración',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: theme.colorScheme.onSurface,
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
@@ -113,7 +113,6 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  // ── Sección de Preferencias ──────────────────────────────
   Widget _buildPreferencesSection(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, _) {
@@ -129,9 +128,9 @@ class SettingsPage extends StatelessWidget {
                 trailing: Switch(
                   value: themeProvider.isDarkMode,
                   onChanged: (_) => themeProvider.toggleTheme(),
-                  activeColor: _kGold,
-                  inactiveThumbColor: _kHint,
-                  inactiveTrackColor: _kBorder,
+                  activeThumbColor: _kGold,
+                  inactiveThumbColor: _kGold.withOpacity(0.6),
+                  inactiveTrackColor: _kGold.withOpacity(0.3),
                 ),
               ),
             ],
@@ -141,8 +140,8 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  // ── Sección de Acerca ─────────────────────────────────────
   Widget _buildAboutSection(BuildContext context) {
+    final theme = Theme.of(context);
     final appConfig = AppConfig();
     return _GlassSection(
       title: 'Acerca de',
@@ -153,9 +152,9 @@ class SettingsPage extends StatelessWidget {
             icon: Icons.business_rounded,
             title: appConfig.companyName,
             subtitle: 'Versión ${appConfig.appVersion}',
-            trailing: const Icon(
+            trailing: Icon(
               Icons.arrow_forward_ios_rounded,
-              color: _kHint,
+              color: theme.colorScheme.onSurfaceVariant,
               size: 14,
             ),
             onTap: () => context.push('/soporte'),
@@ -165,20 +164,20 @@ class SettingsPage extends StatelessWidget {
             icon: Icons.description_outlined,
             title: 'Términos y condiciones',
             subtitle: 'Lee nuestros términos',
-            trailing: const Icon(
+            trailing: Icon(
               Icons.arrow_forward_ios_rounded,
-              color: _kHint,
+              color: theme.colorScheme.onSurfaceVariant,
               size: 14,
             ),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('Términos en desarrollo'),
-                  backgroundColor: _kSurface,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: _kBorder),
+                    side: BorderSide(color: theme.colorScheme.outline),
                   ),
                 ),
               );
@@ -189,20 +188,20 @@ class SettingsPage extends StatelessWidget {
             icon: Icons.privacy_tip_outlined,
             title: 'Política de privacidad',
             subtitle: 'Cómo protegemos tus datos',
-            trailing: const Icon(
+            trailing: Icon(
               Icons.arrow_forward_ios_rounded,
-              color: _kHint,
+              color: theme.colorScheme.onSurfaceVariant,
               size: 14,
             ),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('Política de privacidad en desarrollo'),
-                  backgroundColor: _kSurface,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: _kBorder),
+                    side: BorderSide(color: theme.colorScheme.outline),
                   ),
                 ),
               );
@@ -213,7 +212,6 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  // ── Sección de Cuenta ─────────────────────────────────────
   Widget _buildAccountSection(BuildContext context) {
     return _GlassSection(
       title: 'Cuenta',
@@ -223,7 +221,7 @@ class SettingsPage extends StatelessWidget {
         title: 'Cerrar sesión',
         subtitle: 'Salir de tu cuenta',
         isDestructive: true,
-        trailing: const Icon(
+        trailing: Icon(
           Icons.arrow_forward_ios_rounded,
           color: Colors.red,
           size: 14,
@@ -253,7 +251,7 @@ class SettingsPage extends StatelessWidget {
         useRootNavigator: true,
         builder:
             (_) => Container(
-              color: Colors.black.withOpacity(0.55),
+              color: Colors.black.withValues(alpha: 0.55),
               child: const Center(
                 child: SizedBox(
                   width: 44,
@@ -286,7 +284,7 @@ class SettingsPage extends StatelessWidget {
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.red.withOpacity(0.35)),
+                  side: BorderSide(color: Colors.red.withValues(alpha: 0.35)),
                 ),
                 content: Text(
                   'Error al cerrar sesión: ${state.message}',
@@ -307,7 +305,7 @@ class SettingsPage extends StatelessWidget {
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.red.withOpacity(0.35)),
+              side: BorderSide(color: Colors.red.withValues(alpha: 0.35)),
             ),
             content: Text(
               'Error inesperado: $error',
@@ -319,10 +317,6 @@ class SettingsPage extends StatelessWidget {
     }
   }
 }
-
-// ══════════════════════════════════════════════════════════════
-//  WIDGETS AUXILIARES
-// ══════════════════════════════════════════════════════════════
 
 class _GlassSection extends StatelessWidget {
   final String title;
@@ -337,15 +331,22 @@ class _GlassSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accentColor = isDark ? _kGold : theme.colorScheme.primary;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
           decoration: BoxDecoration(
-            color: _kSurfaceCard.withOpacity(0.90),
+            color: theme.colorScheme.surface.withValues(alpha: 0.90),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _kBorder, width: 1),
+            border: Border.all(
+              color: theme.colorScheme.surfaceContainerHighest,
+              width: 1,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,19 +360,19 @@ class _GlassSection extends StatelessWidget {
                       height: 30,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _kGold.withOpacity(0.10),
+                        color: accentColor.withValues(alpha: 0.10),
                         border: Border.all(
-                          color: _kGold.withOpacity(0.28),
+                          color: accentColor.withValues(alpha: 0.28),
                           width: 1,
                         ),
                       ),
-                      child: Icon(icon, color: _kGold, size: 15),
+                      child: Icon(icon, color: accentColor, size: 15),
                     ),
                     const SizedBox(width: 10),
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.3,
@@ -385,7 +386,10 @@ class _GlassSection extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [_kGold.withOpacity(0.35), Colors.transparent],
+                    colors: [
+                      accentColor.withValues(alpha: 0.35),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
               ),
@@ -449,8 +453,12 @@ class _SettingsTileState extends State<_SettingsTile>
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = widget.isDestructive ? Colors.red[300]! : _kGold;
-    final textColor = widget.isDestructive ? Colors.red[300]! : Colors.white;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accentColor = isDark ? _kGold : theme.colorScheme.primary;
+    final iconColor = widget.isDestructive ? Colors.red[300]! : accentColor;
+    final textColor =
+        widget.isDestructive ? Colors.red[300]! : theme.colorScheme.onSurface;
 
     return GestureDetector(
       onTapDown: (_) {
@@ -477,9 +485,7 @@ class _SettingsTileState extends State<_SettingsTile>
                 decoration: BoxDecoration(
                   color:
                       _pressed
-                          ? (widget.isDestructive
-                              ? Colors.red.withOpacity(0.05)
-                              : _kGold.withOpacity(0.05))
+                          ? iconColor.withValues(alpha: 0.05)
                           : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -490,9 +496,11 @@ class _SettingsTileState extends State<_SettingsTile>
                       height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: iconColor.withOpacity(0.10),
+                        color: iconColor.withValues(alpha: 0.10),
                         border: Border.all(
-                          color: iconColor.withOpacity(_pressed ? 0.38 : 0.18),
+                          color: iconColor.withValues(
+                            alpha: _pressed ? 0.38 : 0.18,
+                          ),
                           width: 1,
                         ),
                       ),
@@ -517,8 +525,8 @@ class _SettingsTileState extends State<_SettingsTile>
                             style: TextStyle(
                               color:
                                   widget.isDestructive
-                                      ? Colors.red[200]?.withOpacity(0.70)
-                                      : _kHint,
+                                      ? Colors.red[200]?.withValues(alpha: 0.70)
+                                      : theme.colorScheme.onSurfaceVariant,
                               fontSize: 12,
                             ),
                           ),
@@ -547,7 +555,7 @@ class _SectionDivider extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             Colors.transparent,
-            _kBorder.withOpacity(0.5),
+            Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
             Colors.transparent,
           ],
         ),
@@ -556,9 +564,6 @@ class _SectionDivider extends StatelessWidget {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  BOTÓN ÍCONO DORADO
-// ══════════════════════════════════════════════════════════════
 class _GoldIconButton extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -595,6 +600,10 @@ class _GoldIconButtonState extends State<_GoldIconButton>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accentColor = isDark ? _kGold : theme.colorScheme.primary;
+
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) {
@@ -612,10 +621,13 @@ class _GoldIconButtonState extends State<_GoldIconButton>
                 height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _kGold.withOpacity(0.07),
-                  border: Border.all(color: _kGold.withOpacity(0.28), width: 1),
+                  color: accentColor.withValues(alpha: 0.07),
+                  border: Border.all(
+                    color: accentColor.withValues(alpha: 0.28),
+                    width: 1,
+                  ),
                 ),
-                child: Icon(widget.icon, color: _kGold, size: 18),
+                child: Icon(widget.icon, color: accentColor, size: 18),
               ),
             ),
       ),
@@ -623,18 +635,17 @@ class _GoldIconButtonState extends State<_GoldIconButton>
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  DIÁLOGO DE CONFIRMACIÓN LOGOUT
-// ══════════════════════════════════════════════════════════════
 class _LogoutDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return AlertDialog(
-      backgroundColor: _kSurface,
+      backgroundColor: theme.colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: _kBorder, width: 1),
+        side: BorderSide(color: theme.colorScheme.outline, width: 1),
       ),
       title: Row(
         children: [
@@ -643,32 +654,42 @@ class _LogoutDialog extends StatelessWidget {
             height: 32,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.red.withOpacity(0.10),
-              border: Border.all(color: Colors.red.withOpacity(0.30), width: 1),
+              color: Colors.red.withValues(alpha: 0.10),
+              border: Border.all(
+                color: Colors.red.withValues(alpha: 0.30),
+                width: 1,
+              ),
             ),
             child: Icon(Icons.logout_rounded, color: Colors.red[300], size: 16),
           ),
           const SizedBox(width: 12),
-          const Text(
+          Text(
             'Cerrar sesión',
             style: TextStyle(
-              color: Colors.white,
+              color: theme.colorScheme.onSurface,
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
           ),
         ],
       ),
-      content: const Text(
+      content: Text(
         '¿Estás seguro de que quieres cerrar sesión?',
-        style: TextStyle(color: _kHint, fontSize: 14, height: 1.5),
+        style: TextStyle(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontSize: 14,
+          height: 1.5,
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text(
+          child: Text(
             'Cancelar',
-            style: TextStyle(color: _kHint, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         TextButton(

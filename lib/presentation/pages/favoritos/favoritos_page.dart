@@ -16,9 +16,6 @@ import '../../widgets/tienda/tienda_card.dart';
 import '../../widgets/producto/producto_card.dart';
 
 const _kGold = Color(0xFFD4AF37);
-const _kBg = Color(0xFF07070F);
-const _kSurface = Color(0xFF0F0F1E);
-const _kHint = Color(0xFF6B6B8A);
 
 class FavoritosPage extends StatefulWidget {
   const FavoritosPage({super.key});
@@ -71,12 +68,14 @@ class _FavoritosPageState extends State<FavoritosPage>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     if (_usuarioId == 0) {
       return Scaffold(
-        backgroundColor: _kBg,
+        backgroundColor: theme.colorScheme.surface,
         appBar: AppBar(
-          backgroundColor: _kSurface,
-          foregroundColor: Colors.white,
+          backgroundColor: theme.colorScheme.surface,
+          foregroundColor: theme.colorScheme.onSurface,
           title: const Text('Mis Favoritos'),
         ),
         body: const Center(child: CircularProgressIndicator(color: _kGold)),
@@ -93,10 +92,10 @@ class _FavoritosPageState extends State<FavoritosPage>
               state is FavoritosLoaded ? state.productoIds.length : 0;
 
           return Scaffold(
-            backgroundColor: _kBg,
+            backgroundColor: theme.colorScheme.surface,
             appBar: AppBar(
-              backgroundColor: _kSurface,
-              foregroundColor: Colors.white,
+              backgroundColor: theme.colorScheme.surface,
+              foregroundColor: theme.colorScheme.onSurface,
               elevation: 0,
               leading: IconButton(
                 icon: const Icon(
@@ -105,10 +104,10 @@ class _FavoritosPageState extends State<FavoritosPage>
                 ),
                 onPressed: () => context.pop(),
               ),
-              title: const Text(
+              title: Text(
                 'Mis Favoritos',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: theme.colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -116,7 +115,7 @@ class _FavoritosPageState extends State<FavoritosPage>
                 controller: _tabController,
                 indicatorColor: _kGold,
                 labelColor: _kGold,
-                unselectedLabelColor: _kHint,
+                unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
                 tabs: [
                   Tab(text: 'Tiendas ($tiendaCount)'),
                   Tab(text: 'Productos ($productoCount)'),
@@ -144,6 +143,8 @@ class _TiendasFavoritasContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return BlocBuilder<FavoritoBloc, FavoritoState>(
       builder: (context, state) {
         debugPrint('Tiendas state: $state');
@@ -157,18 +158,22 @@ class _TiendasFavoritasContent extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                Icon(
+                  Icons.error_outline,
+                  color: theme.colorScheme.error,
+                  size: 48,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   state.message,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: theme.colorScheme.onSurface),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _kGold,
-                    foregroundColor: _kBg,
+                    foregroundColor: Colors.black,
                   ),
                   onPressed: () {
                     context.read<FavoritoBloc>().add(LoadFavoritos(usuarioId));
@@ -197,7 +202,6 @@ class _TiendasFavoritasContent extends StatelessWidget {
           );
         }
 
-        // Initial state - still loading
         return const Center(child: CircularProgressIndicator(color: _kGold));
       },
     );
@@ -212,6 +216,8 @@ class _TiendasList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return FutureBuilder(
       future: _loadTiendas(tiendaIds),
       builder: (context, snapshot) {
@@ -223,7 +229,7 @@ class _TiendasList extends StatelessWidget {
           return Center(
             child: Text(
               'Error: ${snapshot.error}',
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: theme.colorScheme.onSurface),
             ),
           );
         }
@@ -232,7 +238,7 @@ class _TiendasList extends StatelessWidget {
 
         return RefreshIndicator(
           color: _kGold,
-          backgroundColor: _kSurface,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
           onRefresh: () async {
             context.read<FavoritoBloc>().add(LoadFavoritos(usuarioId));
           },
@@ -248,7 +254,7 @@ class _TiendasList extends StatelessWidget {
                 child: TiendaCard(
                   tienda: tienda,
                   showFavoriteButton: true,
-                  isFavorite: true, // Si está en favoritos, siempre es true
+                  isFavorite: true,
                   onFavoriteToggle: () {
                     debugPrint(
                       'Toggle tienda - usuarioId: $usuarioId, tiendaId: $tiendaId',
@@ -290,6 +296,8 @@ class _ProductosFavoritosContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return BlocBuilder<FavoritoBloc, FavoritoState>(
       builder: (context, state) {
         debugPrint('Productos state: $state');
@@ -303,18 +311,22 @@ class _ProductosFavoritosContent extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                Icon(
+                  Icons.error_outline,
+                  color: theme.colorScheme.error,
+                  size: 48,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   state.message,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: theme.colorScheme.onSurface),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _kGold,
-                    foregroundColor: _kBg,
+                    foregroundColor: Colors.black,
                   ),
                   onPressed: () {
                     context.read<FavoritoBloc>().add(LoadFavoritos(usuarioId));
@@ -343,7 +355,6 @@ class _ProductosFavoritosContent extends StatelessWidget {
           );
         }
 
-        // Initial state
         return const Center(child: CircularProgressIndicator(color: _kGold));
       },
     );
@@ -358,6 +369,8 @@ class _ProductosList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return FutureBuilder(
       future: _loadProductos(productoIds),
       builder: (context, snapshot) {
@@ -369,7 +382,7 @@ class _ProductosList extends StatelessWidget {
           return Center(
             child: Text(
               'Error: ${snapshot.error}',
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: theme.colorScheme.onSurface),
             ),
           );
         }
@@ -378,7 +391,7 @@ class _ProductosList extends StatelessWidget {
 
         return RefreshIndicator(
           color: _kGold,
-          backgroundColor: _kSurface,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
           onRefresh: () async {
             context.read<FavoritoBloc>().add(LoadFavoritos(usuarioId));
           },
@@ -394,7 +407,7 @@ class _ProductosList extends StatelessWidget {
                 child: ProductoCard(
                   producto: producto,
                   showFavoriteButton: true,
-                  isFavorite: true, // Si está en favoritos, siempre es true
+                  isFavorite: true,
                   onFavoriteToggle: () {
                     debugPrint(
                       'Toggle producto - usuarioId: $usuarioId, productoId: $productoId',
@@ -451,34 +464,39 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 80, color: _kHint),
+            Icon(icon, size: 80, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(height: 24),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: theme.colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: const TextStyle(fontSize: 14, color: _kHint),
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kGold,
-                foregroundColor: _kBg,
+                foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
                   vertical: 12,

@@ -8,19 +8,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/app/app_config.dart';
 
-// ── Paleta (idéntica al sistema de diseño) ────────────────────
 const Color _kGold = Color(0xFFD4AF37);
 const Color _kGoldLight = Color(0xFFFFE082);
 const Color _kGoldDeep = Color(0xFF9C7A1A);
-const Color _kBg = Color(0xFF07070F);
-const Color _kSurface = Color(0xFF0F0F1E);
-const Color _kSurfaceCard = Color(0xFF12121F);
-const Color _kBorder = Color(0xFF1E1E3A);
-const Color _kHint = Color(0xFF6B6B8A);
 
-// ══════════════════════════════════════════════════════════════
-//  PÁGINA DE SOPORTE Y ACERCA
-// ══════════════════════════════════════════════════════════════
 class SoportePage extends StatelessWidget {
   const SoportePage({super.key});
 
@@ -34,8 +25,9 @@ class SoportePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appConfig = AppConfig();
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: theme.colorScheme.surface,
       body: Stack(
         children: [
           SafeArea(
@@ -48,7 +40,7 @@ class SoportePage extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
                     children: [
                       const SizedBox(height: 32),
-                      _buildHeader(appConfig),
+                      _buildHeader(context, appConfig),
                       const SizedBox(height: 32),
                       _buildSupportSection(appConfig),
                       const SizedBox(height: 24),
@@ -66,16 +58,24 @@ class SoportePage extends StatelessWidget {
     );
   }
 
-  // ── AppBar glassmorphism ──────────────────────────────────
   Widget _buildAppBar(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor =
+        isDark
+            ? theme.colorScheme.surface.withValues(alpha: 0.82)
+            : Colors.white.withValues(alpha: 0.90);
+
     return ClipRect(
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           height: kToolbarHeight,
           decoration: BoxDecoration(
-            color: _kSurface.withOpacity(0.82),
-            border: Border(bottom: BorderSide(color: _kBorder, width: 1)),
+            color: surfaceColor,
+            border: Border(
+              bottom: BorderSide(color: theme.colorScheme.outline, width: 1),
+            ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
@@ -101,10 +101,10 @@ class SoportePage extends StatelessWidget {
                       (b) => const LinearGradient(
                         colors: [_kGoldDeep, _kGold, _kGoldLight],
                       ).createShader(b),
-                  child: const Text(
+                  child: Text(
                     'Soporte',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: theme.colorScheme.onSurface,
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
@@ -120,8 +120,8 @@ class SoportePage extends StatelessWidget {
     );
   }
 
-  // ── Header con logo ───────────────────────────────────────
-  Widget _buildHeader(AppConfig appConfig) {
+  Widget _buildHeader(BuildContext context, AppConfig appConfig) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       children: [
         Container(
@@ -134,7 +134,7 @@ class SoportePage extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: _kGold.withOpacity(0.25),
+                color: _kGold.withValues(alpha: 0.25),
                 blurRadius: 20,
                 spreadRadius: 2,
               ),
@@ -142,7 +142,10 @@ class SoportePage extends StatelessWidget {
           ),
           padding: const EdgeInsets.all(3),
           child: Container(
-            decoration: BoxDecoration(shape: BoxShape.circle, color: _kBg),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isDark ? const Color(0xFF07070F) : Colors.white,
+            ),
             clipBehavior: Clip.antiAlias,
             child: Image.asset(
               'assets/icons/favicon.jpeg',
@@ -162,7 +165,7 @@ class SoportePage extends StatelessWidget {
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFFD4AF37),
+                color: _kGold,
                 fontFamily: 'Optima',
                 letterSpacing: 1,
               ),
@@ -173,7 +176,7 @@ class SoportePage extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w300,
-                color: Colors.grey[400],
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
                 fontFamily: 'Poppins',
                 letterSpacing: 1,
               ),
@@ -183,13 +186,16 @@ class SoportePage extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'Centro Comercial Virtual',
-          style: TextStyle(color: _kHint, fontSize: 13, letterSpacing: 0.5),
+          style: TextStyle(
+            color: isDark ? const Color(0xFF6B6B8A) : Colors.grey[500],
+            fontSize: 13,
+            letterSpacing: 0.5,
+          ),
         ),
       ],
     );
   }
 
-  // ── Sección de soporte ─────────────────────────────────────
   Widget _buildSupportSection(AppConfig appConfig) {
     return _GlassSection(
       title: 'Soporte',
@@ -215,7 +221,6 @@ class SoportePage extends StatelessWidget {
     );
   }
 
-  // ── Sección de redes sociales ───────────────────────────────
   Widget _buildSocialSection(AppConfig appConfig) {
     return _GlassSection(
       title: 'Síguenos',
@@ -271,7 +276,6 @@ class SoportePage extends StatelessWidget {
     );
   }
 
-  // ── Sección de info de la app ──────────────────────────────
   Widget _buildAppInfoSection(AppConfig appConfig) {
     return _GlassSection(
       title: 'Información',
@@ -298,10 +302,6 @@ class SoportePage extends StatelessWidget {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  WIDGETS AUXILIARES
-// ══════════════════════════════════════════════════════════════
-
 class _GlassSection extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -315,15 +315,22 @@ class _GlassSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accentColor = isDark ? _kGold : theme.colorScheme.primary;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
           decoration: BoxDecoration(
-            color: _kSurfaceCard.withOpacity(0.90),
+            color: theme.colorScheme.surface.withValues(alpha: 0.90),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _kBorder, width: 1),
+            border: Border.all(
+              color: theme.colorScheme.surfaceContainerHighest,
+              width: 1,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,19 +344,19 @@ class _GlassSection extends StatelessWidget {
                       height: 30,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _kGold.withOpacity(0.10),
+                        color: accentColor.withValues(alpha: 0.10),
                         border: Border.all(
-                          color: _kGold.withOpacity(0.28),
+                          color: accentColor.withValues(alpha: 0.28),
                           width: 1,
                         ),
                       ),
-                      child: Icon(icon, color: _kGold, size: 15),
+                      child: Icon(icon, color: accentColor, size: 15),
                     ),
                     const SizedBox(width: 10),
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.3,
@@ -363,7 +370,10 @@ class _GlassSection extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [_kGold.withOpacity(0.35), Colors.transparent],
+                    colors: [
+                      accentColor.withValues(alpha: 0.35),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
               ),
@@ -427,6 +437,8 @@ class _SocialTileState extends State<_SocialTile>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return GestureDetector(
       onTapDown: (_) {
         _ctrl.forward();
@@ -452,7 +464,7 @@ class _SocialTileState extends State<_SocialTile>
                 decoration: BoxDecoration(
                   color:
                       _pressed
-                          ? widget.backgroundColor.withOpacity(0.15)
+                          ? widget.backgroundColor.withValues(alpha: 0.15)
                           : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -466,7 +478,9 @@ class _SocialTileState extends State<_SocialTile>
                         color: widget.backgroundColor,
                         boxShadow: [
                           BoxShadow(
-                            color: widget.backgroundColor.withOpacity(0.3),
+                            color: widget.backgroundColor.withValues(
+                              alpha: 0.3,
+                            ),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -485,8 +499,8 @@ class _SocialTileState extends State<_SocialTile>
                         children: [
                           Text(
                             widget.title,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface,
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                             ),
@@ -494,14 +508,17 @@ class _SocialTileState extends State<_SocialTile>
                           const SizedBox(height: 2),
                           Text(
                             widget.subtitle,
-                            style: TextStyle(color: _kHint, fontSize: 12),
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
                     ),
                     Icon(
                       Icons.arrow_forward_ios_rounded,
-                      color: _kHint,
+                      color: theme.colorScheme.onSurfaceVariant,
                       size: 14,
                     ),
                   ],
@@ -528,12 +545,20 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: _kHint, fontSize: 14)),
+          Text(
+            label,
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 14,
+            ),
+          ),
           GestureDetector(
             onTap: onTap,
             child: Row(
@@ -542,7 +567,7 @@ class _InfoRow extends StatelessWidget {
                 Text(
                   value,
                   style: TextStyle(
-                    color: isLink ? _kGold : Colors.white,
+                    color: isLink ? _kGold : theme.colorScheme.onSurface,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -572,7 +597,7 @@ class _SectionDivider extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             Colors.transparent,
-            _kBorder.withOpacity(0.5),
+            Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
             Colors.transparent,
           ],
         ),
@@ -581,9 +606,6 @@ class _SectionDivider extends StatelessWidget {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  BOTÓN ÍCONO DORADO
-// ══════════════════════════════════════════════════════════════
 class _GoldIconButton extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -620,6 +642,10 @@ class _GoldIconButtonState extends State<_GoldIconButton>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accentColor = isDark ? _kGold : theme.colorScheme.primary;
+
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) {
@@ -637,10 +663,13 @@ class _GoldIconButtonState extends State<_GoldIconButton>
                 height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _kGold.withOpacity(0.07),
-                  border: Border.all(color: _kGold.withOpacity(0.28), width: 1),
+                  color: accentColor.withValues(alpha: 0.07),
+                  border: Border.all(
+                    color: accentColor.withValues(alpha: 0.28),
+                    width: 1,
+                  ),
                 ),
-                child: Icon(widget.icon, color: _kGold, size: 18),
+                child: Icon(widget.icon, color: accentColor, size: 18),
               ),
             ),
       ),

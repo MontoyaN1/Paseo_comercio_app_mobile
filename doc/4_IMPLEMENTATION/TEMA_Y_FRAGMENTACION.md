@@ -1,7 +1,7 @@
 # Plan de Implementación: Fragmentación + Tema Oscuro/Claro
 
 **Fecha:** Abril 2026  
-**Estado:** Fase 8 ✅ COMPLETADA - Próximo: Fase 9  
+**Estado:** Fases 1-10 ✅ TODAS COMPLETADAS  
 **Proyecto:** Paseo del Comercio - Mobile App  
 
 ---
@@ -538,31 +538,32 @@ lib/presentation/pages/organizaciones/
 
 ---
 
-### Fase 9: Más Fragmentación + Tema 🚧 EN PROGRESO
+### Fase 9: Más Fragmentación + Tema ✅ COMPLETADA
 
-#### 9.1 plazoleta_list_page.dart (~950 líneas) ⏳ PENDIENTE
+#### 9.1 plazoleta_list_page.dart (~950 líneas) ✅ COMPLETADO
 
 ```
 lib/presentation/pages/plazoletas/
-  plazoleta_list_page.dart (~950 líneas)
+  plazoleta_list_page.dart (955 → 633 líneas, 34% reducción)
 
 widgets/plazoleta/
   mall_background.dart        ✅ Ya existe
   mall_world_painter.dart    ✅ Ya existe  
   plazoleta_detail_panel.dart ✅ Ya existe
 
-Fragmentación propuesta:
-  plazoleta_list_header.dart    → Header con búsqueda
-  plazoleta_map_controls.dart   → Controles del mapa
-  plazoleta_empty_state.dart    → Estado vacío/sin resultados
-  plazoleta_loading_shimmer.dart → Shimmer de carga
+Widgets creados:
+  plazoleta_list_header.dart    → Header glassmorphism
+  plazoleta_list_loading.dart   → Estado de carga
+  plazoleta_list_error.dart     → Estado de error
+  plazoleta_list_hint.dart      → Hint animado
+  plazoleta_list_map_controls.dart → Controles del mapa
 ```
 
-#### 9.2 profile_page.dart (936 líneas) ⏳ PENDIENTE
+#### 9.2 profile_page.dart (936 líneas) ✅ COMPLETADO
 
 ```
 lib/presentation/pages/profile/
-  profile_page.dart (936 líneas)
+  profile_page.dart (936 → 583 líneas, 38% reducción)
 
 widgets/profile/
   profile_bg_painter.dart  ✅ Ya existe
@@ -571,18 +572,17 @@ widgets/profile/
   profile_edit_dialog.dart ✅ Ya existe
   country_picker_dialog.dart ✅ Ya existe
 
-Fragmentación propuesta:
-  profile_avatar_section.dart  → Hero del avatar (líneas 299-488)
-  profile_info_section.dart   → Sección de información (líneas 681-742)
-  profile_actions_section.dart → Sección de acciones (líneas 744-776)
-  profile_skeleton.dart      → Estados loading/empty/signed-out
+Widgets creados:
+  profile_app_bar.dart              → AppBar glassmorphism
+  profile_avatar_hero.dart         → Hero del avatar con animación
+  profile_avatar_options_sheet.dart → Bottom sheet para cambiar avatar
 ```
 
-#### 9.3 producto_detail_page.dart (917 líneas) ⏳ PENDIENTE
+#### 9.3 producto_detail_page.dart (917 líneas) ✅ COMPLETADO
 
 ```
 lib/presentation/pages/productos/
-  producto_detail_page.dart (917 líneas)
+  producto_detail_page.dart (917 → 743 líneas, 19% reducción)
 
 widgets/producto/
   producto_bg_painter.dart  ✅ Ya existe
@@ -593,34 +593,32 @@ widgets/producto/
   producto_valoraciones_tab.dart ✅ Ya existe
   producto_valoracion_dialog.dart ✅ Ya existe
 
-Fragmentación propuesta:
-  producto_estadisticas.dart → Helper de stats (registrar vista, visita, etc - líneas 232-399)
-  producto_compartir.dart    → Lógica de compartir (líneas 489-532)
-  producto_whatsapp.dart     → Lógica WhatsApp (líneas 534-592)
-  producto_tienda_helper.dart → Transformación tienda + tienda tap (líneas 594-601)
-  producto_valoracion_helper.dart → Crear valoración (líneas 603-668)
-  producto_empty_state.dart → Estados loading/empty/error (líneas 725-743)
+Widgets creados:
+  producto_tab_bar.dart            → TabBar con glassmorphism
+  producto_loading_error.dart       → Estado loading/error
+  producto_animated_content.dart     → Wrapper de animación
+  producto_data_helpers.dart        → Helpers de transformación de datos
 ```
 
 **Resumen Phase 9:**
-| Archivo | Líneas actual | Líneas objetivo | Reducción |
-|---------|-------------|-----------------|-----------|
-| plazoleta_list_page.dart | ~950 | ~500 | 47% |
-| profile_page.dart | 936 | ~500 | 47% |
-| producto_detail_page.dart | 917 | ~500 | 45% |
+| Archivo | Líneas original | Líneas final | Reducción |
+|---------|----------------|--------------|-----------|
+| plazoleta_list_page.dart | 955 | 633 | 34% |
+| profile_page.dart | 936 | 583 | 38% |
+| producto_detail_page.dart | 917 | 743 | 19% |
 
 ---
 
-### Fase 10: Solo Tema ⏳ PENDIENTE
+### Fase 10: Solo Tema ✅ COMPLETADA
 
 **Archivos que solo necesitan adaptaciones de tema (sin fragmentación significativa):**
 
 | Archivo | Líneas | Estado | Notas |
 |---------|--------|--------|-------|
-| `soporte_page.dart` | 649 | ❌ | necesita tema |
-| `settings_page.dart` | 687 | ❌ | necesita tema |
-| `favoritos_page.dart` | 495 | ❌ | necesita tema |
-| `splash_page.dart` | 191 | ❌ | necesita tema |
+| `soporte_page.dart` | 678 | ✅ | tema adaptado |
+| `settings_page.dart` | 709 | ✅ | tema adaptado |
+| `favoritos_page.dart` | 514 | ✅ | tema adaptado |
+| `splash_page.dart` | 184 | ✅ | tema adaptado |
 
 ---
 
@@ -636,8 +634,8 @@ Fragmentación propuesta:
 | 6 | Fase 6 | profile_page + tema ✅ | Medio | Fase 2 |
 | 7 | Fase 7 | tienda/producto detail pages ✅ | Alto | Fase 2 |
 | 8 | Fase 8 | plazoleta/organizacion detail + tema ✅ | Alto | Fase 2 |
-| 9 | Fase 9 | Más fragmentación (lista/detail) ⏳ | Medio | Fase 2 |
-| 10 | Fase 10 | Solo tema (soporte/settings/favoritos/splash) ⏳ | Bajo | Fase 1 |
+| 9 | Fase 9 | Más fragmentación (lista/detail) ✅ | Medio | Fase 2 |
+| 10 | Fase 10 | Solo tema (soporte/settings/favoritos/splash) ✅ | Bajo | Fase 1 |
 
 **Total estimado:** 6-8 sprints de trabajo
 
@@ -713,12 +711,13 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 - [x] producto_detail_page theme ✅
 - [x] plazoleta_detail_page fragmentado (Fase 8 - COMPLETADA)
 - [x] organizacion_detail_page fragmentado (Fase 8 - COMPLETADA)
-- [ ] plazoleta_list_page fragmentación adicional (Fase 9 - pendiente)
-- [ ] producto_detail_page fragmentación adicional (Fase 9 - pendiente)
-- [ ] soporte_page tema (Fase 10 - pendiente)
-- [ ] settings_page tema (Fase 10 - pendiente)
-- [ ] favoritos_page tema (Fase 10 - pendiente)
-- [ ] splash_page tema (Fase 10 - pendiente)
+- [x] plazoleta_list_page fragmentación adicional (Fase 9 - COMPLETADA)
+- [x] profile_page fragmentación adicional (Fase 9 - COMPLETADA)
+- [x] producto_detail_page fragmentación adicional (Fase 9 - COMPLETADA)
+- [x] soporte_page tema (Fase 10 - ✅)
+- [x] settings_page tema (Fase 10 - ✅)
+- [x] favoritos_page tema (Fase 10 - ✅)
+- [x] splash_page tema (Fase 10 - ✅)
 - [ ] Análisis estático sin errores
 
 ### Testing Post-Implementación
@@ -741,5 +740,5 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 ---
 
 **Última actualización:** Abril 2026  
-**Estado:** Fase 8 Completada, Fases 9-10 Pendientes  
+**Estado:** Fases 1-10 COMPLETADAS  
 **Responsable:** Equipo de desarrollo
