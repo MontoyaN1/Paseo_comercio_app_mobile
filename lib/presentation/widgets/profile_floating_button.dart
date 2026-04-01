@@ -231,7 +231,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
         isDark
             ? theme.colorScheme.surface.withValues(alpha: 0.95)
             : Colors.white.withValues(alpha: 0.95);
-    final borderColor = theme.colorScheme.outline;
+    final borderColor = _kGold;
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -548,7 +548,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: theme.colorScheme.outline, width: 1),
+        side: BorderSide(color: _kGold, width: 1),
       ),
       title: Row(
         children: [

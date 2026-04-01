@@ -10,6 +10,8 @@ import '../../core/utils/firebase_auth_service.dart';
 import '../../core/app/app_config.dart';
 import '../blocs/auth/auth_bloc.dart';
 
+const _kGold = Color(0xFFD4AF37);
+
 /// AppBar personalizado con botón de perfil y funcionalidad de cerrar sesión
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
@@ -260,6 +262,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       builder:
           (context) => AlertDialog(
             backgroundColor: theme.colorScheme.surface,
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: _kGold, width: 1),
+            ),
             title: Text(
               'Cerrar sesión',
               style: TextStyle(color: theme.colorScheme.onSurface),

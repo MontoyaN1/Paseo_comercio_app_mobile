@@ -119,10 +119,7 @@ class ProfileLogoutDialog extends StatelessWidget {
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: theme.colorScheme.surfaceContainerHighest,
-          width: 1,
-        ),
+        side: BorderSide(color: _kGold, width: 1),
       ),
       title: Row(
         children: [

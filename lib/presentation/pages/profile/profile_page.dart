@@ -528,11 +528,7 @@ class _ProfilePageState extends State<ProfilePage>
         if (state is AuthUnauthenticated) {
           if (context.mounted) {
             Navigator.of(context, rootNavigator: true).pop();
-            // Small delay to ensure Firebase auth state is fully updated
-            await Future.delayed(const Duration(milliseconds: 300));
-            if (context.mounted) {
-              context.go('/login');
-            }
+            context.go('/login');
           }
           break;
         } else if (state is AuthError) {
