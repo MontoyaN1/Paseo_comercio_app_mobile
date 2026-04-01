@@ -538,17 +538,76 @@ lib/presentation/pages/organizaciones/
 
 ---
 
-### Fase 9: Más Fragmentación + Tema ⏳ PENDIENTE
+### Fase 9: Más Fragmentación + Tema 🚧 EN PROGRESO
 
-**Archivos para fragmentación adicional:**
+#### 9.1 plazoleta_list_page.dart (~950 líneas) ⏳ PENDIENTE
 
-#### 9.1 plazoleta_list_page.dart (~950 líneas)
-- Ya tiene widgets separados (mall_background, mall_world_painter, plazoleta_detail_panel)
-- Puede extraerse más: header, map_controls, empty states
+```
+lib/presentation/pages/plazoletas/
+  plazoleta_list_page.dart (~950 líneas)
 
-#### 9.2 producto_detail_page.dart (~917 líneas)
-- Ya fue reducido de 2142 a 917 líneas
-- Puede reducirse más extrayendo: empty states, loading states
+widgets/plazoleta/
+  mall_background.dart        ✅ Ya existe
+  mall_world_painter.dart    ✅ Ya existe  
+  plazoleta_detail_panel.dart ✅ Ya existe
+
+Fragmentación propuesta:
+  plazoleta_list_header.dart    → Header con búsqueda
+  plazoleta_map_controls.dart   → Controles del mapa
+  plazoleta_empty_state.dart    → Estado vacío/sin resultados
+  plazoleta_loading_shimmer.dart → Shimmer de carga
+```
+
+#### 9.2 profile_page.dart (936 líneas) ⏳ PENDIENTE
+
+```
+lib/presentation/pages/profile/
+  profile_page.dart (936 líneas)
+
+widgets/profile/
+  profile_bg_painter.dart  ✅ Ya existe
+  profile_components.dart ✅ Ya existe
+  profile_buttons.dart    ✅ Ya existe
+  profile_edit_dialog.dart ✅ Ya existe
+  country_picker_dialog.dart ✅ Ya existe
+
+Fragmentación propuesta:
+  profile_avatar_section.dart  → Hero del avatar (líneas 299-488)
+  profile_info_section.dart   → Sección de información (líneas 681-742)
+  profile_actions_section.dart → Sección de acciones (líneas 744-776)
+  profile_skeleton.dart      → Estados loading/empty/signed-out
+```
+
+#### 9.3 producto_detail_page.dart (917 líneas) ⏳ PENDIENTE
+
+```
+lib/presentation/pages/productos/
+  producto_detail_page.dart (917 líneas)
+
+widgets/producto/
+  producto_bg_painter.dart  ✅ Ya existe
+  producto_hero.dart       ✅ Ya existe  
+  producto_app_bar.dart    ✅ Ya existe
+  producto_info_tab.dart   ✅ Ya existe
+  producto_tienda_tab.dart ✅ Ya existe
+  producto_valoraciones_tab.dart ✅ Ya existe
+  producto_valoracion_dialog.dart ✅ Ya existe
+
+Fragmentación propuesta:
+  producto_estadisticas.dart → Helper de stats (registrar vista, visita, etc - líneas 232-399)
+  producto_compartir.dart    → Lógica de compartir (líneas 489-532)
+  producto_whatsapp.dart     → Lógica WhatsApp (líneas 534-592)
+  producto_tienda_helper.dart → Transformación tienda + tienda tap (líneas 594-601)
+  producto_valoracion_helper.dart → Crear valoración (líneas 603-668)
+  producto_empty_state.dart → Estados loading/empty/error (líneas 725-743)
+```
+
+**Resumen Phase 9:**
+| Archivo | Líneas actual | Líneas objetivo | Reducción |
+|---------|-------------|-----------------|-----------|
+| plazoleta_list_page.dart | ~950 | ~500 | 47% |
+| profile_page.dart | 936 | ~500 | 47% |
+| producto_detail_page.dart | 917 | ~500 | 45% |
 
 ---
 
@@ -576,7 +635,7 @@ lib/presentation/pages/organizaciones/
 | 5 | Fase 5 | login_page + tema ✅ | Medio | Ninguna |
 | 6 | Fase 6 | profile_page + tema ✅ | Medio | Fase 2 |
 | 7 | Fase 7 | tienda/producto detail pages ✅ | Alto | Fase 2 |
-| 8 | Fase 8 | plazoleta/organizacion detail + tema ⏳ | Alto | Fase 2 |
+| 8 | Fase 8 | plazoleta/organizacion detail + tema ✅ | Alto | Fase 2 |
 | 9 | Fase 9 | Más fragmentación (lista/detail) ⏳ | Medio | Fase 2 |
 | 10 | Fase 10 | Solo tema (soporte/settings/favoritos/splash) ⏳ | Bajo | Fase 1 |
 

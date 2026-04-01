@@ -13,15 +13,12 @@
 //  • Estado sin sesión: pantalla de invitación elegante
 // ────────────────────────────────────────────────────────────
 
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:paseo_del_comercio/di/service_locator.dart';
 import 'package:paseo_del_comercio/core/utils/firebase_auth_service.dart';
-import 'package:paseo_del_comercio/presentation/providers/avatar_provider.dart';
 import 'package:paseo_del_comercio/presentation/blocs/auth/auth_bloc.dart';
 import 'package:paseo_del_comercio/core/errors/app_exceptions.dart';
 import 'package:paseo_del_comercio/data/datasources/remote/supabase_client.dart';
@@ -29,15 +26,13 @@ import 'package:paseo_del_comercio/presentation/widgets/profile/profile_bg_paint
 import 'package:paseo_del_comercio/presentation/widgets/profile/profile_components.dart';
 import 'package:paseo_del_comercio/presentation/widgets/profile/profile_edit_dialog.dart';
 import 'package:paseo_del_comercio/presentation/widgets/profile/profile_buttons.dart';
+import 'package:paseo_del_comercio/presentation/widgets/profile/profile_app_bar.dart';
+import 'package:paseo_del_comercio/presentation/widgets/profile/profile_avatar_hero.dart';
+import 'package:paseo_del_comercio/presentation/widgets/profile/profile_avatar_options_sheet.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const Color _kGold = Color(0xFFD4AF37);
-const _kGoldLight = Color(0xFFFFE082);
-const _kGoldDeep = Color(0xFF9C7A1A);
 const _kBg = Color(0xFF07070F);
-const _kSurface = Color(0xFF0F0F1E);
-const _kBorder = Color(0xFF1E1E3A);
-const _kHint = Color(0xFF6B6B8A);
 
 // ══════════════════════════════════════════════════════════════
 //  PAGE PRINCIPAL
@@ -146,7 +141,7 @@ class _ProfilePageState extends State<ProfilePage>
           SafeArea(
             child: Column(
               children: [
-                _buildAppBar(context),
+                const ProfileAppBar(title: 'Perfil'),
                 Expanded(
                   child: StreamBuilder<User?>(
                     stream: FirebaseAuth.instance.authStateChanges(),
@@ -183,68 +178,6 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  // ── AppBar glassmorphism ──────────────────────────────────
-  Widget _buildAppBar(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor =
-        isDark
-            ? _kSurface.withValues(alpha: 0.82)
-            : Colors.white.withValues(alpha: 0.90);
-    final borderColor = isDark ? _kBorder : Colors.grey.shade300;
-    final textColor = isDark ? Colors.white : Colors.black87;
-
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          height: kToolbarHeight,
-          decoration: BoxDecoration(
-            color: surfaceColor,
-            border: Border(bottom: BorderSide(color: borderColor, width: 1)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            children: [
-              ProfileIconButton(
-                icon: Icons.arrow_back_ios_new_rounded,
-                onTap: () {
-                  try {
-                    if (context.canPop()) {
-                      context.pop();
-                    } else {
-                      Future.microtask(() => context.go('/plazoletas'));
-                    }
-                  } catch (e) {
-                    Future.microtask(() => context.go('/'));
-                  }
-                },
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: ShaderMask(
-                  shaderCallback:
-                      (b) => const LinearGradient(
-                        colors: [_kGoldDeep, _kGold, _kGoldLight],
-                      ).createShader(b),
-                  child: Text(
-                    'Perfil',
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 38),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   // ── Perfil con sesión activa ──────────────────────────────
   Widget _buildProfileContent(BuildContext context, User user) {
     return SingleChildScrollView(
@@ -265,7 +198,10 @@ class _ProfilePageState extends State<ProfilePage>
                     child: child,
                   ),
                 ),
-            child: _buildAvatarHero(),
+            child: ProfileAvatarHero(
+              avatarPulse: _avatarPulse,
+              onAvatarTap: _showAvatarOptions,
+            ),
           ),
 
           const SizedBox(height: 32),
@@ -296,278 +232,9 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  // ── Hero del Avatar ───────────────────────────────────────
-  Widget _buildAvatarHero() {
-    final authService = getIt<FirebaseAuthService>();
-    final avatarProvider = getIt<AvatarProvider>();
-    final displayName = authService.currentUserName;
-    final email = authService.currentUserEmail;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Column(
-      children: [
-        // Avatar con anillo dorado animado y botón de edición
-        GestureDetector(
-          onTap: _showAvatarOptions,
-          child: AnimatedBuilder(
-            animation: _avatarPulse,
-            builder:
-                (_, child) => Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Anillo de glow exterior pulsante
-                    Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: _kGold.withValues(
-                              alpha: 0.20 * _avatarPulse.value,
-                            ),
-                            blurRadius: 30 * _avatarPulse.value,
-                            spreadRadius: 6 * _avatarPulse.value,
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Anillo dorado exterior
-                    Container(
-                      width: 112,
-                      height: 112,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: SweepGradient(
-                          colors: [
-                            _kGold.withValues(alpha: 0.80),
-                            _kGoldLight.withValues(alpha: 0.30),
-                            _kGold.withValues(alpha: 0.80),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Avatar interior
-                    Container(
-                      width: 104,
-                      height: 104,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isDark ? _kSurface : Colors.grey.shade200,
-                        border: Border.all(
-                          color: isDark ? _kBg : Colors.grey.shade400,
-                          width: 3,
-                        ),
-                      ),
-                      child: ClipOval(
-                        child: ListenableBuilder(
-                          listenable: avatarProvider,
-                          builder: (context, _) {
-                            final imageUrl = avatarProvider.avatarUrl;
-                            final updateCount = avatarProvider.updateCount;
-                            if (imageUrl != null && imageUrl.isNotEmpty) {
-                              return Image.network(
-                                imageUrl,
-                                key: ValueKey(
-                                  'avatar_${imageUrl}_$updateCount',
-                                ),
-                                fit: BoxFit.cover,
-                                errorBuilder:
-                                    (_, __, ___) => _buildAvatarFallback(),
-                              );
-                            }
-                            return _buildAvatarFallback();
-                          },
-                        ),
-                      ),
-                    ),
-                    // Botón de edición de avatar
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: _kGold,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isDark ? _kBg : Colors.white,
-                            width: 2,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          size: 16,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-          ),
-        ),
-
-        const SizedBox(height: 18),
-
-        // Nombre con degradado dorado
-        ShaderMask(
-          shaderCallback:
-              (b) => const LinearGradient(
-                colors: [_kGoldDeep, _kGold, _kGoldLight],
-              ).createShader(b),
-          child: Text(
-            displayName ?? 'Usuario',
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.3,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-
-        const SizedBox(height: 6),
-
-        // Email
-        Text(
-          email ?? '',
-          style: TextStyle(
-            color: isDark ? _kHint : Colors.grey.shade600,
-            fontSize: 13,
-          ),
-          textAlign: TextAlign.center,
-        ),
-
-        const SizedBox(height: 14),
-
-        // Badge de sesión activa
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color:
-                isDark
-                    ? Colors.green.withValues(alpha: 0.15)
-                    : Colors.green.shade100,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color:
-                  isDark
-                      ? Colors.green.withValues(alpha: 0.40)
-                      : Colors.green.shade400,
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isDark ? Colors.greenAccent : Colors.green.shade700,
-                ),
-              ),
-              const SizedBox(width: 7),
-              Text(
-                'Sesión activa',
-                style: TextStyle(
-                  color: isDark ? Colors.greenAccent : Colors.green.shade800,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   // ── Opciones para cambiar avatar ─────────────────────────────────
   void _showAvatarOptions() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? _kSurface : Colors.white;
-    final textColor = isDark ? Colors.white : Colors.black87;
-    final hintColor = isDark ? _kHint : Colors.grey.shade600;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: surfaceColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder:
-          (context) => SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Cambiar foto de perfil',
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  ListTile(
-                    leading: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: _kGold.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.camera_alt, color: _kGold),
-                    ),
-                    title: Text(
-                      'Tomar foto',
-                      style: TextStyle(color: textColor),
-                    ),
-                    subtitle: Text(
-                      'Usar la cámara',
-                      style: TextStyle(color: hintColor),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _cambiarAvatar(ImageSource.camera);
-                    },
-                  ),
-                  ListTile(
-                    leading: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: _kGold.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.photo_library, color: _kGold),
-                    ),
-                    title: Text(
-                      'Elegir de galería',
-                      style: TextStyle(color: textColor),
-                    ),
-                    subtitle: Text(
-                      'Seleccionar una imagen',
-                      style: TextStyle(color: hintColor),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _cambiarAvatar(ImageSource.gallery);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                ],
-              ),
-            ),
-          ),
-    );
+    ProfileAvatarOptionsSheet.show(context, onSourceSelected: _cambiarAvatar);
   }
 
   // ── Cambiar avatar ─────────────────────────────────────────────
@@ -655,26 +322,6 @@ class _ProfilePageState extends State<ProfilePage>
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(mensaje), backgroundColor: Colors.red),
-    );
-  }
-
-  Widget _buildAvatarFallback() {
-    final authService = getIt<FirebaseAuthService>();
-    final displayName = authService.currentUserName;
-    final initials =
-        (displayName?.isNotEmpty == true) ? displayName![0].toUpperCase() : '?';
-    return Container(
-      color: _kGold.withOpacity(0.10),
-      child: Center(
-        child: Text(
-          initials,
-          style: const TextStyle(
-            color: _kGold,
-            fontSize: 38,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
     );
   }
 

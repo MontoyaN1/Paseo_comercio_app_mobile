@@ -3,14 +3,11 @@
 // 🏛️  PLAZA UNIVERSE — Detalle de Producto
 // ────────────────────────────────────────────────────────────
 
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:paseo_del_comercio/core/app/app_config.dart';
 import 'package:paseo_del_comercio/core/utils/firebase_auth_service.dart';
 import 'package:paseo_del_comercio/core/utils/share_service.dart';
 import 'package:paseo_del_comercio/data/datasources/remote/supabase_client.dart';
@@ -24,13 +21,13 @@ import 'package:paseo_del_comercio/presentation/widgets/producto/producto_info_t
 import 'package:paseo_del_comercio/presentation/widgets/producto/producto_tienda_tab.dart';
 import 'package:paseo_del_comercio/presentation/widgets/producto/producto_valoraciones_tab.dart';
 import 'package:paseo_del_comercio/presentation/widgets/producto/producto_valoracion_dialog.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/producto_tab_bar.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/producto_loading_error.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/producto_animated_content.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/producto_data_helpers.dart';
 import '../../widgets/profile_floating_button.dart';
 
-const _kGold = Color(0xFFD4AF37);
 const _kBg = Color(0xFF07070F);
-const _kSurface = Color(0xFF0F0F1E);
-const _kBorder = Color(0xFF1E1E3A);
-const _kHint = Color(0xFF6B6B8A);
 
 class ProductoDetailPage extends StatefulWidget {
   final int productoId;
@@ -65,7 +62,7 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
 
   Map<String, dynamic>? _productoData;
   Map<String, dynamic>? _tiendaData;
-  final AppConfig _appConfig = AppConfig();
+  final ProductoDataHelpers _dataHelpers = ProductoDataHelpers();
 
   List<Map<String, dynamic>> _valoraciones = [];
   bool _valoracionesLoaded = false;
@@ -398,92 +395,16 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
     }
   }
 
-  String? _transformUrlToR2(String? url) {
-    if (url == null || url.isEmpty) return url;
-    if (!url.contains('contabostorage.com')) return url;
-
-    try {
-      if (_appConfig.cloudflareR2PublicUrl.isEmpty) return url;
-      final uri = Uri.parse(url);
-      final pathSegments = uri.pathSegments;
-      if (pathSegments.isEmpty) return url;
-      final newPath = pathSegments.join('/');
-      return '${_appConfig.cloudflareR2PublicUrl}/$newPath';
-    } catch (e) {
-      return url;
-    }
-  }
-
   Map<String, dynamic> _transformTiendaUrlsToR2(Map<String, dynamic> tienda) {
-    final tiendaTransformada = Map<String, dynamic>.from(tienda);
-
-    final logoUrl =
-        tiendaTransformada['logoUrl'] ??
-        tiendaTransformada['logo_url'] ??
-        tiendaTransformada['url_logo'] ??
-        tiendaTransformada['logo'];
-    if (logoUrl != null && logoUrl is String && logoUrl.isNotEmpty) {
-      final transformed = _transformUrlToR2(logoUrl);
-      tiendaTransformada['logoUrl'] = transformed;
-      tiendaTransformada['logo_url'] = transformed;
-    }
-
-    final imagenesTienda = tiendaTransformada['imagen_tienda'];
-    if (imagenesTienda is List) {
-      final nuevasImagenes = <Map<String, dynamic>>[];
-      for (final img in imagenesTienda) {
-        if (img is Map<String, dynamic>) {
-          final nuevaImagen = Map<String, dynamic>.from(img);
-          final urlImagen = nuevaImagen['url_imagen'] as String?;
-          if (urlImagen != null) {
-            nuevaImagen['url_imagen'] = _transformUrlToR2(urlImagen);
-          }
-          nuevasImagenes.add(nuevaImagen);
-        }
-      }
-      tiendaTransformada['imagen_tienda'] = nuevasImagenes;
-    }
-
-    return tiendaTransformada;
+    return _dataHelpers.transformTiendaUrlsToR2(tienda);
   }
 
   String? _getProductImageUrl() {
-    if (_productoData == null) return null;
-
-    final imagenProductoData = _productoData!['imagen_productos'];
-    if (imagenProductoData is List && imagenProductoData.isNotEmpty) {
-      String? imagenPrincipal;
-      for (final img in imagenProductoData) {
-        if (img is Map<String, dynamic>) {
-          final tipo = img['tipo_imagen'] ?? img['tipo'];
-          if (tipo == 'principal' || img['es_principal'] == true) {
-            imagenPrincipal = img['url'] ?? img['url_imagen'];
-            break;
-          }
-        }
-      }
-      if (imagenPrincipal == null && imagenProductoData.isNotEmpty) {
-        final primera = imagenProductoData.first;
-        if (primera is Map<String, dynamic>) {
-          imagenPrincipal = primera['url'] ?? primera['url_imagen'];
-        }
-      }
-      if (imagenPrincipal != null) {
-        return _transformUrlToR2(imagenPrincipal);
-      }
-    }
-
-    final imagenUrl =
-        _productoData!['imagen'] ??
-        _productoData!['imagen_url'] ??
-        _productoData!['url_imagen'];
-    return _transformUrlToR2(imagenUrl?.toString());
+    return _dataHelpers.getProductImageUrl(_productoData);
   }
 
   String _getProductoNombre() {
-    return _productoData?['nombre'] ??
-        _productoData?['nombre_producto'] ??
-        'Producto sin nombre';
+    return _dataHelpers.getProductoNombre(_productoData);
   }
 
   Future<void> _onShareProducto() async {
@@ -711,35 +632,18 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
   Widget _buildContent(ProductoState state) {
     if (_productoData == null) {
       if (state is ProductoLoading) {
-        return _buildLoadingOrError('Cargando producto...');
+        return const ProductoLoadingError(message: 'Cargando producto...');
       }
       if (state is ProductoError) {
-        return _buildLoadingOrError(state.message, onRetry: _loadProducto);
+        return ProductoLoadingError(
+          message: state.message,
+          onRetry: _loadProducto,
+        );
       }
-      return _buildLoadingOrError('Producto no encontrado');
+      return const ProductoLoadingError(message: 'Producto no encontrado');
     }
 
     return _buildPage(context, _productoData!);
-  }
-
-  Widget _buildLoadingOrError(String message, {VoidCallback? onRetry}) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(color: _kGold),
-          const SizedBox(height: 16),
-          Text(message, style: const TextStyle(color: _kHint)),
-          if (onRetry != null) ...[
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: onRetry,
-              child: const Text('Reintentar', style: TextStyle(color: _kGold)),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 
   Widget _buildPage(BuildContext context, Map<String, dynamic> producto) {
@@ -769,51 +673,30 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
                 ],
             body: Column(
               children: [
-                _buildTabBar(),
+                ProductoTabBar(tabController: _tabController),
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      AnimatedBuilder(
-                        animation: _contentCtrl,
-                        builder:
-                            (_, child) => Opacity(
-                              opacity: _contentFade.value.clamp(0.0, 1.0),
-                              child: Transform.translate(
-                                offset: Offset(0, _contentSlide.value),
-                                child: child,
-                              ),
-                            ),
+                      ProductoAnimatedContent(
+                        contentFade: _contentFade,
+                        contentSlide: _contentSlide,
                         child: ProductoInfoTab(
                           producto: producto,
                           onWhatsApp: _enviarWhatsapp,
                         ),
                       ),
-                      AnimatedBuilder(
-                        animation: _contentCtrl,
-                        builder:
-                            (_, child) => Opacity(
-                              opacity: _contentFade.value.clamp(0.0, 1.0),
-                              child: Transform.translate(
-                                offset: Offset(0, _contentSlide.value),
-                                child: child,
-                              ),
-                            ),
+                      ProductoAnimatedContent(
+                        contentFade: _contentFade,
+                        contentSlide: _contentSlide,
                         child: ProductoTiendaTab(
                           tienda: _tiendaData,
                           onTiendaTap: _onTiendaTap,
                         ),
                       ),
-                      AnimatedBuilder(
-                        animation: _contentCtrl,
-                        builder:
-                            (_, child) => Opacity(
-                              opacity: _contentFade.value.clamp(0.0, 1.0),
-                              child: Transform.translate(
-                                offset: Offset(0, _contentSlide.value),
-                                child: child,
-                              ),
-                            ),
+                      ProductoAnimatedContent(
+                        contentFade: _contentFade,
+                        contentSlide: _contentSlide,
                         child: ProductoValoracionesTab(
                           valoraciones: _valoraciones,
                           isLoading: !_valoracionesLoaded,
@@ -855,63 +738,6 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
       precio: precioDouble,
       heroFade: _heroFade,
       heroScale: _heroScale,
-    );
-  }
-
-  Widget _buildTabBar() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final tabBgColor =
-        isDark
-            ? _kSurface.withValues(alpha: 0.88)
-            : Colors.white.withValues(alpha: 0.88);
-    final tabBorderColor = isDark ? _kBorder : Colors.grey.shade300;
-    final unselectedLabel = isDark ? _kHint : Colors.grey.shade600;
-
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: tabBgColor,
-            border: Border(bottom: BorderSide(color: tabBorderColor, width: 1)),
-          ),
-          child: TabBar(
-            controller: _tabController,
-            labelColor: _kGold,
-            unselectedLabelColor: unselectedLabel,
-            indicatorColor: _kGold,
-            indicatorSize: TabBarIndicatorSize.label,
-            indicatorWeight: 2,
-            dividerColor: Colors.transparent,
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
-              letterSpacing: 0.5,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w400,
-              fontSize: 13,
-            ),
-            tabs: const [
-              Tab(
-                icon: Icon(Icons.info_outline_rounded, size: 18),
-                text: 'Info',
-                iconMargin: EdgeInsets.only(bottom: 2),
-              ),
-              Tab(
-                icon: Icon(Icons.store_outlined, size: 18),
-                text: 'Tienda',
-                iconMargin: EdgeInsets.only(bottom: 2),
-              ),
-              Tab(
-                icon: Icon(Icons.star_outline_rounded, size: 18),
-                text: 'Reseñas',
-                iconMargin: EdgeInsets.only(bottom: 2),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

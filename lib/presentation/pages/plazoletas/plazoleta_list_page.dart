@@ -18,7 +18,6 @@
 // ────────────────────────────────────────────────────────────
 
 import 'dart:async';
-import 'dart:ui' as ui;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -34,14 +33,17 @@ import '../../blocs/plazoleta/plazoleta_state.dart';
 import '../../widgets/mall/mall_background.dart';
 import '../../widgets/mall/mall_world_painter.dart';
 import '../../widgets/plazoleta/plazoleta_detail_panel.dart';
+import '../../widgets/plazoleta/plazoleta_list_header.dart';
+import '../../widgets/plazoleta/plazoleta_list_loading.dart';
+import '../../widgets/plazoleta/plazoleta_list_error.dart';
+import '../../widgets/plazoleta/plazoleta_list_hint.dart';
+import '../../widgets/plazoleta/plazoleta_list_map_controls.dart';
 import '../../widgets/profile_floating_button.dart';
 
 // ══════════════════════════════════════════════════════════════
 //  PALETA DE LUJO (branding - no theme)
 // ══════════════════════════════════════════════════════════════
 const _kGold = Color(0xFFD4AF37);
-const _kGoldGlow = Color(0xFFFFE082);
-const _kGoldDeep = Color(0xFF9C7A1A);
 
 // ══════════════════════════════════════════════════════════════
 //  CONSTANTES ISOMÉTRICAS
@@ -510,8 +512,12 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
                 s is PlazoletaProductosError ||
                 s is PlazoletaTiendasError ||
                 _plazas.isEmpty)
-              return _loading();
-            if (s is PlazoletaErrorState) return _error(s);
+              return const PlazoletaListLoading();
+            if (s is PlazoletaErrorState)
+              return PlazoletaListError(
+                message: s.message,
+                onRetry: _onRefresh,
+              );
             if (s is PlazoletaLoaded) return _mainView(s);
             if (_plazas.isNotEmpty) {
               final currentState = getIt<PlazoletaBloc>().state;
@@ -519,7 +525,7 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
                 return _mainView(currentState);
               }
             }
-            return _loading();
+            return const PlazoletaListLoading();
           },
         ),
       ),
@@ -573,9 +579,17 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
           ),
         ),
 
-        _header(state),
+        PlazoletaListHeader(
+          plazoletasCount: state.plazoletas.length,
+          onRefresh: _onRefresh,
+        ),
 
-        _mapControls(),
+        PlazoletaListMapControls(
+          scale: _scale,
+          onZoomIn: () => _animateZoom(_scale * 1.4),
+          onZoomOut: () => _animateZoom(_scale / 1.4),
+          onResetView: _resetView,
+        ),
 
         if (hasPanel) ...[
           AnimatedBuilder(
@@ -612,339 +626,8 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
           ),
         ),
 
-        _hint(),
+        PlazoletaListHint(introCtrl: _introCtrl!),
       ],
-    );
-  }
-
-  // ── UI WIDGETS ────────────────────────────────────────────
-
-  Widget _header(PlazoletaLoaded state) {
-    final theme = Theme.of(context);
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-          child: Container(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              MediaQuery.of(context).padding.top + 10,
-              20,
-              14,
-            ),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  theme.colorScheme.surface.withValues(alpha: 0.96),
-                  theme.colorScheme.surface.withValues(alpha: 0.0),
-                ],
-              ),
-              border: Border(
-                bottom: BorderSide(
-                  color: _kGold.withValues(alpha: 0.18),
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ShaderMask(
-                        shaderCallback:
-                            (b) => const LinearGradient(
-                              colors: [
-                                Color(0xFF9C7A1A),
-                                _kGold,
-                                Color(0xFFFFE082),
-                                _kGold,
-                              ],
-                              stops: [0.0, 0.35, 0.65, 1.0],
-                            ).createShader(b),
-                        child: const Text(
-                          'PASEO DEL COMERCIO',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 4,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          Container(
-                            width: 5,
-                            height: 5,
-                            decoration: const BoxDecoration(
-                              color: _kGold,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 7),
-                          Text(
-                            '${state.plazoletas.length} plazoletas  •  Centro Comercial Virtual',
-                            style: TextStyle(
-                              color: _kGold.withValues(alpha: 0.65),
-                              fontSize: 11,
-                              letterSpacing: 1.4,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                _iconBtn(Icons.refresh_rounded, _onRefresh),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _mapControls() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final accentColor = isDark ? _kGold : const Color(0xFFB8860B);
-    return Positioned(
-      right: 14,
-      top: MediaQuery.of(context).padding.top + 120,
-      child: Container(
-        decoration: BoxDecoration(
-          color:
-              isDark
-                  ? theme.colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.85,
-                  )
-                  : Colors.white.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: accentColor.withValues(alpha: 0.25)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _mapBtn(Icons.remove, () => _animateZoom(_scale / 1.4)),
-            Container(
-              width: 1,
-              height: 24,
-              color: accentColor.withValues(alpha: 0.2),
-            ),
-            _mapBtn(Icons.add, () => _animateZoom(_scale * 1.4)),
-            Container(
-              width: 1,
-              height: 24,
-              color: accentColor.withValues(alpha: 0.2),
-            ),
-            _mapBtn(
-              Icons.center_focus_strong_rounded,
-              _resetView,
-              accent: true,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _mapBtn(IconData icon, VoidCallback onTap, {bool accent = false}) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final accentColor = isDark ? _kGold : const Color(0xFFB8860B);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color:
-              accent ? accentColor.withValues(alpha: 0.18) : Colors.transparent,
-          borderRadius: accent ? BorderRadius.circular(8) : BorderRadius.zero,
-          border: Border.all(
-            color:
-                accent
-                    ? accentColor.withValues(alpha: 0.55)
-                    : Colors.transparent,
-            width: accent ? 1 : 0,
-          ),
-        ),
-        child: Icon(icon, color: accentColor, size: 18),
-      ),
-    );
-  }
-
-  Widget _iconBtn(IconData icon, VoidCallback onTap) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final iconColor = isDark ? _kGold : const Color(0xFFB8860B);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(9),
-        decoration: BoxDecoration(
-          color:
-              isDark
-                  ? theme.colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.88,
-                  )
-                  : Colors.white.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: iconColor.withValues(alpha: 0.30)),
-        ),
-        child: Icon(icon, color: iconColor, size: 18),
-      ),
-    );
-  }
-
-  Widget _hint() {
-    return AnimatedBuilder(
-      animation: _introCtrl!,
-      builder: (_, __) {
-        final t = _introCtrl!.value;
-        if (t < 0.55 || t > 0.94) return const SizedBox.shrink();
-        final op = (t < 0.65
-                ? (t - 0.55) / 0.1
-                : t > 0.84
-                ? 1 - (t - 0.84) / 0.1
-                : 1.0)
-            .clamp(0.0, 1.0);
-        return Positioned(
-          bottom: 88,
-          left: 0,
-          right: 0,
-          child: Opacity(
-            opacity: op,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 9,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.88),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: _kGold.withValues(alpha: 0.4)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _kGold.withValues(alpha: 0.12),
-                      blurRadius: 16,
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.touch_app_rounded, color: _kGold, size: 14),
-                    SizedBox(width: 8),
-                    Text(
-                      'Toca una plaza  •  Pellizca para zoom',
-                      style: TextStyle(color: Colors.white70, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _loading() {
-    final theme = Theme.of(context);
-    return Container(
-      color: theme.colorScheme.surface,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 48,
-              height: 48,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation(_kGold),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              'Construyendo el mall…',
-              style: TextStyle(
-                color: _kGold.withValues(alpha: 0.8),
-                fontSize: 13,
-                letterSpacing: 2,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _error(PlazoletaErrorState s) {
-    final theme = Theme.of(context);
-    return Container(
-      color: theme.colorScheme.surface,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.wifi_off_rounded,
-              color: theme.colorScheme.error.withValues(alpha: 0.6),
-              size: 54,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              s.message.isNotEmpty ? s.message : 'Error de conexión',
-              style: const TextStyle(color: Colors.white60, fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 22),
-            GestureDetector(
-              onTap: _onRefresh,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [_kGoldDeep, _kGold, _kGoldGlow],
-                  ),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: const Text(
-                  'Reintentar',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
