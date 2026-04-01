@@ -1,7 +1,7 @@
 # Plan de Implementación: Fragmentación + Tema Oscuro/Claro
 
-**Fecha:** Marzo 2026  
-**Estado:** Fase 7 En curso - detail pages + tema  
+**Fecha:** Abril 2026  
+**Estado:** Fase 8 ✅ COMPLETADA - Próximo: Fase 9  
 **Proyecto:** Paseo del Comercio - Mobile App  
 
 ---
@@ -461,11 +461,11 @@ lib/presentation/widgets/profile/
 
 ---
 
-### Fase 7: Fragmentar Detalle Pages + Aplicar Tema ✅ EN PROGRESO
+### Fase 7: Fragmentar Detalle Pages + Aplicar Tema ✅ COMPLETADA (Parcial)
 
 **Objetivo:** Reducir páginas de detalle + reemplazar colores UI con tema.
 
-#### 7.1-7.2 Widgets Creados
+#### 7.1 Widgets Creados (Tienda)
 ```
 lib/presentation/widgets/tienda/
   tienda_bg_painter.dart    (136 líneas) → NO USA TEMA (branding)
@@ -478,18 +478,90 @@ lib/presentation/widgets/tienda/
     - TiendaIconButton
     - TiendaActionButton
     - TiendaOutlineButton
+  tienda_hero.dart         (~340 líneas) → USA TEMA
+  tienda_info_tab.dart      (~560 líneas) → USA TEMA
+  tienda_productos_tab.dart (~115 líneas) → USA TEMA
+  tienda_app_bar.dart       (~122 líneas) → USA TEMA
+```
 
+#### 7.2 Widgets Creados (Producto)
+```
 lib/presentation/widgets/producto/
   producto_bg_painter.dart  (127 líneas) → NO USA TEMA (branding)
   producto_components.dart   (131 líneas) → USA TEMA
     - ProductoPhoneInfo
     - ProductoGoldStatCard
     - ProductoIconButton
+  producto_hero.dart        (~220 líneas) → USA TEMA
+  producto_app_bar.dart     (~119 líneas) → USA TEMA
+  producto_info_tab.dart    (~253 líneas) → USA TEMA
+  producto_tienda_tab.dart  (~60 líneas) → USA TEMA
+  producto_valoraciones_tab.dart (~355 líneas) → USA TEMA
+  producto_valoracion_dialog.dart (~165 líneas) → USA TEMA
 ```
 
-#### 7.3-7.4 Pages por actualizar
-- `tienda_detail_page.dart` (2210 líneas) → usar widgets
-- `producto_detail_page.dart` (2142 líneas) → usar widgets
+#### 7.3 Pages Actualizadas
+- `tienda_detail_page.dart` (2210 → 621 líneas, 70% reducción) ✅
+- `producto_detail_page.dart` (2142 → 917 líneas, 54% reducción) ✅
+
+---
+
+### Fase 8: Detalle Pages + Organizacion/Plazoleta + Tema ✅ COMPLETADA
+
+#### 8.1 plazoleta_detail_page.dart ✅ COMPLETADO
+```
+lib/presentation/widgets/plazoleta/
+  plazoleta_bg_painter.dart  ✅ NO USA TEMA (branding)
+  plazoleta_hero.dart       ✅ USA TEMA
+  plazoleta_app_bar.dart    ✅ USA TEMA
+  plazoleta_info_tab.dart   ✅ USA TEMA
+  plazoleta_productos_tab.dart ✅ USA TEMA (nuevo)
+  plazoleta_tiendas_tab.dart ✅ USA TEMA (nuevo)
+
+lib/presentation/pages/plazoletas/
+  plazoleta_detail_page.dart ✅ (1577 → 516 líneas, 67% reducción)
+```
+
+#### 8.2 organizacion_detail_page.dart ✅ COMPLETADO
+```
+lib/presentation/widgets/organizacion/
+  organizacion_bg_painter.dart  ✅ USA TEMA (adaptado)
+  organizacion_components.dart  ✅ USA TEMA (expandido)
+  organizacion_hero.dart        ✅ USA TEMA (nuevo)
+  organizacion_app_bar.dart     ✅ USA TEMA (nuevo)
+  organizacion_info_tab.dart    ✅ USA TEMA (nuevo)
+  organizacion_tiendas_tab.dart ✅ USA TEMA (nuevo)
+
+lib/presentation/pages/organizaciones/
+  organizacion_detail_page.dart ✅ (1272 → 372 líneas, 71% reducción)
+```
+
+---
+
+### Fase 9: Más Fragmentación + Tema ⏳ PENDIENTE
+
+**Archivos para fragmentación adicional:**
+
+#### 9.1 plazoleta_list_page.dart (~950 líneas)
+- Ya tiene widgets separados (mall_background, mall_world_painter, plazoleta_detail_panel)
+- Puede extraerse más: header, map_controls, empty states
+
+#### 9.2 producto_detail_page.dart (~917 líneas)
+- Ya fue reducido de 2142 a 917 líneas
+- Puede reducirse más extrayendo: empty states, loading states
+
+---
+
+### Fase 10: Solo Tema ⏳ PENDIENTE
+
+**Archivos que solo necesitan adaptaciones de tema (sin fragmentación significativa):**
+
+| Archivo | Líneas | Estado | Notas |
+|---------|--------|--------|-------|
+| `soporte_page.dart` | 649 | ❌ | necesita tema |
+| `settings_page.dart` | 687 | ❌ | necesita tema |
+| `favoritos_page.dart` | 495 | ❌ | necesita tema |
+| `splash_page.dart` | 191 | ❌ | necesita tema |
 
 ---
 
@@ -499,11 +571,14 @@ lib/presentation/widgets/producto/
 |-------|------|----------|----------|--------------|
 | 1 | Fase 1 | Sistema de tema base ✅ | Bajo | Ninguna |
 | 2 | Fase 2 | Widgets compartidos ✅ | Bajo | Fase 1 |
-| 3 | Fase 3 | plazoleta_list_page + tema | Alto | Ninguna |
-| 4 | Fase 4 | organizacion_list_page + tema | Medio | Fase 2 |
-| 5 | Fase 5 | login_page + tema | Medio | Ninguna |
-| 6 | Fase 6 | profile_page + tema | Medio | Fase 2 |
-| 7 | Fase 7 | detail pages + tema | Alto | Fase 2 |
+| 3 | Fase 3 | plazoleta_list_page + tema ✅ | Alto | Ninguna |
+| 4 | Fase 4 | organizacion_list_page + tema ✅ | Medio | Fase 2 |
+| 5 | Fase 5 | login_page + tema ✅ | Medio | Ninguna |
+| 6 | Fase 6 | profile_page + tema ✅ | Medio | Fase 2 |
+| 7 | Fase 7 | tienda/producto detail pages ✅ | Alto | Fase 2 |
+| 8 | Fase 8 | plazoleta/organizacion detail + tema ⏳ | Alto | Fase 2 |
+| 9 | Fase 9 | Más fragmentación (lista/detail) ⏳ | Medio | Fase 2 |
+| 10 | Fase 10 | Solo tema (soporte/settings/favoritos/splash) ⏳ | Bajo | Fase 1 |
 
 **Total estimado:** 6-8 sprints de trabajo
 
@@ -573,16 +648,27 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 - [x] organizacion_list_page theme fixes ✅
 - [x] login_page fragmentado ✅
 - [x] profile_page fragmentado ✅
-- [ ] Detail pages fragmentados (en progreso)
+- [x] tienda_detail_page fragmentado ✅
+- [x] tienda_detail_page theme ✅
+- [x] producto_detail_page fragmentado ✅
+- [x] producto_detail_page theme ✅
+- [x] plazoleta_detail_page fragmentado (Fase 8 - COMPLETADA)
+- [x] organizacion_detail_page fragmentado (Fase 8 - COMPLETADA)
+- [ ] plazoleta_list_page fragmentación adicional (Fase 9 - pendiente)
+- [ ] producto_detail_page fragmentación adicional (Fase 9 - pendiente)
+- [ ] soporte_page tema (Fase 10 - pendiente)
+- [ ] settings_page tema (Fase 10 - pendiente)
+- [ ] favoritos_page tema (Fase 10 - pendiente)
+- [ ] splash_page tema (Fase 10 - pendiente)
 - [ ] Análisis estático sin errores
 
 ### Testing Post-Implementación
 
-- [ ] Tema cambia al cambiar toggle en Settings
-- [ ] Tema sigue al sistema cuando está en "Sistema"
+- [x] Tema cambia al cambiar toggle en Settings
+- [x] Tema sigue al sistema cuando está en "Sistema"
 - [ ] Navegación de返回 a listas funciona correctamente
-- [ ] Painters mantienen estética dark
-- [ ] Widgets usan colores de tema correctamente
+- [x] Painters mantienen estética dark
+- [x] Widgets usan colores de tema correctamente
 
 ---
 
@@ -595,6 +681,6 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 
 ---
 
-**Última actualización:** Marzo 2026  
-**Estado:** Planificado - Listo para implementar  
+**Última actualización:** Abril 2026  
+**Estado:** Fase 8 Completada, Fases 9-10 Pendientes  
 **Responsable:** Equipo de desarrollo

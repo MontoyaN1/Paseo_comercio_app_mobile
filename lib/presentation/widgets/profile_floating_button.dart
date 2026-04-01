@@ -287,35 +287,39 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                 _SheetTile(
                   icon: Icons.person_outline_rounded,
                   label: 'Mi perfil',
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(context);
-                    context.push('/profile');
+                    await Future.delayed(const Duration(milliseconds: 50));
+                    if (context.mounted) context.push('/profile');
                   },
                 ),
                 if (!widget.hidePlazoletasOption)
                   _SheetTile(
                     icon: Icons.location_city_rounded,
                     label: 'Plazoletas',
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
-                      context.push('/plazoletas');
+                      await Future.delayed(const Duration(milliseconds: 50));
+                      if (context.mounted) context.push('/plazoletas');
                     },
                   ),
                 if (!widget.hideOrganizacionesOption)
                   _SheetTile(
                     icon: Icons.account_balance_rounded,
                     label: 'Organizaciones',
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
-                      context.push('/organizaciones');
+                      await Future.delayed(const Duration(milliseconds: 50));
+                      if (context.mounted) context.push('/organizaciones');
                     },
                   ),
                 _SheetTile(
                   icon: Icons.settings_outlined,
                   label: 'Configuración',
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(context);
-                    context.push('/settings');
+                    await Future.delayed(const Duration(milliseconds: 50));
+                    if (context.mounted) context.push('/settings');
                   },
                 ),
 
@@ -520,48 +524,47 @@ class _ProfileSheetState extends State<_ProfileSheet> {
       return;
     }
 
-    // Cerrar el BottomSheet primero
+    // Cerrar el BottomSheet primero y esperar a que complete
     Navigator.of(context).pop();
+    await Future.delayed(const Duration(milliseconds: 50));
 
-    // Usar Future.microtask para asegurar que el BottomSheet se haya cerrado
-    Future.microtask(() async {
-      if (!overlayContext.mounted) {
-        _showLogoutConfirmationFallback(context);
-        return;
-      }
+    if (!overlayContext.mounted) {
+      _showLogoutConfirmationFallback(context);
+      return;
+    }
 
-      // Mostrar diálogo de confirmación usando el overlay context
-      final result = await showDialog<bool>(
-        context: overlayContext,
-        useRootNavigator: true,
-        barrierDismissible: true,
-        builder: (dialogContext) => _buildLogoutDialog(dialogContext),
-      );
+    // Mostrar diálogo de confirmación usando el overlay context
+    final result = await showDialog<bool>(
+      context: overlayContext,
+      useRootNavigator: true,
+      barrierDismissible: true,
+      builder: (dialogContext) => _buildLogoutDialog(dialogContext),
+    );
 
-      if (result == true && overlayContext.mounted) {
-        // Realizar logout
-        await _performLogout(overlayContext);
-      }
-    });
+    if (result == true && overlayContext.mounted) {
+      // Realizar logout
+      await _performLogout(overlayContext);
+    }
   }
 
-  void _showLogoutConfirmationFallback(BuildContext context) {
-    // Cerrar el BottomSheet
+  void _showLogoutConfirmationFallback(BuildContext context) async {
+    // Cerrar el BottomSheet y esperar a que complete
     Navigator.of(context).pop();
+    await Future.delayed(const Duration(milliseconds: 50));
+
+    if (!context.mounted) return;
 
     // Mostrar diálogo directamente usando el contexto después de un delay
-    Future.microtask(() async {
-      final result = await showDialog<bool>(
-        context: context,
-        useRootNavigator: true,
-        barrierDismissible: true,
-        builder: (dialogContext) => _buildLogoutDialog(dialogContext),
-      );
+    final result = await showDialog<bool>(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: true,
+      builder: (dialogContext) => _buildLogoutDialog(dialogContext),
+    );
 
-      if (result == true && context.mounted) {
-        await _performLogout(context);
-      }
-    });
+    if (result == true && context.mounted) {
+      await _performLogout(context);
+    }
   }
 
   Widget _buildLogoutDialog(BuildContext dialogContext) {
