@@ -13,7 +13,7 @@ import 'package:paseo_del_comercio/domain/entities/producto.dart';
 import 'package:paseo_del_comercio/domain/entities/tienda.dart';
 import 'package:paseo_del_comercio/domain/entities/imagen_base.dart';
 
-import 'plazoleta_components.dart';
+import '../plazoleta_components.dart';
 
 const _kGold = Color(0xFFD4AF37);
 const _kGoldLight = Color(0xFFFFE082);

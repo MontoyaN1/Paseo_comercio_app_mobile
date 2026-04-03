@@ -13,7 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:paseo_del_comercio/domain/entities/plazoleta.dart';
 import 'package:paseo_del_comercio/domain/entities/imagen_base.dart';
 
-import 'plazoleta_components.dart';
+import '../plazoleta_components.dart';
 
 const _kGold = Color(0xFFD4AF37);
 const _kSurface = Color(0xFF0F0F1E);

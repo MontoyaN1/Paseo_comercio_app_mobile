@@ -1,6 +1,6 @@
 // lib/core/routing/app_router.dart
 
-import '../../presentation/widgets/custom_app_bar.dart';
+import '../../presentation/widgets/shared/custom_app_bar.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';

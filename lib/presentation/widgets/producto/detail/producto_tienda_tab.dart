@@ -5,7 +5,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:paseo_del_comercio/presentation/widgets/tienda/tienda_card.dart';
+import 'package:paseo_del_comercio/presentation/widgets/tienda/list/tienda_card.dart';
 
 const _kHint = Color(0xFF6B6B8A);
 

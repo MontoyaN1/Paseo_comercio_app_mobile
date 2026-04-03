@@ -20,13 +20,13 @@ import 'package:paseo_del_comercio/presentation/blocs/plazoleta/plazoleta_bloc.d
 import 'package:paseo_del_comercio/presentation/blocs/plazoleta/plazoleta_event.dart';
 import 'package:paseo_del_comercio/presentation/blocs/plazoleta/plazoleta_state.dart';
 import 'package:paseo_del_comercio/presentation/widgets/plazoleta/plazoleta_bg_painter.dart';
-import 'package:paseo_del_comercio/presentation/widgets/plazoleta/plazoleta_hero.dart';
-import 'package:paseo_del_comercio/presentation/widgets/plazoleta/plazoleta_app_bar.dart';
-import 'package:paseo_del_comercio/presentation/widgets/plazoleta/plazoleta_info_tab.dart';
-import 'package:paseo_del_comercio/presentation/widgets/plazoleta/plazoleta_productos_tab.dart';
-import 'package:paseo_del_comercio/presentation/widgets/plazoleta/plazoleta_tiendas_tab.dart';
+import 'package:paseo_del_comercio/presentation/widgets/plazoleta/detail/plazoleta_hero.dart';
+import 'package:paseo_del_comercio/presentation/widgets/plazoleta/detail/plazoleta_app_bar.dart';
+import 'package:paseo_del_comercio/presentation/widgets/plazoleta/detail/plazoleta_info_tab.dart';
+import 'package:paseo_del_comercio/presentation/widgets/plazoleta/detail/plazoleta_productos_tab.dart';
+import 'package:paseo_del_comercio/presentation/widgets/plazoleta/detail/plazoleta_tiendas_tab.dart';
 import 'package:paseo_del_comercio/presentation/widgets/plazoleta/plazoleta_components.dart';
-import '../../widgets/profile_floating_button.dart';
+import '../../widgets/shared/profile_floating_button.dart';
 
 const _kGold = Color(0xFFD4AF37);
 const _kBg = Color(0xFF07070F);

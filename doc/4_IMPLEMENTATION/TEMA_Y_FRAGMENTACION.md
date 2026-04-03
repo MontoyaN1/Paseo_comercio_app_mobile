@@ -1,7 +1,7 @@
-# Plan de Implementación: Fragmentación + Tema Oscuro/Claro
+# Plan de Implementación: Fragmentación + Tema Oscuro/Claro + Reorganización
 
 **Fecha:** Abril 2026  
-**Estado:** Fases 1-10 ✅ TODAS COMPLETADAS  
+**Estado:** Fases 1-11 ✅ TODAS COMPLETADAS  
 **Proyecto:** Paseo del Comercio - Mobile App  
 
 ---
@@ -622,6 +622,214 @@ Widgets creados:
 
 ---
 
+### Fase 11: Reorganización de Carpetas de Widgets 📋 PLANIFICACIÓN
+
+**Objetivo:** Organizar los widgets en subcarpetas lógicas para mejorar mantenibilidad y navegación.
+
+#### 11.1 Estado Actual de `lib/presentation/widgets/`
+
+```
+widgets/
+├── auth/                   (2 files) ✅ Ya organizado
+│   ├── login_bg_painter.dart
+│   └── login_card.dart
+├── common/                 (3 files) ✅ Ya organizado
+│   ├── empty_state.dart
+│   ├── error_state.dart
+│   └── loading_state.dart
+├── images/                 (1 file)
+│   └── resilient_image.dart
+├── mall/                   (2 files) ✅ Ya organizado
+│   ├── mall_background.dart
+│   └── mall_world_painter.dart
+├── organizacion/           (8 files) ⚠️ Mezclado
+│   ├── organizacion_bg_painter.dart      (detail)
+│   ├── organizacion_card.dart            (list)
+│   ├── organizacion_components.dart      (detail helpers)
+│   ├── organizacion_filter_chip.dart     (list)
+│   ├── organizacion_hero.dart            (detail)
+│   ├── organizacion_app_bar.dart         (detail)
+│   ├── organizacion_info_tab.dart        (detail)
+│   └── organizacion_tiendas_tab.dart     (detail)
+├── plazoleta/              (13 files) ⚠️ Mezclado
+│   ├── plazoleta_bg_painter.dart         (detail)
+│   ├── plazoleta_hero.dart               (detail)
+│   ├── plazoleta_app_bar.dart            (detail)
+│   ├── plazoleta_info_tab.dart           (detail)
+│   ├── plazoleta_productos_tab.dart      (detail)
+│   ├── plazoleta_tiendas_tab.dart        (detail)
+│   ├── plazoleta_components.dart         (helpers)
+│   ├── plazoleta_detail_panel.dart       (list)
+│   ├── plazoleta_list_header.dart        (list)
+│   ├── plazoleta_list_loading.dart       (list)
+│   ├── plazoleta_list_error.dart         (list)
+│   ├── plazoleta_list_hint.dart          (list)
+│   └── plazoleta_list_map_controls.dart  (list)
+├── producto/              (12 files) ⚠️ Mezclado
+│   ├── producto_bg_painter.dart          (detail)
+│   ├── producto_hero.dart                (detail)
+│   ├── producto_app_bar.dart             (detail)
+│   ├── producto_tab_bar.dart             (detail)
+│   ├── producto_info_tab.dart            (detail)
+│   ├── producto_tienda_tab.dart          (detail)
+│   ├── producto_valoraciones_tab.dart   (detail)
+│   ├── producto_valoracion_dialog.dart  (detail dialog)
+│   ├── producto_components.dart          (detail helpers)
+│   ├── producto_card.dart                (list)
+│   ├── producto_loading_error.dart       (detail)
+│   └── producto_animated_content.dart    (detail wrapper)
+├── profile/                (8 files) ✅ Ya organizado por funcionalidad
+│   ├── profile_bg_painter.dart           (background)
+│   ├── profile_components.dart           (shared components)
+│   ├── profile_buttons.dart             (buttons)
+│   ├── profile_app_bar.dart             (app bar)
+│   ├── profile_avatar_hero.dart         (hero)
+│   ├── profile_avatar_options_sheet.dart (sheet)
+│   ├── profile_edit_dialog.dart         (dialogs)
+│   └── country_picker_dialog.dart       (dialogs)
+├── tienda/                (7 files) ⚠️ Mezclado
+│   ├── tienda_bg_painter.dart           (detail)
+│   ├── tienda_hero.dart                  (detail)
+│   ├── tienda_app_bar.dart              (detail)
+│   ├── tienda_info_tab.dart             (detail)
+│   ├── tienda_productos_tab.dart        (detail)
+│   ├── tienda_components.dart           (detail helpers)
+│   └── tienda_card.dart                 (list)
+├── custom_app_bar.dart       (root - 445 líneas)
+├── profile_floating_button.dart (root - 853 líneas)
+├── favorite_button.dart       (root)
+└── share_button.dart          (root)
+```
+
+#### 11.2 Estructura Propuesta
+
+**Criterios de organización:**
+- `list/` - Widgets usados principalmente en páginas de LISTA
+- `detail/` - Widgets usados principalmente en páginas de DETALLE
+- Componentes compartidos entre list y detail van en la carpeta raíz del módulo
+- `bg_painter.dart` - SIEMPRE en la carpeta raíz (son branding, no componentes de UI)
+
+```
+widgets/
+├── auth/                   ✅ Sin cambios
+├── common/                 ✅ Sin cambios
+├── images/                 ✅ Sin cambios
+├── mall/                   ✅ Sin cambios
+├── shared/                 🆕 NUEVO - Widgets compartidos globalmente
+│   ├── custom_app_bar.dart
+│   ├── profile_floating_button.dart
+│   ├── favorite_button.dart
+│   └── share_button.dart
+├── organizacion/
+│   ├── organizacion_bg_painter.dart     (detail - NO usa tema)
+│   ├── organizacion_components.dart     (detail helpers)
+│   ├── list/                            🆕 NUEVA
+│   │   ├── organizacion_card.dart
+│   │   └── organizacion_filter_chip.dart
+│   └── detail/                         🆕 NUEVA
+│       ├── organizacion_hero.dart
+│       ├── organizacion_app_bar.dart
+│       ├── organizacion_info_tab.dart
+│       └── organizacion_tiendas_tab.dart
+├── plazoleta/
+│   ├── plazoleta_bg_painter.dart        (detail - NO usa tema)
+│   ├── plazoleta_components.dart       (helpers)
+│   ├── list/                            🆕 NUEVA
+│   │   ├── plazoleta_detail_panel.dart
+│   │   ├── plazoleta_list_header.dart
+│   │   ├── plazoleta_list_loading.dart
+│   │   ├── plazoleta_list_error.dart
+│   │   ├── plazoleta_list_hint.dart
+│   │   └── plazoleta_list_map_controls.dart
+│   └── detail/                         🆕 NUEVA
+│       ├── plazoleta_hero.dart
+│       ├── plazoleta_app_bar.dart
+│       ├── plazoleta_info_tab.dart
+│       ├── plazoleta_productos_tab.dart
+│       └── plazoleta_tiendas_tab.dart
+├── producto/
+│   ├── producto_bg_painter.dart         (detail - NO usa tema)
+│   ├── producto_components.dart         (detail helpers)
+│   ├── list/                            🆕 NUEVA
+│   │   └── producto_card.dart
+│   └── detail/                         🆕 NUEVA
+│       ├── producto_hero.dart
+│       ├── producto_app_bar.dart
+│       ├── producto_tab_bar.dart
+│       ├── producto_info_tab.dart
+│       ├── producto_tienda_tab.dart
+│       ├── producto_valoraciones_tab.dart
+│       ├── producto_valoracion_dialog.dart
+│       ├── producto_loading_error.dart
+│       └── producto_animated_content.dart
+├── profile/                ✅ Sin cambios (ya está bien organizado)
+└── tienda/
+    ├── tienda_bg_painter.dart           (detail - NO usa tema)
+    ├── tienda_components.dart          (detail helpers)
+    ├── list/                            🆕 NUEVA
+    │   └── tienda_card.dart
+    └── detail/                         🆕 NUEVA
+        ├── tienda_hero.dart
+        ├── tienda_app_bar.dart
+        ├── tienda_info_tab.dart
+        └── tienda_productos_tab.dart
+```
+
+#### 11.3 Resumen de Cambios
+
+| Carpeta | Acción | Archivos afectados |
+|---------|--------|-------------------|
+| `shared/` | CREAR | Mover 4 archivos desde root |
+| `organizacion/list/` | CREAR | Mover 2 archivos |
+| `organizacion/detail/` | CREAR | Mover 4 archivos |
+| `plazoleta/list/` | CREAR | Mover 6 archivos |
+| `plazoleta/detail/` | CREAR | Mover 5 archivos |
+| `producto/list/` | CREAR | Mover 1 archivo |
+| `producto/detail/` | CREAR | Mover 9 archivos |
+| `tienda/list/` | CREAR | Mover 1 archivo |
+| `tienda/detail/` | CREAR | Mover 4 archivos |
+
+**Total de movimientos:** ~35 archivos movidos a nuevas ubicaciones
+
+#### 11.4 Notas Importantes
+
+1. **Imports:** Después de mover archivos, actualizar TODOS los imports en:
+   - Pages que usan estos widgets
+   - Otros widgets que referencian archivos movidos
+   - Tests que referencian widgets movidos
+
+2. **Rutas de imports típicas a actualizar:**
+   ```dart
+   // ANTES
+   import '../../../widgets/organizacion/organizacion_card.dart';
+   import '../../../widgets/tienda/tienda_card.dart';
+   import '../../../widgets/producto/producto_card.dart';
+   
+   // DESPUÉS
+   import '../../../widgets/organizacion/list/organizacion_card.dart';
+   import '../../../widgets/tienda/list/tienda_card.dart';
+   import '../../../widgets/producto/list/producto_card.dart';
+   ```
+
+3. **Orden de ejecución sugerido:**
+   - Crear carpetas primero
+   - Mover archivos en batches (por módulo)
+   - Actualizar imports después de cada batch
+   - Ejecutar `flutter analyze` después de cada batch
+   - No mover todo de golpe
+
+#### 11.5 Verificación Post-Reorganización
+
+```bash
+# Verificar que no hay errores de importación
+flutter analyze
+
+# Verificar que las páginas funcionan correctamente
+flutter run -d chrome
+```
+
+---
+
 ## PARTE 6: ORDEN DE IMPLEMENTACIÓN
 
 | Orden | Fase | Archivos | Esfuerzo | Dependencias |
@@ -636,6 +844,7 @@ Widgets creados:
 | 8 | Fase 8 | plazoleta/organizacion detail + tema ✅ | Alto | Fase 2 |
 | 9 | Fase 9 | Más fragmentación (lista/detail) ✅ | Medio | Fase 2 |
 | 10 | Fase 10 | Solo tema (soporte/settings/favoritos/splash) ✅ | Bajo | Fase 1 |
+| 11 | Fase 11 | Reorganizar carpetas de widgets 📋 | Medio | Ninguna |
 
 **Total estimado:** 6-8 sprints de trabajo
 
@@ -718,7 +927,9 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 - [x] settings_page tema (Fase 10 - ✅)
 - [x] favoritos_page tema (Fase 10 - ✅)
 - [x] splash_page tema (Fase 10 - ✅)
-- [ ] Análisis estático sin errores
+- [x] Diseño de reorganización de widgets (Fase 11 - ✅)
+- [x] Reorganizar carpetas de widgets (Fase 11 - ✅)
+- [x] Análisis estático sin errores
 
 ### Testing Post-Implementación
 
@@ -740,5 +951,5 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 ---
 
 **Última actualización:** Abril 2026  
-**Estado:** Fases 1-10 COMPLETADAS  
+**Estado:** Fases 1-11 ✅ TODAS COMPLETADAS  
 **Responsable:** Equipo de desarrollo

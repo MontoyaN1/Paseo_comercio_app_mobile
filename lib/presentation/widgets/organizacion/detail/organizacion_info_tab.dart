@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 
 import 'package:paseo_del_comercio/domain/entities/organizacion.dart';
 
-import 'organizacion_components.dart';
+import '../organizacion_components.dart';
 
 const _kGold = Color(0xFFD4AF37);
 const _kSurfaceCard = Color(0xFF12121F);

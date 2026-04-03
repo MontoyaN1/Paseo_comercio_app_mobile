@@ -1,53 +1,50 @@
-// lib/presentation/widgets/tienda/tienda_productos_tab.dart
+// lib/presentation/widgets/plazoleta/plazoleta_productos_tab.dart
 //
-// 🏛️ PRODUCTOS TAB - Tienda Detail
+// 🏛️ PLAZUELA PRODUCTOS TAB
 // ────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
 
-import 'package:paseo_del_comercio/presentation/widgets/producto/producto_card.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/list/producto_card.dart';
 
 const _kGold = Color(0xFFD4AF37);
 const _kGoldDeep = Color(0xFF9C7A1A);
 const _kGoldLight = Color(0xFFFFE082);
-const _kHint = Color(0xFF6B6B8A);
 
-class TiendaProductosTab extends StatelessWidget {
+class PlazoletaProductosTab extends StatelessWidget {
   final List<Map<String, dynamic>> productos;
-  final bool hasMore;
-  final bool isLoadingMore;
-  final VoidCallback? onLoadMore;
+  final VoidCallback? onRefresh;
   final void Function(Map<String, dynamic> producto)? onProductoTap;
 
-  const TiendaProductosTab({
+  const PlazoletaProductosTab({
     super.key,
     required this.productos,
-    this.hasMore = false,
-    this.isLoadingMore = false,
-    this.onLoadMore,
+    this.onRefresh,
     this.onProductoTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor =
+        isDark ? const Color(0xFF0F0F1E) : Colors.grey.shade100;
+    final hintColor = isDark ? const Color(0xFF6B6B8A) : Colors.grey.shade600;
+
     if (productos.isEmpty) {
       return _buildEmptyState(
+        context: context,
         icon: Icons.shopping_bag_rounded,
         title: 'Sin productos',
-        subtitle: 'Esta tienda no tiene\nproductos disponibles aún',
+        subtitle: 'Esta plazoleta no tiene\nproductos disponibles aún',
+        surfaceColor: surfaceColor,
+        hintColor: hintColor,
       );
     }
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (ScrollNotification notification) {
-        if (notification is ScrollEndNotification) {
-          final metrics = notification.metrics;
-          if (metrics.pixels >= metrics.maxScrollExtent - 200) {
-            onLoadMore?.call();
-          }
-        }
-        return false;
-      },
+    return RefreshIndicator(
+      color: _kGold,
+      backgroundColor: surfaceColor,
+      onRefresh: () async => onRefresh?.call(),
       child: GridView.builder(
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
@@ -57,64 +54,25 @@ class TiendaProductosTab extends StatelessWidget {
           mainAxisSpacing: 12,
           childAspectRatio: 1.5,
         ),
-        itemCount: productos.length + (hasMore ? 1 : 0),
+        itemCount: productos.length,
         itemBuilder: (context, index) {
-          if (index >= productos.length) {
-            return _buildLoadMoreIndicator();
-          }
-
           final producto = productos[index];
-          return TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: 1),
-            duration: Duration(milliseconds: 400 + index * 60),
-            curve: Curves.easeOutCubic,
-            builder:
-                (_, v, child) => Opacity(
-                  opacity: v,
-                  child: Transform.translate(
-                    offset: Offset(0, 20 * (1 - v)),
-                    child: child,
-                  ),
-                ),
-            child: ProductoCard(
-              producto: producto,
-              onTap: () => onProductoTap?.call(producto),
-            ),
+          return ProductoCard(
+            producto: producto,
+            onTap: () => onProductoTap?.call(producto),
           );
         },
       ),
     );
   }
 
-  Widget _buildLoadMoreIndicator() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child:
-            isLoadingMore
-                ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(_kGold),
-                  ),
-                )
-                : TextButton(
-                  onPressed: onLoadMore,
-                  child: const Text(
-                    'Cargar más',
-                    style: TextStyle(color: _kGold),
-                  ),
-                ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String subtitle,
+    required Color surfaceColor,
+    required Color hintColor,
   }) {
     return Center(
       child: Column(
@@ -151,7 +109,7 @@ class TiendaProductosTab extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(color: _kHint, fontSize: 13, height: 1.5),
+            style: TextStyle(color: hintColor, fontSize: 13, height: 1.5),
             textAlign: TextAlign.center,
           ),
         ],

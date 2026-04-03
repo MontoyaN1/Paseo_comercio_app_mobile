@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../di/service_locator.dart';
-import '../../core/utils/firebase_auth_service.dart';
-import '../../core/app/app_config.dart';
-import '../blocs/auth/auth_bloc.dart';
+import '../../../di/service_locator.dart';
+import '../../../core/utils/firebase_auth_service.dart';
+import '../../../core/app/app_config.dart';
+import '../../blocs/auth/auth_bloc.dart';
 
 const _kGold = Color(0xFFD4AF37);
 

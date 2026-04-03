@@ -16,10 +16,10 @@ import '../../../../domain/entities/organizacion.dart';
 import '../../../../domain/entities/enums.dart';
 import '../../../../presentation/blocs/organizacion/organizacion_bloc.dart';
 import '../../../../presentation/widgets/organizacion/organizacion_bg_painter.dart';
-import '../../../../presentation/widgets/organizacion/organizacion_card.dart';
-import '../../../../presentation/widgets/organizacion/organizacion_filter_chip.dart';
+import '../../../../presentation/widgets/organizacion/list/organizacion_card.dart';
+import '../../../../presentation/widgets/organizacion/list/organizacion_filter_chip.dart';
 import '../../../../presentation/widgets/organizacion/organizacion_components.dart';
-import '../../../../presentation/widgets/profile_floating_button.dart';
+import '../../../../presentation/widgets/shared/profile_floating_button.dart';
 
 const _kGold = Color(0xFFD4AF37);
 const _kGoldDeep = Color(0xFF9C7A1A);

@@ -10,7 +10,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'plazoleta_components.dart';
+import '../plazoleta_components.dart';
 
 // ── Paleta branding ─────────────────────────────────────────
 const _kGold = Color(0xFFD4AF37);

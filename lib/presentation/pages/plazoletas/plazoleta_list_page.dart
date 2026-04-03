@@ -32,13 +32,13 @@ import '../../blocs/plazoleta/plazoleta_event.dart';
 import '../../blocs/plazoleta/plazoleta_state.dart';
 import '../../widgets/mall/mall_background.dart';
 import '../../widgets/mall/mall_world_painter.dart';
-import '../../widgets/plazoleta/plazoleta_detail_panel.dart';
-import '../../widgets/plazoleta/plazoleta_list_header.dart';
-import '../../widgets/plazoleta/plazoleta_list_loading.dart';
-import '../../widgets/plazoleta/plazoleta_list_error.dart';
-import '../../widgets/plazoleta/plazoleta_list_hint.dart';
-import '../../widgets/plazoleta/plazoleta_list_map_controls.dart';
-import '../../widgets/profile_floating_button.dart';
+import '../../widgets/plazoleta/list/plazoleta_detail_panel.dart';
+import '../../widgets/plazoleta/list/plazoleta_list_header.dart';
+import '../../widgets/plazoleta/list/plazoleta_list_loading.dart';
+import '../../widgets/plazoleta/list/plazoleta_list_error.dart';
+import '../../widgets/plazoleta/list/plazoleta_list_hint.dart';
+import '../../widgets/plazoleta/list/plazoleta_list_map_controls.dart';
+import '../../widgets/shared/profile_floating_button.dart';
 
 // ══════════════════════════════════════════════════════════════
 //  PALETA DE LUJO (branding - no theme)

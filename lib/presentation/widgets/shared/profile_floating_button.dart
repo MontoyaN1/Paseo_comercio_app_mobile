@@ -16,9 +16,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../di/service_locator.dart';
-import '../providers/avatar_provider.dart';
-import '../blocs/auth/auth_bloc.dart';
+import '../../../di/service_locator.dart';
+import '../../providers/avatar_provider.dart';
+import '../../blocs/auth/auth_bloc.dart';
 
 const _kGold = Color(0xFFD4AF37);
 const _kGoldLight = Color(0xFFFFE082);

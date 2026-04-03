@@ -9,9 +9,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-import '../../../domain/entities/organizacion.dart';
-import '../../../domain/entities/enums.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../../domain/entities/organizacion.dart';
+import '../../../../domain/entities/enums.dart';
+import '../../../../core/theme/app_colors.dart';
 
 const _kGold = Color(0xFFD4AF37);
 

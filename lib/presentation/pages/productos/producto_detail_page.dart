@@ -15,17 +15,17 @@ import 'package:paseo_del_comercio/di/service_locator.dart';
 
 import 'package:paseo_del_comercio/presentation/blocs/producto/producto_bloc.dart';
 import 'package:paseo_del_comercio/presentation/widgets/producto/producto_bg_painter.dart';
-import 'package:paseo_del_comercio/presentation/widgets/producto/producto_hero.dart';
-import 'package:paseo_del_comercio/presentation/widgets/producto/producto_app_bar.dart';
-import 'package:paseo_del_comercio/presentation/widgets/producto/producto_info_tab.dart';
-import 'package:paseo_del_comercio/presentation/widgets/producto/producto_tienda_tab.dart';
-import 'package:paseo_del_comercio/presentation/widgets/producto/producto_valoraciones_tab.dart';
-import 'package:paseo_del_comercio/presentation/widgets/producto/producto_valoracion_dialog.dart';
-import 'package:paseo_del_comercio/presentation/widgets/producto/producto_tab_bar.dart';
-import 'package:paseo_del_comercio/presentation/widgets/producto/producto_loading_error.dart';
-import 'package:paseo_del_comercio/presentation/widgets/producto/producto_animated_content.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/detail/producto_hero.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/detail/producto_app_bar.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/detail/producto_info_tab.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/detail/producto_tienda_tab.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/detail/producto_valoraciones_tab.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/detail/producto_valoracion_dialog.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/detail/producto_tab_bar.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/detail/producto_loading_error.dart';
+import 'package:paseo_del_comercio/presentation/widgets/producto/detail/producto_animated_content.dart';
 import 'package:paseo_del_comercio/presentation/widgets/producto/producto_data_helpers.dart';
-import '../../widgets/profile_floating_button.dart';
+import '../../widgets/shared/profile_floating_button.dart';
 
 const _kBg = Color(0xFF07070F);
 

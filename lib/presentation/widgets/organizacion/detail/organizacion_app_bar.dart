@@ -10,7 +10,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'organizacion_components.dart';
+import '../organizacion_components.dart';
 
 const _kGold = Color(0xFFD4AF37);
 const _kSurface = Color(0xFF0F0F1E);

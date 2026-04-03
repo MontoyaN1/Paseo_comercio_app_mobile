@@ -18,12 +18,12 @@ import 'package:paseo_del_comercio/domain/entities/tienda.dart';
 
 import 'package:paseo_del_comercio/presentation/blocs/tienda/tienda_bloc.dart';
 import 'package:paseo_del_comercio/presentation/widgets/tienda/tienda_bg_painter.dart';
-import 'package:paseo_del_comercio/presentation/widgets/tienda/tienda_hero.dart';
-import 'package:paseo_del_comercio/presentation/widgets/tienda/tienda_app_bar.dart';
-import 'package:paseo_del_comercio/presentation/widgets/tienda/tienda_info_tab.dart';
-import 'package:paseo_del_comercio/presentation/widgets/tienda/tienda_productos_tab.dart';
+import 'package:paseo_del_comercio/presentation/widgets/tienda/detail/tienda_hero.dart';
+import 'package:paseo_del_comercio/presentation/widgets/tienda/detail/tienda_app_bar.dart';
+import 'package:paseo_del_comercio/presentation/widgets/tienda/detail/tienda_info_tab.dart';
+import 'package:paseo_del_comercio/presentation/widgets/tienda/detail/tienda_productos_tab.dart';
 import 'package:paseo_del_comercio/presentation/widgets/tienda/tienda_components.dart';
-import '../../widgets/profile_floating_button.dart';
+import '../../widgets/shared/profile_floating_button.dart';
 
 const _kGold = Color(0xFFD4AF37);
 const _kBg = Color(0xFF07070F);

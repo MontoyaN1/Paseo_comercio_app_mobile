@@ -9,10 +9,10 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../domain/entities/plazoleta.dart';
-import '../../../domain/entities/enums.dart';
-import '../../blocs/plazoleta/plazoleta_state.dart';
-import '../mall/mall_world_painter.dart';
+import '../../../../domain/entities/plazoleta.dart';
+import '../../../../domain/entities/enums.dart';
+import '../../../blocs/plazoleta/plazoleta_state.dart';
+import '../../mall/mall_world_painter.dart';
 
 class PlazoletaDetailPanel extends StatelessWidget {
   final PlazaDetail plaza;

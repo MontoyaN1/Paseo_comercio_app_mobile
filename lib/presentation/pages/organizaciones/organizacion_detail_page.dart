@@ -15,12 +15,12 @@ import 'package:paseo_del_comercio/di/service_locator.dart';
 
 import 'package:paseo_del_comercio/presentation/blocs/organizacion/organizacion_bloc.dart';
 import 'package:paseo_del_comercio/presentation/widgets/organizacion/organizacion_bg_painter.dart';
-import 'package:paseo_del_comercio/presentation/widgets/organizacion/organizacion_hero.dart';
-import 'package:paseo_del_comercio/presentation/widgets/organizacion/organizacion_app_bar.dart';
-import 'package:paseo_del_comercio/presentation/widgets/organizacion/organizacion_info_tab.dart';
-import 'package:paseo_del_comercio/presentation/widgets/organizacion/organizacion_tiendas_tab.dart';
+import 'package:paseo_del_comercio/presentation/widgets/organizacion/detail/organizacion_hero.dart';
+import 'package:paseo_del_comercio/presentation/widgets/organizacion/detail/organizacion_app_bar.dart';
+import 'package:paseo_del_comercio/presentation/widgets/organizacion/detail/organizacion_info_tab.dart';
+import 'package:paseo_del_comercio/presentation/widgets/organizacion/detail/organizacion_tiendas_tab.dart';
 import 'package:paseo_del_comercio/presentation/widgets/organizacion/organizacion_components.dart';
-import 'package:paseo_del_comercio/presentation/widgets/profile_floating_button.dart';
+import 'package:paseo_del_comercio/presentation/widgets/shared/profile_floating_button.dart';
 
 class OrganizacionDetailPage extends StatefulWidget {
   final int organizacionId;

@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 
-import '../../core/utils/share_service.dart';
-import '../../di/service_locator.dart';
+import '../../../core/utils/share_service.dart';
+import '../../../di/service_locator.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const Color _kGold = Color(0xFFD4AF37);

@@ -18,11 +18,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/app/app_config.dart';
-import '../../../di/service_locator.dart';
-import '../../blocs/favorito/favorito_bloc.dart';
-import '../../blocs/favorito/favorito_event.dart';
-import '../../blocs/favorito/favorito_state.dart';
+import '../../../../core/app/app_config.dart';
+import '../../../../di/service_locator.dart';
+import '../../../blocs/favorito/favorito_bloc.dart';
+import '../../../blocs/favorito/favorito_event.dart';
+import '../../../blocs/favorito/favorito_state.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const _kGold = Color(0xFFD4AF37);

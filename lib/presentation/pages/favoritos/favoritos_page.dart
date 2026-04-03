@@ -12,8 +12,8 @@ import '../../../domain/repositories/producto_repository_interface.dart';
 import '../../blocs/favorito/favorito_bloc.dart';
 import '../../blocs/favorito/favorito_event.dart';
 import '../../blocs/favorito/favorito_state.dart';
-import '../../widgets/tienda/tienda_card.dart';
-import '../../widgets/producto/producto_card.dart';
+import '../../widgets/tienda/list/tienda_card.dart';
+import '../../widgets/producto/list/producto_card.dart';
 
 const _kGold = Color(0xFFD4AF37);
 
