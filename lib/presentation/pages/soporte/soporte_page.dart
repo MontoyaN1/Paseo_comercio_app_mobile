@@ -104,7 +104,7 @@ class SoportePage extends StatelessWidget {
                   child: Text(
                     'Soporte',
                     style: TextStyle(
-                      color: theme.colorScheme.onSurface,
+                      color: Colors.white,
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,

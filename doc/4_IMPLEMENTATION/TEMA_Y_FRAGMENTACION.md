@@ -1,7 +1,7 @@
-# Plan de Implementación: Fragmentación + Tema Oscuro/Claro + Reorganización
+# Plan de Implementación: Fragmentación + Tema Oscuro/Claro + Reorganización + Legal
 
 **Fecha:** Abril 2026  
-**Estado:** Fases 1-11 ✅ TODAS COMPLETADAS  
+**Estado:** Fases 1-12 ✅ TODAS COMPLETADAS  
 **Proyecto:** Paseo del Comercio - Mobile App  
 
 ---
@@ -830,6 +830,54 @@ flutter run -d chrome
 
 ---
 
+### Fase 12: Políticas de Privacidad y Términos ✅ COMPLETADA
+
+**Objetivo:** Crear páginas legales accesibles desde Settings con soporte de tema claro/oscuro.
+
+#### 12.1 Archivos creados
+
+```
+lib/presentation/pages/settings/
+├── terminos_page.dart      (~330 líneas) ✅
+└── privacidad_page.dart    (~340 líneas) ✅
+```
+
+#### 12.2 Características
+
+- **Tema claro/oscuro:** Usa `Theme.of(context)` para todos los colores de UI
+- **Gold branding:** Acentos dorados para headers y bullets
+- **Estructura:** Header con icono + título, secciones con bullets, footer
+- **Rutas agregadas:**
+  - `/terminos` → `TerminosPage`
+  - `/privacidad` → `PrivacidadPage`
+- **Navegación:** Accessible desde Settings → "Términos y condiciones" y "Política de privacidad"
+
+#### 12.3 Contenido
+
+**Términos y condiciones incluye:**
+1. Aceptación de los términos
+2. Descripción del servicio
+3. Cuenta de usuario
+4. Uso aceptable
+5. Propiedad intelectual
+6. Limitación de responsabilidad
+7. Modificaciones
+8. Ley aplicable
+9. Contacto
+
+**Política de privacidad incluye:**
+1. Información que recopilamos
+2. Cómo usamos su información
+3. Almacenamiento y seguridad
+4. Compartimos su información
+5. Sus derechos
+6. Cookies y tecnologías similares
+7. Menores de edad
+8. Cambios a esta política
+9. Contacto
+
+---
+
 ## PARTE 6: ORDEN DE IMPLEMENTACIÓN
 
 | Orden | Fase | Archivos | Esfuerzo | Dependencias |
@@ -844,7 +892,8 @@ flutter run -d chrome
 | 8 | Fase 8 | plazoleta/organizacion detail + tema ✅ | Alto | Fase 2 |
 | 9 | Fase 9 | Más fragmentación (lista/detail) ✅ | Medio | Fase 2 |
 | 10 | Fase 10 | Solo tema (soporte/settings/favoritos/splash) ✅ | Bajo | Fase 1 |
-| 11 | Fase 11 | Reorganizar carpetas de widgets 📋 | Medio | Ninguna |
+| 11 | Fase 11 | Reorganizar carpetas de widgets ✅ | Medio | Ninguna |
+| 12 | Fase 12 | Políticas de privacidad y Términos ✅ | Bajo | Ninguna |
 
 **Total estimado:** 6-8 sprints de trabajo
 
@@ -929,6 +978,9 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 - [x] splash_page tema (Fase 10 - ✅)
 - [x] Diseño de reorganización de widgets (Fase 11 - ✅)
 - [x] Reorganizar carpetas de widgets (Fase 11 - ✅)
+- [x] Términos y condiciones page (Fase 12 - ✅)
+- [x] Política de privacidad page (Fase 12 - ✅)
+- [x] Navegación desde Settings (Fase 12 - ✅)
 - [x] Análisis estático sin errores
 
 ### Testing Post-Implementación
@@ -951,5 +1003,5 @@ Los painters (_BgPainter, _WorldPainter) son considerados "hero images" de brand
 ---
 
 **Última actualización:** Abril 2026  
-**Estado:** Fases 1-11 ✅ TODAS COMPLETADAS  
+**Estado:** Fases 1-12 ✅ TODAS COMPLETADAS  
 **Responsable:** Equipo de desarrollo

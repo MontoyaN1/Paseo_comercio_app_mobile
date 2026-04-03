@@ -21,6 +21,8 @@ import '../../presentation/pages/favoritos/favoritos_page.dart';
 import '../../presentation/pages/settings/settings_page.dart';
 import '../../presentation/pages/soporte/soporte_page.dart';
 import '../../presentation/pages/historial/historial_page.dart';
+import '../../presentation/pages/settings/terminos_page.dart';
+import '../../presentation/pages/settings/privacidad_page.dart';
 import '../../domain/entities/organizacion.dart';
 
 /// Configuración de rutas de la aplicación usando GoRouter
@@ -170,6 +172,48 @@ class AppRouter {
             (context, state) => MaterialPage<void>(
               key: state.pageKey,
               child: const SettingsPage(),
+            ),
+      ),
+
+      // Términos y condiciones (protegida)
+      GoRoute(
+        path: '/terminos',
+        name: 'terminos',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          if (user == null) {
+            return '/login';
+          }
+
+          return null;
+        },
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const TerminosPage(),
+            ),
+      ),
+
+      // Política de privacidad (protegida)
+      GoRoute(
+        path: '/privacidad',
+        name: 'privacidad',
+        redirect: (context, state) {
+          final auth = FirebaseAuth.instance;
+          final user = auth.currentUser;
+
+          if (user == null) {
+            return '/login';
+          }
+
+          return null;
+        },
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const PrivacidadPage(),
             ),
       ),
 

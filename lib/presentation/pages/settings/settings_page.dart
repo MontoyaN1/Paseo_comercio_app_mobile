@@ -169,19 +169,7 @@ class SettingsPage extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
               size: 14,
             ),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Términos en desarrollo'),
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: theme.colorScheme.outline),
-                  ),
-                ),
-              );
-            },
+            onTap: () => context.push('/terminos'),
           ),
           const _SectionDivider(),
           _SettingsTile(
@@ -193,19 +181,7 @@ class SettingsPage extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
               size: 14,
             ),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Política de privacidad en desarrollo'),
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: theme.colorScheme.outline),
-                  ),
-                ),
-              );
-            },
+            onTap: () => context.push('/privacidad'),
           ),
         ],
       ),
