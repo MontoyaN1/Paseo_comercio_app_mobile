@@ -5,6 +5,7 @@ Arquitectura Clean Architecture con integración Supabase, Clerk y Cloudflare R2
 
 ## 📋 DOCUMENTACIÓN ORGANIZADA
 
+
 Toda la documentación está organizada en la carpeta `doc/`:
 
 ### 📁 **doc/ESQUEMA_BASE_DATOS.md** - **NUEVO**
