@@ -142,8 +142,8 @@ class PlazoletaTabBar extends StatelessWidget {
             ),
             tabs: const [
               Tab(
-                icon: Icon(Icons.info_outline_rounded, size: 18),
-                text: 'Información',
+                icon: Icon(Icons.store_rounded, size: 18),
+                text: 'Tiendas',
                 iconMargin: EdgeInsets.only(bottom: 2),
               ),
               Tab(
@@ -152,8 +152,8 @@ class PlazoletaTabBar extends StatelessWidget {
                 iconMargin: EdgeInsets.only(bottom: 2),
               ),
               Tab(
-                icon: Icon(Icons.store_rounded, size: 18),
-                text: 'Tiendas',
+                icon: Icon(Icons.info_outline_rounded, size: 18),
+                text: 'Información',
                 iconMargin: EdgeInsets.only(bottom: 2),
               ),
             ],

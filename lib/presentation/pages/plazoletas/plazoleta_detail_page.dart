@@ -484,12 +484,15 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      PlazoletaInfoTab(
-                        plazoleta: plazoleta,
-                        imagenes: imagenes,
+                      PlazoletaTiendasTab(
+                        tiendas: tiendas.map(_tiendaToMap).toList(),
                         onRefresh: _onRefresh,
-                        contentFade: _contentFade,
-                        contentSlide: _contentSlide,
+                        onTiendaTap: (tienda) {
+                          final id = tienda['id'];
+                          if (id != null) {
+                            context.push('/tiendas/$id', extra: tienda);
+                          }
+                        },
                       ),
                       PlazoletaProductosTab(
                         productos: productos.map(_productoToMap).toList(),
@@ -501,15 +504,12 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
                           }
                         },
                       ),
-                      PlazoletaTiendasTab(
-                        tiendas: tiendas.map(_tiendaToMap).toList(),
+                      PlazoletaInfoTab(
+                        plazoleta: plazoleta,
+                        imagenes: imagenes,
                         onRefresh: _onRefresh,
-                        onTiendaTap: (tienda) {
-                          final id = tienda['id'];
-                          if (id != null) {
-                            context.push('/tiendas/$id');
-                          }
-                        },
+                        contentFade: _contentFade,
+                        contentSlide: _contentSlide,
                       ),
                     ],
                   ),
