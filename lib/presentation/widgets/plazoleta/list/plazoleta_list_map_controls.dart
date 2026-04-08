@@ -49,8 +49,12 @@ class PlazoletaListMapControls extends StatelessWidget {
           ],
         ),
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Wrap(
+          direction: Axis.horizontal,
+          spacing: 0,
+          runSpacing: 0,
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             _MapControlButton(
               icon: Icons.remove,

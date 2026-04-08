@@ -185,6 +185,8 @@ class PlazoletaDetailPanel extends StatelessWidget {
                       ? CachedNetworkImage(
                         imageUrl: imgUrl,
                         fit: BoxFit.cover,
+                        placeholder:
+                            (_, __) => _imgLoadingPlaceholder(context, acc, uiAcc),
                         errorWidget:
                             (_, __, ___) =>
                                 _imgPlaceholder(context, acc, uiAcc),
@@ -384,6 +386,26 @@ class PlazoletaDetailPanel extends StatelessWidget {
           Icons.park_outlined,
           color: uiAcc.withValues(alpha: 0.5),
           size: 32,
+        ),
+      ),
+    );
+  }
+
+  Widget _imgLoadingPlaceholder(BuildContext context, Color acc, Color uiAcc) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation(uiAcc),
+          ),
         ),
       ),
     );

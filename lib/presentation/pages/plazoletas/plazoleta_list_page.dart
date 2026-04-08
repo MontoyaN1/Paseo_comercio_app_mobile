@@ -169,7 +169,7 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
   StreamSubscription<User?>? _authSubscription;
 
   double _scale = 0.72;
-  Offset _pan = Offset.zero;
+  Offset _pan = Offset(0.0, -_kOriginOffsetY * 3.0);
   double _baseSc = 0.72;
   Offset _basePan = Offset.zero;
   Offset _focal = Offset.zero;
@@ -242,9 +242,8 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      getIt<PlazoletaBloc>().add(
-        const LoadPlazoletasActivas(page: 1, limit: 20, forceRefresh: true),
-      );
+      // No recargar automáticamente para evitar molestar al usuario
+      // El usuario puede hacer pull-to-refresh si quiere actualizar
     }
   }
 
@@ -433,14 +432,17 @@ class _PlazoletaListPageState extends State<PlazoletaListPage>
     _inertiaCtrl?.stop();
     _navCtrl?.stop();
 
+    final newScale = _initScale;
+    final targetPan = Offset(0.0, -_kOriginOffsetY * 3.0);
+
     _scaleAnim = Tween<double>(
       begin: _scale,
-      end: _initScale,
+      end: newScale,
     ).animate(CurvedAnimation(parent: _navCtrl!, curve: Curves.easeOutCubic));
 
     _panAnim = Tween<Offset>(
       begin: _pan,
-      end: Offset.zero,
+      end: targetPan,
     ).animate(CurvedAnimation(parent: _navCtrl!, curve: Curves.easeOutCubic));
 
     _navCtrl!.forward(from: 0);

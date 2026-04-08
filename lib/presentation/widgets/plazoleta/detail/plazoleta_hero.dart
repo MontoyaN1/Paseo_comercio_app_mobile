@@ -20,6 +20,71 @@ const _kGoldLight = Color(0xFFFFE082);
 const _kGoldDeep = Color(0xFF9C7A1A);
 const _kSurface = Color(0xFF0F0F1E);
 
+class _ShimmerLoading extends StatefulWidget {
+  const _ShimmerLoading();
+
+  @override
+  State<_ShimmerLoading> createState() => _ShimmerLoadingState();
+}
+
+class _ShimmerLoadingState extends State<_ShimmerLoading>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final value = _controller.value;
+        final opacity = (value < 0.5) ? value * 2 : (1 - value) * 2;
+        return Container(
+          color: isDark ? const Color(0xFF1A1A2E) : Colors.grey.shade300,
+          child: Center(
+            child: Opacity(
+              opacity: 0.3 + opacity * 0.5,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDark
+                      ? _kGold.withOpacity(0.2)
+                      : Colors.white,
+                  border: Border.all(
+                    color: _kGold,
+                    width: 2.5,
+                  ),
+                ),
+                child: const Center(
+                  child: Text('🏛️', style: TextStyle(fontSize: 48)),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class PlazoletaHero extends StatelessWidget {
   final Plazoleta plazoleta;
   final List<ImagenBase> imagenes;
@@ -52,16 +117,19 @@ class PlazoletaHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imagenPrincipal =
+    final imagenDetalle =
         imagenes.isNotEmpty
             ? imagenes.firstWhere(
-              (i) => i.esPrincipal,
-              orElse: () => imagenes.first,
+              (i) => i.tipoImagen.value == 'detalle',
+              orElse: () => imagenes.firstWhere(
+                (i) => i.esPrincipal,
+                orElse: () => imagenes.first,
+              ),
             )
             : null;
 
     final tieneImagen =
-        imagenPrincipal != null && _isValidUrl(imagenPrincipal.urlPreferida);
+        imagenDetalle != null && _isValidUrl(imagenDetalle.urlPreferida);
 
     return SizedBox(
       height: 300,
@@ -70,13 +138,14 @@ class PlazoletaHero extends StatelessWidget {
         children: [
           if (tieneImagen)
             CachedNetworkImage(
-              imageUrl: imagenPrincipal.urlPreferida,
+              imageUrl: imagenDetalle.urlPreferida,
               fit: BoxFit.cover,
-              placeholder: (_, __) => _buildFallback(context),
+              placeholder: (_, __) => const _ShimmerLoading(),
               errorWidget: (_, __, ___) => _buildFallback(context),
+              memCacheWidth: 800,
             )
           else
-            _buildFallback(context),
+            const _ShimmerLoading(),
 
           Container(
             decoration: BoxDecoration(

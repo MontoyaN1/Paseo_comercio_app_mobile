@@ -133,10 +133,8 @@ class _PlazoletaDetailPageState extends State<PlazoletaDetailPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
-      if (_plazoleta != null && mounted) {
-        _loadPlazoleta();
-        _loadTabData(_currentTabIndex);
-      }
+      // No recargar automáticamente para evitar molestar al usuario
+      // El usuario puede hacer pull-to-refresh si quiere actualizar
     }
   }
 
