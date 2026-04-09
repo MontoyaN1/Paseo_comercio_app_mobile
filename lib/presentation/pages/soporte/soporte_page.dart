@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:simple_icons/simple_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/app/app_config.dart';
@@ -203,7 +204,7 @@ class SoportePage extends StatelessWidget {
       child: Column(
         children: [
           _SocialTile(
-            icon: Icons.chat_rounded,
+            icon: SimpleIcons.whatsapp,
             title: 'WhatsApp',
             subtitle: 'Escríbenos directamente',
             backgroundColor: const Color(0xFF25D366),
@@ -228,7 +229,7 @@ class SoportePage extends StatelessWidget {
       child: Column(
         children: [
           _SocialTile(
-            icon: Icons.camera_alt_rounded,
+            icon: SimpleIcons.instagram,
             title: 'Instagram',
             subtitle: '@paseodelcomercio.ccv',
             backgroundColor: const Color(0xFFE4405F),
@@ -243,7 +244,7 @@ class SoportePage extends StatelessWidget {
           ),
           const _SectionDivider(),
           _SocialTile(
-            icon: Icons.music_note_rounded,
+            icon: SimpleIcons.tiktok,
             title: 'TikTok',
             subtitle: '@paseodelcomercio.ccv',
             backgroundColor: Colors.black,
@@ -258,7 +259,7 @@ class SoportePage extends StatelessWidget {
           ),
           const _SectionDivider(),
           _SocialTile(
-            icon: Icons.play_circle_filled_rounded,
+            icon: SimpleIcons.youtube,
             title: 'YouTube',
             subtitle: '@PaseodelComercio',
             backgroundColor: const Color(0xFFFF0000),

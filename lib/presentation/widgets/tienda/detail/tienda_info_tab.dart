@@ -6,6 +6,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:simple_icons/simple_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:paseo_del_comercio/core/utils/phone_utils.dart';
@@ -336,35 +337,35 @@ class TiendaInfoTab extends StatelessWidget {
     final buttons = <Widget>[];
     final socialConfig = {
       'facebook': {
-        'icon': Icons.facebook_rounded,
+        'icon': SimpleIcons.facebook,
         'color': const Color(0xFF1877F2),
       },
       'instagram': {
-        'icon': Icons.camera_alt_rounded,
+        'icon': SimpleIcons.instagram,
         'color': const Color(0xFFE4405F),
       },
       'twitter': {
-        'icon': Icons.alternate_email_rounded,
+        'icon': SimpleIcons.x,
         'color': const Color(0xFF1DA1F2),
       },
       'x': {
-        'icon': Icons.alternate_email_rounded,
+        'icon': SimpleIcons.x,
         'color': const Color(0xFF000000),
       },
       'tiktok': {
-        'icon': Icons.music_note_rounded,
+        'icon': SimpleIcons.tiktok,
         'color': const Color(0xFF25F4EE),
       },
       'youtube': {
-        'icon': Icons.play_circle_rounded,
+        'icon': SimpleIcons.youtube,
         'color': const Color(0xFFFF0000),
       },
       'linkedin': {
-        'icon': Icons.work_rounded,
+        'icon': Icons.business_rounded,
         'color': const Color(0xFF0A66C2),
       },
       'whatsapp': {
-        'icon': Icons.chat_rounded,
+        'icon': SimpleIcons.whatsapp,
         'color': const Color(0xFF25D366),
       },
       'web': {'icon': Icons.language_rounded, 'color': _kGold},
