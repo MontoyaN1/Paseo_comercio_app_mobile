@@ -29,6 +29,16 @@ class ProductoHero extends StatelessWidget {
 
   bool get _hasImage => imageUrl != null && imageUrl!.isNotEmpty;
 
+  String _formatPrice(double precio) {
+    if (precio >= 1000) {
+      final precioInt = precio.round();
+      final miles = (precioInt / 1000).floor();
+      final resto = precioInt % 1000;
+      return '\$$miles.${resto.toString().padLeft(3, '0')}';
+    }
+    return '\$${precio.round()}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -140,7 +150,7 @@ class ProductoHero extends StatelessWidget {
                             if (precio != null) ...[
                               const SizedBox(height: 6),
                               Text(
-                                '\$${precio!.toStringAsFixed(2)}',
+                                _formatPrice(precio!),
                                 style: const TextStyle(
                                   color: _kGold,
                                   fontSize: 22,

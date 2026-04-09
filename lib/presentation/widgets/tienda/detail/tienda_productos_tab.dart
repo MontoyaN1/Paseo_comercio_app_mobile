@@ -55,7 +55,7 @@ class TiendaProductosTab extends StatelessWidget {
           crossAxisCount: 2,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          childAspectRatio: 1.5,
+          childAspectRatio: 0.75,
         ),
         itemCount: productos.length + (hasMore ? 1 : 0),
         itemBuilder: (context, index) {

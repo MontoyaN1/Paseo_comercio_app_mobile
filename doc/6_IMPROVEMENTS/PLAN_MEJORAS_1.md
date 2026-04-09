@@ -31,23 +31,27 @@
 
 ---
 
-## Fase 2: Correcciones UI - Formularios y Cards
+## Fase 2: Correcciones UI - Formularios y Cards ✅ COMPLETADA
 
-### 2.1 Formulario editar teléfono - Layout amontonado
+### 2.1 Formulario editar teléfono - Layout amontonado ✅
 - **Descripción**: Los elementos del formulario de editar teléfono están amontonados.
-- **Solución propuesta**: Mover el número de teléfono hacia abajo y quitar el texto redundante debajo.
+- **Solución implementada**: Reestructurado el layout para que el selector de código de país esté arriba y el campo del número debajo. Eliminado el texto explicativo redundante.
+- **Archivos modificados**: `lib/presentation/widgets/profile/profile_edit_dialog.dart`
 
-### 2.2 Formulario editar nombre - Título cortado
+### 2.2 Formulario editar nombre - Título cortado ✅
 - **Descripción**: El título "Editar nombre completo" se corta en pantallas pequeñas.
-- **Solución propuesta**: Cambiar a "Editar nombre" y configurar salto de línea para "Nombre" para mejor adaptabilidad.
+- **Solución implementada**: Cambiado `_displayLabel` de 'Nombre completo' a 'Nombre' para evitar que se corte el título.
+- **Archivos modificados**: `lib/presentation/widgets/profile/profile_edit_dialog.dart`
 
-### 2.3 Card de productos - Información amontonada
+### 2.3 Card de productos - Información amontonada ✅
 - **Descripción**: La card de productos muestra información amontonada.
-- **Solución propuesta**: Crear un recuadro dedicado en la parte inferior de la card para mostrar: precio, estado, nombre y botón de favorito (corazón).
+- **Solución implementada**: Creado un recuadro dedicado en la parte inferior de la card con fondo sólido (`_kSurfaceCard`) que contiene: nombre del producto, precio con ShaderMask dorado, rating, y estado del producto (con punto de color).
+- **Archivos modificados**: `lib/presentation/widgets/producto/list/producto_card.dart`
 
-### 2.4 Precio sin decimales y con marcador de miles
+### 2.4 Precio sin decimales y con marcador de miles ✅
 - **Descripción**: Los precios de productos no deben mostrar decimales y deben tener separadores de miles.
-- **Solución propuesta**: Formatear precios sin decimales pero con marcador de miles (ej: 1.000, 10.000, 100.000). Usar `NumberFormat` con `decimalDigits: 0` y separador de miles.
+- **Solución implementada**: Agregada función `_formatPrice()` que formatea precios sin decimales con marcador de miles (ej: 1.000, 10.000, 100.000). Reemplazado `toStringAsFixed(2)` por `_formatPrice()` en `_buildFullCard` y `_buildCompactCard`.
+- **Archivos modificados**: `lib/presentation/widgets/producto/list/producto_card.dart`
 
 ---
 
@@ -99,7 +103,7 @@
 | Fase | Descripción | Prioridad | Complejidad | Estado |
 |------|-------------|-----------|-------------|--------|
 | 1 | UI Críticas (Plazoletas) | Alta | Media | ✅ Completada |
-| 2 | UI Formularios y Cards | Alta | Baja-Media | Pendiente |
+| 2 | UI Formularios y Cards | Alta | Baja-Media | ✅ Completada |
 | 3 | Soporte y Branding | Media | Baja | Pendiente |
 | 4 | Rendimiento Gama Baja | Alta | Alta | Pendiente |
 | 5 | Reestructuración tabs | Baja | Baja | ✅ Completada |

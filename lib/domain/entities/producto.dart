@@ -291,6 +291,15 @@ class Producto extends Equatable {
   }
 
   // Métodos para formatos específicos
-  String get precioFormateado => '\$${precioBase.toStringAsFixed(2)}';
+  String get precioFormateado {
+    final p = precioBase;
+    if (p >= 1000) {
+      final precioInt = p.round();
+      final miles = (precioInt / 1000).floor();
+      final resto = precioInt % 1000;
+      return '\$$miles.${resto.toString().padLeft(3, '0')}';
+    }
+    return '\$${p.round()}';
+  }
   String get stockInfo => '$cantidad unidades';
 }

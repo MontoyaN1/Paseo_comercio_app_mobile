@@ -285,8 +285,6 @@ class _ProductoCardState extends State<ProductoCard>
   }
 
   // ── Tarjeta completa ──────────────────────────────────────
-  // La imagen ocupa toda la tarjeta; la info flota sobre el
-  // degradado inferior en glassmorphism.
   Widget _buildFullCard(
     String? imageUrl,
     String nombre,
@@ -296,143 +294,165 @@ class _ProductoCardState extends State<ProductoCard>
     _StockBadgeData badge,
     String? categoria,
   ) {
-    return SizedBox(
-      height: 180,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // ── Imagen a pantalla completa ──────────────────────
-          _buildImageSection(imageUrl),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceCardColor = isDark ? _kSurfaceCard : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final borderColor = isDark ? _kBorder : Colors.grey.shade300;
+    const goldPriceColor = Color(0xFFD4AF37);
 
-          // ── Overlay degradado fuerte en la parte inferior ───
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.transparent,
-                    _kBg.withOpacity(0.55),
-                    _kBg.withOpacity(0.92),
-                  ],
-                  stops: const [0.0, 0.42, 0.68, 1.0],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // ── Imagen (60% del espacio) ────────────────────────
+        Expanded(
+          flex: 60,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
                 ),
+                child: _buildImageSection(imageUrl),
               ),
-            ),
-          ),
 
-          // ── Badge stock (top-left) ──────────────────────────
-          Positioned(
-            top: 8,
-            left: 8,
-            child: _buildStockBadge(badge, small: true),
-          ),
+              // Badge stock
+              Positioned(
+                top: 6,
+                left: 6,
+                child: _buildStockBadge(badge, small: true),
+              ),
 
-          // ── Botón favorito (top-right) ──────────────────────
-          if (widget.showFavoriteButton)
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Builder(
-                builder: (context) {
-                  final productoId =
-                      int.tryParse(widget.producto['id']?.toString() ?? '') ??
-                      0;
-                  return BlocBuilder<FavoritoBloc, FavoritoState>(
-                    builder: (context, state) {
-                      bool isFav = widget.isFavorite;
-                      if (state is FavoritosLoaded && productoId > 0) {
-                        isFav = state.isProductoFavorito(productoId);
-                      }
-                      return _FavButton(
-                        isFavorite: isFav,
-                        onTap: () {
-                          if (productoId > 0) {
-                            getIt<FavoritoBloc>().add(
-                              ToggleProductoFavorito(productoId: productoId),
-                            );
+              // Favorito
+              if (widget.showFavoriteButton)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Builder(
+                    builder: (context) {
+                      final productoId =
+                          int.tryParse(
+                            widget.producto['id']?.toString() ?? '',
+                          ) ??
+                          0;
+                      return BlocBuilder<FavoritoBloc, FavoritoState>(
+                        builder: (context, state) {
+                          bool isFav = widget.isFavorite;
+                          if (state is FavoritosLoaded && productoId > 0) {
+                            isFav = state.isProductoFavorito(productoId);
                           }
+                          return _FavButton(
+                            isFavorite: isFav,
+                            onTap: () {
+                              if (productoId > 0) {
+                                getIt<FavoritoBloc>().add(
+                                  ToggleProductoFavorito(
+                                    productoId: productoId,
+                                  ),
+                                );
+                              }
+                            },
+                          );
                         },
                       );
                     },
-                  );
-                },
-              ),
-            ),
-
-          // ── Panel de info inferior superpuesto ──────────────
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Nombre
-                  Text(
-                    nombre,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      height: 1.3,
-                      letterSpacing: 0.1,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black54,
-                          blurRadius: 6,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
+                ),
+            ],
+          ),
+        ),
 
-                  const SizedBox(height: 5),
+        // ── Info inferior (40% del espacio) ───────────────
+        Expanded(
+          flex: 40,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+            decoration: BoxDecoration(
+              color: surfaceCardColor,
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(16),
+              ),
+              border: Border.all(color: borderColor, width: 1),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Nombre
+                Text(
+                  nombre,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
 
-                  // Precio + Rating en fila
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Precio con ShaderMask dorado
-                      Flexible(
-                        child: ShaderMask(
-                          shaderCallback:
-                              (b) => const LinearGradient(
-                                colors: [_kGold, _kGoldLight],
-                              ).createShader(b),
-                          child: Text(
-                            '\$${precio.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.2,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
+                const SizedBox(height: 4),
+
+                // Precio
+                Text(
+                  _formatPrice(precio),
+                  style: TextStyle(
+                    color: goldPriceColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    shadows: [
+                      Shadow(
+                        color: goldPriceColor.withOpacity(0.3),
+                        blurRadius: 4,
                       ),
-
-                      // Rating
-                      _buildRatingMini(rating, ratingCnt),
                     ],
                   ),
-                ],
-              ),
+                ),
+
+                const SizedBox(height: 4),
+
+                // Rating + Estado
+                Row(
+                  children: [
+                    _buildRatingMini(rating, ratingCnt),
+                    const Spacer(),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: badge.color,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      badge.label,
+                      style: TextStyle(
+                        color: badge.color,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
+  }
+
+  String _formatPrice(double precio) {
+    if (precio >= 1000) {
+      final precioInt = precio.round();
+      final miles = (precioInt / 1000).floor();
+      final resto = precioInt % 1000;
+      return '\$$miles.${resto.toString().padLeft(3, '0')}';
+    }
+    return '\$${precio.round()}';
   }
 
   // ── Tarjeta compacta (fila) ───────────────────────────────
@@ -441,6 +461,8 @@ class _ProductoCardState extends State<ProductoCard>
     double precio,
     _StockBadgeData badge,
   ) {
+    const goldPriceColor = Color(0xFFD4AF37);
+
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Row(
@@ -473,18 +495,12 @@ class _ProductoCardState extends State<ProductoCard>
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),
-                ShaderMask(
-                  shaderCallback:
-                      (b) => const LinearGradient(
-                        colors: [_kGold, _kGoldLight],
-                      ).createShader(b),
-                  child: Text(
-                    '\$${precio.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
+                Text(
+                  _formatPrice(precio),
+                  style: const TextStyle(
+                    color: goldPriceColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],
@@ -616,7 +632,7 @@ class _ProductoCardState extends State<ProductoCard>
         Text(
           rating.toStringAsFixed(1),
           style: const TextStyle(
-            color: _kGoldLight,
+            color: _kGold,
             fontSize: 10,
             fontWeight: FontWeight.w700,
           ),

@@ -51,7 +51,7 @@ class _ProfileEditDialogState extends State<ProfileEditDialog> {
   }
 
   String get _displayLabel =>
-      widget.field == 'nombre' ? 'Nombre completo' : 'Teléfono';
+      widget.field == 'nombre' ? 'Nombre' : 'Teléfono';
 
   Future<String?> _showCountryPicker() async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -181,95 +181,81 @@ class _ProfileEditDialogState extends State<ProfileEditDialog> {
         children: [
           const SizedBox(height: 8),
           if (widget.field == 'telefono') ...[
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () async {
-                    final newCode = await _showCountryPicker();
-                    if (newCode != null && newCode != _selectedCountryCode) {
-                      setState(() {
-                        _selectedCountryCode = newCode;
-                        _countryChanged = true;
-                      });
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _kGold.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _kGold.withValues(alpha: 0.35)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(flag ?? '', style: const TextStyle(fontSize: 16)),
-                        const SizedBox(width: 4),
-                        Text(
-                          _selectedCountryCode,
-                          style: const TextStyle(
-                            color: _kGold,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.arrow_drop_down_rounded,
-                          color: _kGold,
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                  ),
+            GestureDetector(
+              onTap: () async {
+                final newCode = await _showCountryPicker();
+                if (newCode != null && newCode != _selectedCountryCode) {
+                  setState(() {
+                    _selectedCountryCode = newCode;
+                    _countryChanged = true;
+                  });
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      labelText: 'Número de teléfono',
-                      labelStyle: TextStyle(color: hintColor),
-                      hintText: 'Ej: 3001234567',
-                      hintStyle: TextStyle(
-                        color: hintColor.withValues(alpha: 0.7),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: borderColor),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: borderColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: _kGold),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
+                decoration: BoxDecoration(
+                  color: _kGold.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _kGold.withValues(alpha: 0.35)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(flag ?? '', style: const TextStyle(fontSize: 16)),
+                    const SizedBox(width: 4),
+                    Text(
+                      _selectedCountryCode,
+                      style: const TextStyle(
+                        color: _kGold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    style: TextStyle(color: textColor),
-                    cursorColor: _kGold,
-                    keyboardType: TextInputType.phone,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                  ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_drop_down_rounded,
+                      color: _kGold,
+                      size: 20,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Formato: $_selectedCountryCode + número (ej: 3001234567)',
-              style: TextStyle(
-                color: hintColor,
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
               ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _controller,
+              decoration: InputDecoration(
+                labelText: 'Número de teléfono',
+                labelStyle: TextStyle(color: hintColor),
+                hintText: 'Ej: 3001234567',
+                hintStyle: TextStyle(
+                  color: hintColor.withValues(alpha: 0.7),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: borderColor),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: borderColor),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: _kGold),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+              style: TextStyle(color: textColor),
+              cursorColor: _kGold,
+              keyboardType: TextInputType.phone,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
             ),
           ] else ...[
             TextFormField(
