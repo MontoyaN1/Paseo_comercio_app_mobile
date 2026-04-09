@@ -542,12 +542,9 @@ class _TiendaCardState extends State<TiendaCard>
 
               const SizedBox(height: 10),
 
-              // Stats: rating + visitas + flecha
+              // Stats: visitas + flecha
               Row(
                 children: [
-                  // Rating
-                  _buildRatingMini(rating, ratingCnt, hintColor),
-                  const SizedBox(width: 14),
                   // Visitas
                   _buildVisitasMini(visitas, hintColor),
                   const Spacer(),

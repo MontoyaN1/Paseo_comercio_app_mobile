@@ -78,7 +78,7 @@
   - Optimizar widgets con `const` constructors donde sea posible
   - Implementar `RepaintBoundary` en áreas estáticas
   - Considerar usar `CachedNetworkImage` en lugar de `Image.network`
-  - Revisar y optimizar深(deep) rebuilds con `PerformanceOverlay` y `DevTools`
+  - Revisar y optimizar deep rebuilds con `PerformanceOverlay` y `DevTools`
   - Considerar implementar splash screen con logo estático en lugar de GIF
   - Revisar uso de `StreamBuilder` y `FutureBuilder` para evitar rebuilds innecesarios
 
@@ -88,6 +88,102 @@
 3. **Optimización de código**: Agregar `const`, `RepaintBoundary`, evitar rebuilds innecesarios
 4. **Testing**: Probar en dispositivos reales de gama baja
 5. **Iteración**: Repetir hasta lograr rendimiento aceptable
+
+### 4.3 Análisis Exhaustivo - Problemas Identificados
+
+#### 4.3.1 Image.network sin optimización (5 archivos) ⚠️ ALTO
+| Archivo | Líneas | Descripción |
+|---------|--------|-------------|
+| `lib/presentation/widgets/shared/profile_floating_button.dart` | 166, 391 | `Image.network` sin cache |
+| `lib/presentation/widgets/organizacion/detail/organizacion_hero.dart` | 52 | `Image.network` sin cache |
+| `lib/presentation/widgets/profile/profile_avatar_hero.dart` | 95 | `Image.network` sin cache |
+| `lib/presentation/pages/historial/historial_page.dart` | 468 | `Image.network` sin cache |
+
+**Impacto**: Cada carga de imagen consume memoria sin caché. En gama baja esto causa lentitud severa.
+**Solución**: Reemplazar por `CachedNetworkImage` con `memCacheWidth: 800`
+
+#### 4.3.2 Sin RepaintBoundary (0 encontrados) ⚠️ ALTO
+**Resultado**: No se usa `RepaintBoundary` en toda la aplicación.
+
+| Ubicación | Problema |
+|-----------|----------|
+| `splash_page.dart` | Animación compleja que redibuja toda la pantalla |
+| `profile_floating_button.dart` | Menú lateral con animaciones que afecta toda la UI |
+| `login_page.dart` | CustomPainter con animación continua |
+| `custom_app_bar.dart` | StreamBuilder que rebuild toda la AppBar |
+
+**Impacto**: Las animaciones fuerzan redibujados completos innecesarios.
+**Solución**: Agregar `RepaintBoundary` en splash_page y login_page
+
+#### 4.3.3 ListView sin lazy loading (2 archivos) ⚠️ ALTO
+| Archivo | Línea | Estado |
+|---------|-------|--------|
+| `lib/presentation/pages/soporte/soporte_page.dart` | 39 | `ListView(` - carga todo de golpe |
+| `lib/presentation/pages/settings/settings_page.dart` | 33 | `ListView(` - carga todo de golpe |
+
+**Impacto**: Carga todos los widgets simultáneamente, consumiendo memoria innecesaria.
+**Solución**: Convertir a `ListView.builder` para lazy loading
+
+#### 4.3.4 Widgets sin const (4 archivos) ℹ️ BAJO
+| Archivo | Líneas | Descripción |
+|---------|--------|-------------|
+| `lib/presentation/pages/splash/splash_page.dart` | 125, 130, 140, 151, 162-175 | Text y SizedBox sin const |
+| `lib/presentation/pages/soporte/soporte_page.dart` | 151-195 | Múltiples Text widgets |
+| `lib/presentation/pages/settings/settings_page.dart` | 90-115 | Text y Column widgets |
+| `lib/presentation/pages/auth/login_page.dart` | 467, 503 | Text widgets |
+
+**Impacto**: Construcción innecesaria de widgets idénticos.
+**Solución**: Agregar `const` donde los valores sean constantes.
+
+#### 4.3.5 StreamBuilder causando rebuilds (3 archivos) ⚠️ MEDIO
+| Archivo | Línea | Tipo | Problema |
+|---------|-------|------|----------|
+| `lib/presentation/widgets/shared/profile_floating_button.dart` | 83 | StreamBuilder | Rebuild completo del FAB |
+| `lib/presentation/widgets/shared/custom_app_bar.dart` | 39 | StreamBuilder | Rebuild de toda la AppBar |
+| `lib/presentation/pages/auth/login_page.dart` | 30 | StreamBuilder | Rebuild de todo el scaffold |
+
+**Impacto**: Cada cambio de auth fuerza rebuild completo de la UI.
+**Solución**: Usar Provider/Selector para evitar rebuilds innecesarios.
+
+#### 4.3.6 Splash screen con animaciones pesadas ⚠️ MEDIO
+**Estado actual**: `splash_page.dart` NO usa GIF - usa AnimationController.
+
+| Característica | Valor |
+|----------------|-------|
+| Animaciones simultáneas | 3 (scale, fade, color) |
+| Duración total | ~4.5s (1500ms + 3000ms delay) |
+| BackdropFilter | blur pesado en build |
+| RepaintBoundary | NO tiene |
+
+**Impacto**: Tiempo de inicio excesivo en gama baja.
+**Solución**: Reducir a 2s, usar una sola animación, agregar RepaintBoundary.
+
+---
+
+### 4.4 Resumen de Hallazgos
+
+| # | Problema | Impacto | Facilidad | Prioridad |
+|---|----------|---------|-----------|-----------|
+| 1 | Image.network -> CachedNetworkImage | ALTO | MEDIA | CRÍTICA |
+| 2 | Sin RepaintBoundary | ALTO | FÁCIL | CRÍTICA |
+| 3 | ListView -> ListView.builder | ALTO | FÁCIL | CRÍTICA |
+| 4 | Widgets sin const | BAJO | FÁCIL | MENOR |
+| 5 | StreamBuilder rebuilds | MEDIO | MEDIA | IMPORTANTE |
+| 6 | Splash screen 4.5s | MEDIO | FÁCIL | IMPORTANTE |
+
+### 4.5 Recomendaciones de Implementación
+
+**CRÍTICAS (arreglar primero):**
+1. Reemplazar `Image.network` por `CachedNetworkImage` con `memCacheWidth: 800`
+2. Agregar `RepaintBoundary` en splash_page y login_page
+3. Convertir `ListView` → `ListView.builder` en soporte_page y settings_page
+
+**IMPORTANTES:**
+4. Agregar `const` a widgets estáticos (texto, iconos)
+5. Reducir duración splash de 3s a 2s
+6. Separar build methods grandes en widgets pequeños
+
+**NOTA**: Las pruebas de rendimiento deben hacerse con dispositivos de gama baja reales (no emuladores) para validar las optimizaciones.
 
 ---
 

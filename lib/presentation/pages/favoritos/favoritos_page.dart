@@ -243,6 +243,7 @@ class _TiendasList extends StatelessWidget {
             context.read<FavoritoBloc>().add(LoadFavoritos(usuarioId));
           },
           child: ListView.builder(
+            physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.all(16),
             itemCount: tiendas.length,
             itemBuilder: (context, index) {
@@ -251,24 +252,27 @@ class _TiendasList extends StatelessWidget {
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: TiendaCard(
-                  tienda: tienda,
-                  showFavoriteButton: true,
-                  isFavorite: true,
-                  onFavoriteToggle: () {
-                    debugPrint(
-                      'Toggle tienda - usuarioId: $usuarioId, tiendaId: $tiendaId',
-                    );
-                    context.read<FavoritoBloc>().add(
-                      ToggleTiendaFavorito(
-                        usuarioId: usuarioId,
-                        tiendaId: tiendaId,
-                      ),
-                    );
-                  },
-                  onTap: () {
-                    context.push('/tiendas/${tienda['id']}', extra: tienda);
-                  },
+                child: SizedBox(
+                  height: 280,
+                  child: TiendaCard(
+                    tienda: tienda,
+                    showFavoriteButton: true,
+                    isFavorite: true,
+                    onFavoriteToggle: () {
+                      debugPrint(
+                        'Toggle tienda - usuarioId: $usuarioId, tiendaId: $tiendaId',
+                      );
+                      context.read<FavoritoBloc>().add(
+                        ToggleTiendaFavorito(
+                          usuarioId: usuarioId,
+                          tiendaId: tiendaId,
+                        ),
+                      );
+                    },
+                    onTap: () {
+                      context.push('/tiendas/${tienda['id']}', extra: tienda);
+                    },
+                  ),
                 ),
               );
             },
@@ -395,37 +399,39 @@ class _ProductosList extends StatelessWidget {
           onRefresh: () async {
             context.read<FavoritoBloc>().add(LoadFavoritos(usuarioId));
           },
-          child: ListView.builder(
+          child: GridView.builder(
+            physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.all(16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.75,
+            ),
             itemCount: productos.length,
             itemBuilder: (context, index) {
               final producto = productos[index];
               final productoId = int.tryParse(producto['id'].toString()) ?? 0;
 
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: ProductoCard(
-                  producto: producto,
-                  showFavoriteButton: true,
-                  isFavorite: true,
-                  onFavoriteToggle: () {
-                    debugPrint(
-                      'Toggle producto - usuarioId: $usuarioId, productoId: $productoId',
-                    );
-                    context.read<FavoritoBloc>().add(
-                      ToggleProductoFavorito(
-                        usuarioId: usuarioId,
-                        productoId: productoId,
-                      ),
-                    );
-                  },
-                  onTap: () {
-                    context.push(
-                      '/productos/${producto['id']}',
-                      extra: producto,
-                    );
-                  },
-                ),
+              return ProductoCard(
+                producto: producto,
+                showDetails: true,
+                showFavoriteButton: true,
+                isFavorite: true,
+                onFavoriteToggle: () {
+                  debugPrint(
+                    'Toggle producto - usuarioId: $usuarioId, productoId: $productoId',
+                  );
+                  context.read<FavoritoBloc>().add(
+                    ToggleProductoFavorito(
+                      usuarioId: usuarioId,
+                      productoId: productoId,
+                    ),
+                  );
+                },
+                onTap: () {
+                  context.push('/productos/${producto['id']}', extra: producto);
+                },
               );
             },
           ),
