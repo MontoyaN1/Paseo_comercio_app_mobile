@@ -25,8 +25,6 @@ import '../../../blocs/favorito/favorito_state.dart';
 
 // ── Paleta (idéntica al sistema de diseño) ────────────────────
 const _kGold = Color(0xFFD4AF37);
-const _kGoldLight = Color(0xFFFFE082);
-const _kBg = Color(0xFF07070F);
 const _kSurface = Color(0xFF0F0F1E);
 const _kSurfaceCard = Color(0xFF12121F);
 const _kBorder = Color(0xFF1E1E3A);
@@ -317,13 +315,6 @@ class _ProductoCardState extends State<ProductoCard>
                 child: _buildImageSection(imageUrl),
               ),
 
-              // Badge stock
-              Positioned(
-                top: 6,
-                left: 6,
-                child: _buildStockBadge(badge, small: true),
-              ),
-
               // Favorito
               if (widget.showFavoriteButton)
                 Positioned(
@@ -564,43 +555,6 @@ class _ProductoCardState extends State<ProductoCard>
                     ),
                   ],
                 ),
-      ),
-    );
-  }
-
-  // ── Badge de stock ────────────────────────────────────────
-  Widget _buildStockBadge(_StockBadgeData data, {bool small = false}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: small ? 7 : 10,
-            vertical: small ? 3 : 5,
-          ),
-          decoration: BoxDecoration(
-            color: data.color.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: data.color.withOpacity(0.45), width: 1),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(data.icon, color: data.color, size: small ? 9 : 11),
-              const SizedBox(width: 4),
-              Text(
-                data.label,
-                style: TextStyle(
-                  color: data.color,
-                  fontSize: small ? 9 : 10,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

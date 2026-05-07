@@ -756,6 +756,7 @@ class _SheetTileState extends State<_SheetTile>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final iconColor = widget.isDestructive ? Colors.red[300]! : _kGold;
     final textColor =
         widget.isDestructive ? Colors.red[300]! : theme.colorScheme.onSurface;
@@ -840,7 +841,12 @@ class _SheetTileState extends State<_SheetTile>
                     if (!widget.isDestructive)
                       Icon(
                         Icons.arrow_forward_ios_rounded,
-                        color: _kGold.withValues(alpha: _pressed ? 0.70 : 0.28),
+                        color:
+                            _pressed
+                                ? _kGold.withValues(alpha: 0.85)
+                                : (isDark
+                                    ? Colors.white.withValues(alpha: 0.55)
+                                    : Colors.black54),
                         size: 13,
                       ),
                   ],
