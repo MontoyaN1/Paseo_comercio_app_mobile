@@ -73,12 +73,20 @@ Deep Links implementados para Android usando **App Links** (`paseodelcomercio.co
 **Archivo:** `android/app/build.gradle.kts`
 
 ```kotlin
+// Credenciales desde android/key.properties (archivo local, NO commitear)
+val keystoreProperties = java.util.Properties().apply {
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
 signingConfigs {
     create("release") {
         storeFile = file("debug_release.keystore")
-        storePassword = project.property("KEYSTORE_STORE_PASSWORD") as String
-        keyAlias = project.property("KEYSTORE_ALIAS") as String
-        keyPassword = project.property("KEYSTORE_KEY_PASSWORD") as String
+        storePassword = keystoreProperties.getProperty("storePassword")
+        keyAlias = keystoreProperties.getProperty("keyAlias")
+        keyPassword = keystoreProperties.getProperty("keyPassword")
     }
 }
 
@@ -92,12 +100,13 @@ buildTypes {
 }
 ```
 
-**Propiedades:** `android/gradle.properties`
+**Propiedades:** `android/key.properties` (archivo local, NO se commitea)
 
 ```
-KEYSTORE_STORE_PASSWORD=***REMOVED***
-KEYSTORE_KEY_PASSWORD=***REMOVED***
-KEYSTORE_ALIAS=my_key
+storePassword=<TU_NUEVA_CONTRASEÑA>
+keyPassword=<TU_NUEVA_CONTRASEÑA>
+keyAlias=my_key
+storeFile=debug_release.keystore
 ```
 
 ---
@@ -108,7 +117,7 @@ KEYSTORE_ALIAS=my_key
 |---------|--------|
 | `android/app/src/main/AndroidManifest.xml` | Agregado intent-filter App Links + Custom Scheme, removido Dynamic Links legacy |
 | `android/app/build.gradle.kts` | Configurado signing con keystore dedicado para debug y release |
-| `android/gradle.properties` | Agregadas variables de keystore (NO commit) |
+| `android/key.properties` | Variables de keystore (archivo local, NO commit) |
 | `android/debug_release.keystore` | Keystore creado (NO commit) |
 | `lib/core/routing/app_router.dart` | Agregadas rutas legacy (`/store/:id`, `/producto/:id`, `/plazoleta/:slug`, `/organizacion/:id`) |
 | `lib/presentation/pages/plazoletas/plazoleta_detail_page.dart` | Soporte para slug en deep links, `didUpdateWidget` para recarga |
@@ -211,7 +220,7 @@ void didUpdateWidget(TiendaDetailPage oldWidget) {
 
 - El keystore `debug_release.keystore` se usa para **debug** y **release**
 - Permite que `flutter run` tenga el mismo SHA256 que release
-- **NO commitear** el keystore ni `gradle.properties` al repositorio
+- **NO commitear** el keystore ni `key.properties` al repositorio
 
 ### Firebase Dynamic Links
 
@@ -257,8 +266,8 @@ adb shell am start -W -a android.intent.action.VIEW \
 ## COMANDOS ÚTILES
 
 ```bash
-# Obtener SHA256 del keystore
-keytool -list -v -keystore android/app/debug_release.keystore -alias my_key -storepass ***REMOVED***
+# Obtener SHA256 del keystore (la contraseña NO va en el repo, va en android/key.properties)
+keytool -list -v -keystore android/app/debug_release.keystore -alias my_key
 
 # Verificar assetlinks.json
 curl -s https://paseodelcomercio.com/.well-known/assetlinks.json | jq

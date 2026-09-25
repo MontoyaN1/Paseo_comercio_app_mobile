@@ -35,7 +35,6 @@ web/
 **/android/local.properties
 **/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
-**/android/gradle.properties
 *.jks
 **/debug_release.keystore
 

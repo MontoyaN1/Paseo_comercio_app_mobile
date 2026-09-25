@@ -36,12 +36,21 @@ android {
         versionName = flutter.versionName
     }
 
+    // Credenciales de firma: se leen de android/key.properties (archivo local,
+    // ignorado por git). Nunca hardcodear contraseñas en archivos rastreados.
+    val keystoreProperties = java.util.Properties().apply {
+        val keystorePropertiesFile = rootProject.file("key.properties")
+        if (keystorePropertiesFile.exists()) {
+            keystorePropertiesFile.inputStream().use { load(it) }
+        }
+    }
+
     signingConfigs {
         create("release") {
             storeFile = file("debug_release.keystore")
-            storePassword = project.property("KEYSTORE_STORE_PASSWORD") as String
-            keyAlias = project.property("KEYSTORE_ALIAS") as String
-            keyPassword = project.property("KEYSTORE_KEY_PASSWORD") as String
+            storePassword = keystoreProperties.getProperty("storePassword")
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
         }
     }
 
