@@ -1,0 +1,609 @@
+# Diagrama de Entidades - Paseo del Comercio
+
+## Modelo Entidad-Relación Completo
+
+```mermaid
+erDiagram
+    USUARIO {
+        bigint id PK
+        varchar clerk_user_id UK
+        varchar nombre_completo
+        varchar email UK
+        varchar telefono
+        timestamptz fecha_registro
+        timestamptz ultimo_login
+        boolean perfil_publico
+        estado_usuario estado_usuario
+        bigint roles_id FK
+    }
+
+    ROLES {
+        bigint id PK
+        tipo_rol rol
+    }
+
+    ORGANIZACION {
+        bigint id PK
+        timestamptz created_at
+        bigint anfitrion_id FK
+        varchar nombre
+        text descripcion
+        varchar email_anfitrion
+        tipo_organizacion tipo
+    }
+
+    PLazoleta {
+        bigint id PK
+        timestamptz fecha_creacion
+        varchar nombre
+        text descripcion
+        tipo_ubicacion tipo_ubicacion
+        varchar slug UK
+        bigint categoria_principal_id FK
+    }
+
+    CATEGORIA {
+        bigint id PK
+        timestamptz created_at
+        varchar nombre
+        text descripcion
+        varchar icono
+        bigint parent_id FK
+    }
+
+    TIENDA {
+        bigint id PK
+        timestamptz fecha_creacion
+        bigint id_propietario FK
+        varchar nombre_tienda UK
+        text descripcion
+        jsonb redes_sociales
+        bigint organizacion_id FK
+        varchar email_contacto
+        varchar telefono_contacto
+        text direccion
+        integer total_visitas
+        integer total_contactos_whatsapp
+        timestamptz fecha_ultima_visita
+    }
+
+    PRODUCTO {
+        bigint id PK
+        timestamptz fecha_creacion
+        timestamptz fecha_actualizacion
+        bigint tienda_id FK
+        bigint categoria_id FK
+        varchar nombre
+        text descripcion
+        numeric precio_base
+        smallint cantidad
+        numeric calificacion_promedio
+        smallint total_valoracion
+        estado_producto estado_producto
+        integer total_visualizaciones
+        integer total_clicks_whatsapp
+        integer total_compartidos
+        integer total_clicks_instagram
+        integer total_clicks_facebook
+    }
+
+    HORARIO {
+        bigint id_horario PK
+        timestamptz fecha_creacion
+        bigint tienda_id FK
+        smallint dia_semana
+        time apertura
+        time cierre
+        boolean cerrado
+        date fecha_especifica
+        tipo_horario tipo_horario
+    }
+
+    VALORACION_PRODUCTO {
+        bigint id PK
+        timestamptz fecha_creacion
+        bigint producto_id FK
+        bigint usuario_id FK
+        smallint calificacion
+        text comentario
+        estado_valoracion estado_valoracion
+    }
+
+    INTERACCION {
+        bigserial id PK
+        varchar tipo_interaccion
+        bigint producto_id FK
+        bigint tienda_id FK
+        text sesion_id
+        varchar dispositivo
+        varchar ip_cliente
+        timestamptz fecha_creacion
+        timestamptz fecha_actualizacion
+    }
+
+    ESTADISTICAS_DIARIAS {
+        bigserial id PK
+        bigint tienda_id FK
+        bigint producto_id FK
+        date fecha
+        integer visualizaciones
+        integer clicks_whatsapp
+        integer compartidos
+        integer clicks_instagram
+        integer clicks_facebook
+        integer sesiones_unicas
+        integer dispositivos_mobile
+        integer dispositivos_desktop
+    }
+
+    MIEMBROS_ORGANIZACION {
+        bigserial id PK
+        bigint organizacion_id FK
+        bigint usuario_id FK
+        varchar email
+        varchar nombre
+        integer rol_id
+        varchar estado
+        timestamptz fecha_invitacion
+        timestamptf fecha_aceptacion
+        timestamptz fecha_rechazo
+        bigint invitado_por FK
+    }
+
+    NOTIFICACION {
+        bigint id PK
+        timestamptz created_at
+        bigint remitente_id FK
+        bigint destinatario_id FK
+        varchar asunto
+        text mensaje
+        varchar tipo
+        boolean leida
+        timestamptz fecha_leida
+        varchar accion_url
+        jsonb metadata
+        bigint referencia_id
+        varchar referencia_tipo
+    }
+
+    ETIQUETA_TIENDA {
+        bigint id PK
+        timestamptz fecha_creacion
+        bigint tienda_id FK
+        varchar nombre
+        varchar icono
+        varchar color
+    }
+
+    ETIQUETA_PRODUCTO {
+        bigint id PK
+        timestamptz fecha_creacion
+        bigint producto_id FK
+        varchar nombre
+        varchar color
+        text icono
+    }
+
+    IMAGEN_TIENDA {
+        bigint id_imagen PK
+        timestamptz fecha_subida
+        bigint tienda_id FK
+        text url_imagen
+        tipo_imagen tipo_imagen
+        integer orden
+        text alt_text
+        boolean activa
+        text url_thumb
+        text url_medium
+        text url_large
+        jsonb variantes
+    }
+
+    IMAGEN_PRODUCTOS {
+        bigint id PK
+        timestamptz fecha_creacion
+        bigint id_producto FK
+        text url_imagen
+        tipo_imagen tipo_imagen
+        smallint orden
+        text alt_text
+        boolean activa
+        text url_thumb
+        text url_medium
+        text url_large
+        jsonb variantes
+    }
+
+    IMAGEN_PLazoleta {
+        bigint id PK
+        timestamptz fecha_subida
+        bigint id_ubicacion FK
+        text url_imagen
+        tipo_imagen tipo_imagen
+        integer orden
+        varchar alt_text
+        boolean activa
+        text url_thumb
+        text url_medium
+        text url_large
+        jsonb variantes
+    }
+
+    IMAGEN_ORGANIZACION {
+        bigint id PK
+        timestamptz created_at
+        varchar url_imagen
+        tipo_imagen tipo_imagen
+        text alt
+        bigint organizacion_id FK
+        text url_thumb
+        text url_medium
+        text url_large
+        jsonb variantes
+    }
+
+    IMAGEN_VALORACION_PRODUCTO {
+        serial id PK
+        timestamptz fecha_creacion
+        integer valoracion_id FK
+        text url_imagen
+        smallint orden
+        boolean activa
+    }
+
+    CONTACTOS_EMPRESA {
+        bigint id PK
+        timestamptz created_at
+        varchar nombre
+        varchar valor
+        varchar url_icono
+    }
+
+    REDES_SOCIALES {
+        bigint id PK
+        timestamptz created_at
+        varchar nombre
+        varchar link_red
+        varchar url_icono
+    }
+
+    TRIGGER_LOGS {
+        bigserial id PK
+        varchar tipo_evento
+        bigint producto_id FK
+        varchar tipo_interaccion
+        text mensaje
+        text error
+        timestamp fecha
+    }
+
+    TIENDA_FAVORITO {
+        bigserial id PK
+        bigint usuario_id FK
+        bigint tienda_id FK
+        timestamptz fecha_creacion
+    }
+
+    PRODUCTO_FAVORITO {
+        bigserial id PK
+        bigint usuario_id FK
+        bigint producto_id FK
+        timestamptz fecha_creacion
+    }
+
+    %% Relaciones
+    USUARIO ||--o{ ROLES : "tiene"
+    USUARIO ||--o{ ORGANIZACION : "anfitrión"
+    USUARIO ||--o{ TIENDA : "propietario"
+    USUARIO ||--o{ VALORACION_PRODUCTO : "evalúa"
+    USUARIO ||--o{ MIEMBROS_ORGANIZACION : "miembro"
+    USUARIO ||--o{ NOTIFICACION : "recibe"
+    USUARIO ||--o{ NOTIFICACION : "envía"
+    USUARIO ||--o{ INTERACCION : "interactúa"
+    USUARIO ||--o{ TIENDA_FAVORITO : "favorita"
+    USUARIO ||--o{ PRODUCTO_FAVORITO : "favorito"
+
+    ORGANIZACION ||--o{ MIEMBROS_ORGANIZACION : "tiene"
+    ORGANIZACION ||--o{ TIENDA : "agrupa"
+    ORGANIZACION ||--o{ IMAGEN_ORGANIZACION : "tiene"
+
+    PLazoleta ||--o{ CATEGORIA : "categoría_principal"
+    PLazoleta ||--o{ IMAGEN_PLazoleta : "imágenes"
+
+    CATEGORIA ||--o{ PRODUCTO : "contiene"
+    CATEGORIA ||--o{ CATEGORIA : "subcategoría"
+    CATEGORIA ||--o{ PLazoleta : "principal_en"
+
+    TIENDA ||--o{ PRODUCTO : "vende"
+    TIENDA ||--o{ HORARIO : "tiene"
+    TIENDA ||--o{ ETIQUETA_TIENDA : "tiene"
+    TIENDA ||--o{ IMAGEN_TIENDA : "tiene"
+    TIENDA ||--o{ INTERACCION : "recibe"
+    TIENDA ||--o{ ESTADISTICAS_DIARIAS : "registra"
+    TIENDA ||--o{ TIENDA_FAVORITO : "es_favorita"
+
+    PRODUCTO ||--o{ ETIQUETA_PRODUCTO : "tiene"
+    PRODUCTO ||--o{ IMAGEN_PRODUCTOS : "tiene"
+    PRODUCTO ||--o{ VALORACION_PRODUCTO : "recibe"
+    PRODUCTO ||--o{ INTERACCION : "registra"
+    PRODUCTO ||--o{ ESTADISTICAS_DIARIAS : "registra"
+    PRODUCTO ||--o{ PRODUCTO_FAVORITO : "es_favorito"
+
+    VALORACION_PRODUCTO ||--o{ IMAGEN_VALORACION_PRODUCTO : "tiene"
+
+    ROLES ||--o{ USUARIO : "asignado_a"
+```
+
+## Diagrama de Relaciones Simplificado
+
+```mermaid
+flowchart TB
+    subgraph Usuario["USUARIO"]
+        U[("id")]
+    end
+
+    subgraph Negocio["NEGOCIO"]
+        subgraph Organizacion["ORGANIZACIÓN"]
+            O[("id")]
+        end
+        subgraph Tienda["TIENDA"]
+            T[("id")]
+        end
+        subgraph Producto["PRODUCTO"]
+            P[("id")]
+        end
+    end
+
+    subgraph Ubicacion["UBICACIÓN"]
+        subgraph Plazoleta["PLAZOLETA"]
+            Pl[("id")]
+        end
+        subgraph Categoria["CATEGORÍA"]
+            C[("id")]
+        end
+    end
+
+    subgraph Interaccion["INTERACCIÓN"]
+        I[("interaccion")]
+        ED[("estadisticas_diarias")]
+    end
+
+    subgraph Valoracion["VALORACIÓN"]
+        VP[("valoracion_producto")]
+    end
+
+    subgraph Favoritos["⭐ FAVORITOS (NUEVO)"]
+        TF["tienda_favorito"]
+        PF["producto_favorito"]
+    end
+
+    subgraph Multimedia["MULTIMEDIA"]
+        IT["imagen_tienda"]
+        IP["imagen_productos"]
+        IPl["imagen_plazoleta"]
+    end
+
+    U -->|"propie-<br>tario"| T
+    U -->|"anfitrión"| O
+    U -->|"favorita"| TF
+    U -->|"favorito"| PF
+    
+    O -->|"agrupa"| T
+    T -->|"vende"| P
+    T -->|"imágenes"| IT
+    P -->|"imágenes"| IP
+    
+    Pl -->|"categoría"| C
+    C -->|"contiene"| P
+    
+    T -->|"interacciones"| I
+    P -->|"interacciones"| I
+    T -->|"stats"| ED
+    P -->|"stats"| ED
+    
+    P -->|"valoraciones"| VP
+    
+    T -->|"es favorito"| TF
+    P -->|"es favorito"| PF
+```
+
+## Jerarquía de Entidades
+
+```mermaid
+graph TD
+    subgraph Nivel1["Nivel 1 - Entidades Principales"]
+        USUARIO[("USUARIO")]
+    end
+
+    subgraph Nivel2["Nivel 2 - Contenedores"]
+        ORG[("ORGANIZACIÓN")]
+        PLA[("PLAZOLETA")]
+    end
+
+    subgraph Nivel3["Nivel 3 - Elementos de Negocio"]
+        TIENDA[("TIENDA")]
+    end
+
+    subgraph Nivel4["Nivel 4 - Items"]
+        PROD[("PRODUCTO")]
+    end
+
+    subgraph Nivel5["Nivel 5 - Metadatos"]
+        CAT[("CATEGORÍA")]
+        ET[("ETIQUETA_TIENDA")]
+        EP[("ETIQUETA_PRODUCTO")]
+        VP[("VALORACIÓN")]
+        IMG_T[("IMAGEN_TIENDA")]
+        IMG_P[("IMAGEN_PRODUCTO")]
+    end
+
+    subgraph Nivel6["Nivel 6 - Nuevas Entidades"]
+        FAV_T["⭐ TIENDA_FAVORITO"]
+        FAV_P["⭐ PRODUCTO_FAVORITO"]
+    end
+
+    USUARIO -->|"crea"| ORG
+    USUARIO -->|"crea"| TIENDA
+    USUARIO -->|"favorita"| FAV_T
+    USUARIO -->|"favorita"| FAV_P
+    
+    ORG -->|"contiene"| TIENDA
+    
+    PLA -->|"agrupa"| TIENDA
+    PLA -->|"categoriza"| CAT
+    
+    TIENDA -->|"vende"| PROD
+    TIENDA -->|"tiene"| IMG_T
+    TIENDA -->|"tiene"| ET
+    TIENDA -->|"tiene"| FAV_T
+    
+    PROD -->|"tiene"| IMG_P
+    PROD -->|"tiene"| EP
+    PROD -->|"tiene"| VP
+    PROD -->|"tiene"| FAV_P
+    
+    CAT -->|"clasifica"| PROD
+```
+
+## Flujo de Datos General
+
+```mermaid
+flowchart LR
+    subgraph Frontend["FRONTEND (Flutter)"]
+        Auth["AuthBloc"]
+        Tienda["TiendaBloc"]
+        Producto["ProductoBloc"]
+        Favorito["FavoritoBloc"]
+        Org["OrganizacionBloc"]
+    end
+
+    subgraph Backend["CAPA DE DATOS"]
+        Cache["Cache Service"]
+        DS_Remote["Remote DataSource"]
+        DS_Local["Local DataSource"]
+    end
+
+    subgraph Database["SUPABASE (PostgreSQL)"]
+        AuthDB["usuarios, roles"]
+        NegocioDB["tiendas, productos, organizaciones"]
+        StatsDB["interacciones, estadísticas"]
+        MultimediaDB["imágenes"]
+        NuevasDB["⭐ tienda_favorito, producto_favorito"]
+    end
+
+    Auth --> Cache
+    Tienda --> Cache
+    Producto --> Cache
+    Favorito --> Cache
+    Org --> Cache
+
+    Cache --> DS_Remote
+    Cache --> DS_Local
+
+    DS_Remote --> AuthDB
+    DS_Remote --> NegocioDB
+    DS_Remote --> StatsDB
+    DS_Remote --> MultimediaDB
+    DS_Remote --> NuevasDB
+```
+
+## Diagrama de Arquitectura Clean
+
+```mermaid
+flowchart TB
+    subgraph Presentacion["PRESENTATION LAYER"]
+        UI["Pages & Widgets"]
+        BLoC["BLoCs"]
+    end
+
+    subgraph Dominio["DOMAIN LAYER"]
+        Entities["Entities"]
+        UseCases["Use Cases"]
+        Repos["Repository Interfaces"]
+    end
+
+    subgraph Datos["DATA LAYER"]
+        Models["Models"]
+        DataSources["Data Sources"]
+        RepoImpl["Repository Implementations"]
+    end
+
+    UI --> BLoC
+    BLoC --> UseCases
+    UseCases --> Repos
+    Repos --> RepoImpl
+    RepoImpl --> Models
+    Models --> DataSources
+    DataSources -->|"Remote"| Supabase[("Supabase DB")]
+    DataSources -->|"Local"| Hive[("Hive Cache")]
+```
+
+## Tipos Enum Definidos
+
+```mermaid
+erDiagram
+    ENUM_TIPO_HORARIO {
+        string normal
+        string especial
+        string festivo
+    }
+
+    ENUM_TIPO_IMAGEN {
+        string principal
+        string secundaria
+        string galeria
+        string logo
+        string banner
+    }
+
+    ENUM_TIPO_ORGANIZACION {
+        string fundacion
+        string asociacion
+        string cooperativa
+        string empresa
+        string comunidad
+        string otro
+    }
+
+    ENUM_TIPO_UBICACION {
+        string plazoleta
+        string pasillo
+        string area_comun
+        string exterior
+    }
+
+    ENUM_ESTADO_PRODUCTO {
+        string activo
+        string inactivo
+        string agotado
+        string descontinuado
+    }
+
+    ENUM_ESTADO_USUARIO {
+        string activo
+        string inactivo
+        string suspendido
+        string eliminado
+    }
+
+    ENUM_ESTADO_VALORACION {
+        string publicado
+        string pendiente
+        string rechazado
+        string eliminado
+    }
+
+    ENUM_TIPO_ROL {
+        string admin
+        string propietario
+        string empleado
+        string cliente
+        string invitado
+    }
+```
+
+---
+
+*Diagrama completo de entidades - Paseo del Comercio*
+*Última actualización: 2026-03-17*
+*Incluye nuevas tablas: tienda_favorito, producto_favorito*

@@ -1,0 +1,331 @@
+# Diagrama del Sistema de Favoritos - Paseo del Comercio
+
+## Diagrama de Arquitectura General
+
+```mermaid
+flowchart TB
+    subgraph Presentación["Capa de Presentación"]
+        UI["UI (Flutter)"]
+        BLoC["FavoritoBloc"]
+    end
+
+    subgraph Dominio["Capa de Dominio"]
+        Entities["Entidades Favorito"]
+        UseCases["Use Cases"]
+        RepoInt["Repositorio (Interfaz)"]
+    end
+
+    subgraph Datos["Capa de Datos"]
+        Models["Modelos"]
+        DataSources["DataSources"]
+        Remote["Remote (Supabase)"]
+        Local["Local (Hive Cache)"]
+    end
+
+    subgraph DB["Base de Datos"]
+        Postgres["PostgreSQL (Supabase)"]
+        TiendaFav["tienda_favorito"]
+        ProductoFav["producto_favorito"]
+    end
+
+    UI --> BLoC
+    BLoC --> UseCases
+    UseCases --> RepoInt
+    RepoInt --> DataSources
+    DataSources --> Models
+    Models --> DataSources
+    DataSources --> Remote
+    DataSources --> Local
+    Remote --> Postgres
+    Entities --> UseCases
+    UseCases --> Entities
+```
+
+## Diagrama de Entidades y Relaciones
+
+```mermaid
+erDiagram
+    USUARIO ||--o{ TIENDA_FAVORITO : "marca como favorito"
+    USUARIO ||--o{ PRODUCTO_FAVORITO : "marca como favorito"
+    TIENDA ||--o{ TIENDA_FAVORITO : "es favorita de"
+    PRODUCTO ||--o{ PRODUCTO_FAVORITO : "es favorito de"
+
+    USUARIO {
+        bigint id PK
+        varchar clerk_user_id UK
+        varchar email UK
+        varchar nombre_completo
+    }
+
+    TIENDA {
+        bigint id PK
+        varchar nombre_tienda UK
+        bigint id_propietario FK
+    }
+
+    PRODUCTO {
+        bigint id PK
+        varchar nombre
+        bigint tienda_id FK
+        numeric precio_base
+    }
+
+    TIENDA_FAVORITO {
+        bigint id PK
+        bigint usuario_id FK
+        bigint tienda_id FK
+        timestamptz fecha_creacion
+    }
+
+    PRODUCTO_FAVORITO {
+        bigint id PK
+        bigint usuario_id FK
+        bigint producto_id FK
+        timestamptz fecha_creacion
+    }
+```
+
+## Flujo de Usuario - Agregar/Quitar Favorito
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant UI as TiendaCard/ProductoCard
+    participant BLoC as FavoritoBloc
+    participant Repo as FavoritoRepository
+    participant DS as FavoritoRemoteDataSource
+    participant DB as PostgreSQL
+
+    Note over U,DB: Agregar a favoritos
+    U->>UI: Toca corazón (toggle)
+    UI->>BLoC: ToggleFavorito(tipo, itemId)
+    BLoC->>Repo: toggleFavorito(tipo, itemId, usuarioId)
+    Repo->>DS: addFavorito(tipo, itemId, usuarioId)
+    DS->>DB: INSERT favorito
+    DB-->>DS: Success
+    DS-->>Repo: Success
+    Repo-->>BLoC: Success
+    BLoC-->>UI: FavoritoToggled(isFavorite=true)
+    UI->>UI: Actualizar UI (corazón lleno)
+
+    Note over U,DB: Quitar de favoritos
+    U->>UI: Toca corazón (toggle)
+    UI->>BLoC: ToggleFavorito(tipo, itemId)
+    BLoC->>Repo: toggleFavorito(tipo, itemId, usuarioId)
+    Repo->>DS: removeFavorito(tipo, itemId, usuarioId)
+    DS->>DB: DELETE favorito
+    DB-->>DS: Success
+    DS-->>Repo: Success
+    Repo-->>BLoC: Success
+    BLoC-->>UI: FavoritoToggled(isFavorite=false)
+    UI->>UI: Actualizar UI (corazón vacío)
+```
+
+## Flujo de Carga de Favoritos
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant Page as FavoritosPage
+    participant BLoC as FavoritoBloc
+    participant Repo as FavoritoRepository
+    participant DS as FavoritoRemoteDataSource
+    participant DB as PostgreSQL
+
+    U->>Page: Entra a página favoritos
+    Page->>BLoC: LoadFavoritos(usuarioId)
+    BLoC->>Repo: getAllFavoritos(usuarioId)
+    Repo->>DS: getTiendasFavoritas(usuarioId)
+    DS->>DB: SELECT tienda_favorito
+    DB-->>DS: Lista tiendas favoritas
+    DS-->>Repo: Lista tiendas
+    Repo->>DS: getProductosFavoritos(usuarioId)
+    DS->>DB: SELECT producto_favorito
+    DB-->>DS: Lista productos favoritos
+    DS-->>Repo: Lista productos
+    Repo-->>BLoC: (tiendas, productos)
+    BLoC-->>Page: FavoritosLoaded(tiendas, productos)
+    Page->>Page: Mostrar listas con TabBar
+```
+
+## Estructura de Archivos Flutter
+
+```mermaid
+graph TD
+    subgraph domain["Dominio (lib/domain)"]
+        E1["entities/favorito.dart"]
+        E2["entities/favorito_type.dart"]
+        R["repositories/favorito_repository.dart"]
+        U1["usecases/toggle_favorite.dart"]
+        U2["usecases/get_favoritos.dart"]
+    end
+
+    subgraph data["Datos (lib/data)"]
+        M1["models/tienda_favorito_model.dart"]
+        M2["models/producto_favorito_model.dart"]
+        DS["datasources/remote/favorito_remote_datasource.dart"]
+        RI["repositories/favorito_repository_impl.dart"]
+    end
+
+    subgraph presentation["Presentación (lib/presentation)"]
+        BLoC["blocs/favorito/favorito_bloc.dart"]
+        EV["blocs/favorito/favorito_event.dart"]
+        ST["blocs/favorito/favorito_state.dart"]
+        PG["pages/favoritos/favoritos_page.dart"]
+    end
+
+    R --> DS
+    DS --> M1
+    DS --> M2
+    M1 --> RI
+    M2 --> RI
+    RI --> BLoC
+    BLoC --> PG
+    E1 --> U1
+    E2 --> U1
+    U1 --> R
+    U2 --> R
+```
+
+## Diagrama de Estados del BLoC
+
+```mermaid
+stateDiagram-v2
+    [*] --> Initial
+    Initial --> Loading : LoadFavoritos
+    Loading --> Loaded : Datos recibidos
+    Loading --> Error : Error en DB
+    Loaded --> Toggling : ToggleFavorito
+    Toggling --> Loaded : Toggle completado
+    Toggling --> Error : Error en toggle
+    Error --> Loading : Retry
+    Loaded --> [*]
+    Error --> [*]
+```
+
+## Navegación de la App
+
+```mermaid
+flowchart LR
+    subgraph Rutas["Rutas de la App"]
+        Splash["/splash"]
+        Login["/login"]
+        Plazoletas["/plazoletas"]
+        Tienda["/tiendas/:id"]
+        Producto["/productos/:id"]
+        Org["/organizaciones"]
+        OrgDet["/organizaciones/:id"]
+        Profile["/profile"]
+        Favoritos["/favoritos"]:::new
+    end
+
+    Splash --> Login
+    Login --> Plazoletas
+    Plazoletas --> Org
+    Plazoletas --> Tienda
+    Plazoletas --> OrgDet
+    Tienda --> Producto
+    Plazoletas --> Profile
+    Profile --> Favoritos
+    Org --> OrgDet
+    OrgDet --> Tienda
+
+    classDef new fill:#90EE90,stroke:#333,stroke-width:2px
+    class Favoritos new
+```
+
+## UI de la Página de Favoritos
+
+```mermaid
+flowchart TB
+    subgraph FavoritosPage["FavoritosPage"]
+        AppBar["AppBar: 'Mis Favoritos'"]
+        TabBar["TabBar\n[Tiendas|Productos]"]
+        
+        subgraph TabTiendas["Tab: Tiendas"]
+            TiendaList["ListView<TiendaCard>"]
+            TiendaEmpty["Empty State:\n'No tienes tiendas favoritas'"]
+        end
+        
+        subgraph TabProductos["Tab: Productos"]
+            ProductoList["ListView<ProductoCard>"]
+            ProductoEmpty["Empty State:\n'No tienes productos favoritos'"]
+        end
+    end
+
+    AppBar --> TabBar
+    TabBar --> TiendaList
+    TabBar --> ProductoList
+    TiendaList --> TiendaEmpty
+    ProductoList --> ProductoEmpty
+```
+
+## Integración con Cards Existentes
+
+```mermaid
+flowchart LR
+    subgraph TiendaCard["TiendaCard (existente)"]
+        Img["Imagen"]
+        Nombre["Nombre Tienda"]
+        Desc["Descripción"]
+        Heart["_FavButton ❤️"]
+    end
+
+    subgraph Integration["Integración"]
+        Bloc["FavoritoBloc"]
+        State["State: FavoritosLoaded"]
+    end
+
+    Heart -->|"onFavoriteToggle"| Bloc
+    Bloc -->|"isFavorite"| State
+    State -->|"prop: isFavorite"| Heart
+```
+
+## Consideraciones de Offline
+
+```mermaid
+flowchart TB
+    subgraph Online["Conectado"]
+        DB[(PostgreSQL)]
+        Remote["Remote DataSource"]
+        Cache["Cache (Hive)"]
+    end
+
+    subgraph Offline["Sin Conexión"]
+        Local["Local DataSource"]
+        CacheOffline["Cache (Hive)"]
+    end
+
+    DB --> Remote
+    Remote --> Cache
+    Cache -->|"Sincronización"| CacheOffline
+    CacheOffline --> Local
+```
+
+## Políticas de Seguridad (RLS)
+
+```mermaid
+flowchart LR
+    subgraph Supabase["Supabase RLS"]
+        RLS1["tienda_favorito"]
+        RLS2["producto_favorito"]
+    end
+
+    subgraph Policies["Políticas"]
+        P1["usuario_id = auth.uid()"]
+        P2["SELECT permitido"]
+        P3["INSERT permitido"]
+        P4["DELETE permitido"]
+    end
+
+    RLS1 --> P1
+    RLS2 --> P1
+    P1 --> P2
+    P1 --> P3
+    P1 --> P4
+```
+
+---
+
+*Diagramas generados para el sistema de favoritos de Paseo del Comercio*
+*Fecha: 2026-03-17*
