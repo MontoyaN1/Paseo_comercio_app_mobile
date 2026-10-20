@@ -354,6 +354,7 @@ Estas reglas aplican a todas las fases y deben validarse en la capa de datos, no
 **Dependencias:** Fases 4 y 5.
 **Esfuerzo:** 6–8 días-dev.
 **Condición:** solo si las fases 1–6 están cerradas.
+**Reparto:** stretch de C; no cuenta para las 3 semanas.
 
 | Subfase | Qué hacer | Dónde | Aceptación |
 |---|---|---|---|
@@ -377,6 +378,7 @@ Estas reglas aplican a todas las fases y deben validarse en la capa de datos, no
 **Objetivo:** validar y pulir favoritos, historial, compartir, mapas, ajustes y soporte.
 **Dependencias:** Fase 1.
 **Esfuerzo:** 5–6 días-dev.
+**Reparto:** 8.1 (favoritos) lo asume B; 8.2–8.6 y la coordinación de 8.7 los asume D.
 
 | Subfase | Qué hacer | Dónde | Aceptación |
 |---|---|---|---|
@@ -505,18 +507,18 @@ Los cuellos de botella (`app_router.dart`, `service_locator.dart`, `app_constant
 
 | Persona | Rol | Fases | Carga estimada |
 |---|---|---|---|
-| **A** | Núcleo, autenticación y administración | 1, 2 | 11–13 días |
-| **B** | Comercio: vendedor, tiendas, productos, reseñas | 3, 6 | 9–12 días |
-| **C** | Notificaciones, organización e invitaciones, push | 4, 5, 7 | 11–12 días (sin 7); 17–20 con 7 |
-| **D** | Calidad, integración, RF restantes y entrega | 8, 9 | 9–11 días |
+| **A** | Identidad y administración | 1, 2 | 11–13 días |
+| **B** | Comercio: tiendas, productos, valoraciones y favoritos | 3, 6, 8.1 | 10–13.5 días |
+| **C** | Organización, invitaciones y notificaciones | 4, 5 | 11–12 días (7 es stretch) |
+| **D** | Experiencia, QA y entrega | 8.2–8.6, 9 | 9.5–12.5 días |
 
-**Lectura del balance:** las dependencias están bien aisladas (cada persona es dueña de una vertical), pero la carga no es pareja. A y C son la ruta crítica: A queda con poca holgura (11–13 de 15 días) y C es el punto más pesado (Fase 5). La Fase 7 **no cabe** en 3 semanas: es extra, solo si C cierra 4 y 5 antes. D tiene carga adecuada, pero su Fase 9 está al final; debe escribir la matriz de pruebas desde la semana 1 y ejecutar regresión continua, no esperar a la semana 3.
+**Lectura del balance:** el reparto es por verticales cerradas: A identidad/admin, B comercio/favoritos, C organización/notificaciones, D experiencia/QA. La carga queda en 9.5–13.5 días por persona, dentro de las 3 semanas. Favoritos pasa a B porque depende de tiendas/productos; C conserva todo el dominio de notificaciones para no partirlo con D. La Fase 7 **no cabe** en 3 semanas: es stretch, solo si C cierra 4 y 5 antes. D debe escribir la matriz de pruebas desde la semana 1 y ejecutar regresión continua, no esperar a la semana 3.
 
 ### 6.2 Responsabilidades por persona
 
-**Persona A — Núcleo y administración**
+**Persona A — Identidad y administración**
 
-- Implementa roles, `hasRole()`, redirección y eliminación del modo invitado.
+- Implementa roles, `hasRole()`, redirección y guard de admin.
 - Escribe la migración `0006` (coordinada con C).
 - Construye el panel admin: CRUD plazoletas/categorías y listados simples.
 - Revisa que ninguna ruta quede sin guard.
@@ -528,20 +530,22 @@ Los cuellos de botella (`app_router.dart`, `service_locator.dart`, `app_constant
 - Construye formularios, subida de imágenes y “mis tiendas/productos”.
 - Implementa guardas de permisos por dueño.
 - Implementa el repositorio/BLoC de valoraciones y la edición/eliminación de reseñas.
+- Valida favoritos (RF-06): persistencia y reactividad al iniciar/cerrar sesión.
 
-**Persona C — Notificaciones y organización**
+**Persona C — Organización, invitaciones y notificaciones**
 
 - Alinea la entidad de notificaciones y construye repositorio, BLoC y bandeja.
+- Es dueño de todo el dominio de notificaciones; no se reparte con D.
 - Implementa organización: crear (una por vendedor), editar, eliminar.
 - Implementa invitaciones: búsqueda por correo, validaciones, aceptar/rechazar, re-invitación.
 - Inserta notificaciones en cada transición.
-- Si hay tiempo, monta FCM (fase 7).
+- La Fase 7 (FCM) es stretch: solo si 4 y 5 están cerradas y sobra tiempo.
 
-**Persona D — Calidad e integración**
+**Persona D — Experiencia, calidad e integración**
 
-- Valida favoritos, historial, compartir, mapas, ajustes y soporte.
-- Escribe el plan de pruebas y la matriz rol → ruta → acción.
-- Ejecuta pruebas de integración y regresión.
+- Valida historial, compartir, mapas, ajustes y soporte (RF-08 y RF-09.2/09.3).
+- Escribe la matriz rol → ruta → acción desde la semana 1.
+- Ejecuta pruebas de integración y regresión continua.
 - Prepara APK, documentación y guion de demo.
 - Apoya a A en los listados simples del panel admin.
 
@@ -549,25 +553,27 @@ Los cuellos de botella (`app_router.dart`, `service_locator.dart`, `app_constant
 
 Las 4 tareas avanzan al mismo tiempo. No hay “turnos”: cada persona es dueña de su track.
 
-| Semana | A (núcleo/admin) | B (comercio) | C (notificaciones/organización) | D (experiencia/QA) |
+| Semana | A (identidad/admin) | B (comercio) | C (organización/notificaciones) | D (experiencia/QA) |
 |---|---|---|---|---|
-| 1 | Fase 1 | Fase 3 (handlers + UI) | Fase 4 + inicio Fase 5 (organización) | Fase 8 (favoritos/historial/share) + matriz de pruebas |
-| 2 | Cierre Fase 1 + Fase 2 | Cierre Fase 3 + Fase 6 | Fase 5 (invitaciones) | Cierre Fase 8 + regresión |
-| 3 | Cierre Fase 2 + apoyo a Fase 5 | Cierre Fase 6 + apoyo QA | Cierre Fase 5 (+ Fase 7 si hay tiempo) | Fase 9 (APK, docs, demo) |
+| 1 | Fase 1 | Fase 3 (handlers + UI) + Favoritos | Fase 4 + inicio Fase 5 (organización) | Historial + Compartir + Mapa + matriz de pruebas |
+| 2 | Cierre Fase 1 + Fase 2 | Cierre Fase 3 + Fase 6 | Fase 5 (invitaciones) | Ajustes + Soporte + regresión |
+| 3 | Cierre Fase 2 + apoyo a Fase 5 | Cierre Fase 6 + apoyo QA | Cierre Fase 5 (+ Fase 7 stretch) | Fase 9 (APK, docs, demo) |
 
 **Hitos**
 
-- **Fin de semana 1:** roles, router, sin invitado, migración `0006`, notificaciones in-app y CRUD de tiendas/productos.
-- **Fin de semana 2:** panel admin, organización con invitaciones, valoraciones editables, favoritos/historial validados.
+- **Fin de semana 1:** roles, router, sin invitado, migración `0006`, notificaciones in-app, CRUD de tiendas/productos y favoritos.
+- **Fin de semana 2:** panel admin, organización con invitaciones, valoraciones editables, historial/compartir/mapa validados.
 - **Fin de semana 3:** release candidate, APK y documentación.
 
 ### 6.4 Reglas de coordinación
 
 - La migración `0006` la escribe **A**, pero **C** define las reglas de invitación. Se revisa entre ambos antes de aplicarla.
 - **A es el único mergeador** de `app_router.dart`, `service_locator.dart` y `app_constants.dart`. Los demás no editan esas firmas: usan los stubs creados en la Fase 0.5 y agregan solo su bloque de registro al final.
-- Cada persona es dueña de sus archivos de feature y no toca los de otra.
+- Cada persona es dueña de sus archivos de feature y no toca los de otra. **Favoritos es de B** (`favorito*`); **D no lo edita**.
+- **C es el único dueño de `notificacion*` y `organizacion*`**; D no los toca.
 - Cada PR debe pasar `flutter analyze` y ser revisado por otra persona.
-- Si alguien termina antes, toma la Fase 7 (push) o apoya QA; no reabre fases ajenas.
+- **La Fase 7 no se asigna**: es stretch de C (o de D si QA ya cerró) y no cuenta para las 3 semanas.
+- Si alguien termina antes, apoya QA o toma la Fase 7; no reabre fases ajenas.
 
 ---
 

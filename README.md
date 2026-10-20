@@ -50,14 +50,14 @@ Editor de Supabase** (el archivo ya está en el repo).
 
 **Aceptación:** cliente → catálogo, vendedor → `/vendedor`, admin → `/admin`; sin “continuar como invitado”; CRUD admin funcional.
 
-### Tarea B — Comercio: tiendas, productos y valoraciones
+### Tarea B — Comercio: tiendas, productos, valoraciones y favoritos
 
-**Fases:** 3, 6.
+**Fases:** 3, 6, 8.1.
 **Puede empezar:** día 1 con handlers y repositorio; la UI desde el día 2, cuando existan los stubs de ruta.
 
 **Documentación de contexto:**
-- `doc/1_PROJECT/PLAN_IMPLEMENTACION_FASES.md`: §1, §2.5, §4 → Fase 3, §4 → Fase 6.
-- `doc/1_PROJECT/ANALISIS_DE_REQUERIMIENTOS.md`: RF-03, RF-04, RF-07.
+- `doc/1_PROJECT/PLAN_IMPLEMENTACION_FASES.md`: §1, §2.5, §4 → Fase 3, §4 → Fase 6, §4 → Fase 8 (8.1).
+- `doc/1_PROJECT/ANALISIS_DE_REQUERIMIENTOS.md`: RF-03, RF-04, RF-06, RF-07.
 - Referencia de patrón: `lib/presentation/blocs/favorito/*`, `lib/data/repositories/favorito_repository_impl.dart`, `lib/data/datasources/remote/favorito_remote_datasource.dart`.
 
 **Indicaciones:**
@@ -67,15 +67,17 @@ Editor de Supabase** (el archivo ya está en el repo).
 4. Validar propiedad en repositorio y BLoC: solo el dueño edita/elimina; usar `PermissionFailure`.
 5. Fase 6: crear interfaz, data source, repositorio y BLoC de valoraciones; mover el insert inline de `lib/presentation/pages/productos/producto_detail_page.dart:518`.
 6. Permitir editar/eliminar la reseña propia y calcular promedio real.
+7. Fase 8.1: favoritos con persistencia y reactividad al iniciar/cerrar sesión, con estados vacío/error (RF-06).
 
-**Archivos propios:** `tienda_bloc.dart`, `producto_bloc.dart`, `tienda_repository.dart`, `producto_repository.dart`, `presentation/pages/vendedor/{mis_tiendas,mis_productos,tienda_form,producto_form}_page.dart`, `presentation/blocs/valoracion/*`, `data/**/valoracion*`, `producto_detail_page.dart`, `presentation/widgets/producto/detail/*`.
+**Archivos propios:** `tienda_bloc.dart`, `producto_bloc.dart`, `tienda_repository.dart`, `producto_repository.dart`, `presentation/pages/vendedor/{mis_tiendas,mis_productos,tienda_form,producto_form}_page.dart`, `presentation/blocs/valoracion/*`, `data/**/valoracion*`, `producto_detail_page.dart`, `presentation/widgets/producto/detail/*`, `presentation/blocs/favorito/*`, `presentation/pages/favoritos/*`.
 
-**Aceptación:** CRUD completo; un vendedor no puede tocar tiendas de otro; una reseña por usuario, editable y eliminable.
+**Aceptación:** CRUD completo; un vendedor no puede tocar tiendas de otro; una reseña por usuario, editable y eliminable; favoritos persisten y reaccionan a la sesión.
 
-### Tarea C — Notificaciones, organización e invitaciones
+### Tarea C — Organización, invitaciones y notificaciones
 
-**Fases:** 4, 5, 7 (condicional).
-**Puede empezar:** día 1 con la entidad y el repositorio; la UI desde el día 2. La migración `0006` la aplica A el día 1.
+**Fases:** 4, 5. **Fase 7 (push FCM):** stretch fuera de las 3 semanas.
+**Puede empezar:** día 1 con la entidad y el repositorio; la UI desde el día 2. La migración `0006` la aplica A.
+**Independencia:** C es dueño de **todo** el dominio de notificaciones (entidad, repositorio, BLoC, bandeja y los inserts de invitación). No se divide con D para evitar handoffs.
 
 **Documentación de contexto:**
 - `doc/1_PROJECT/PLAN_IMPLEMENTACION_FASES.md`: §2.2, §2.3, §2.4, §4 → Fase 4, §4 → Fase 5, §5.1, §5.2.
@@ -89,7 +91,7 @@ Editor de Supabase** (el archivo ya está en el repo).
 4. Implementar invitaciones: buscar por correo, validar que sea vendedor, que no sea uno mismo, que no pertenezca a otra organización y que no tenga invitación pendiente.
 5. Registrar `on<InviteToOrganizacion>`, `on<AcceptInvitation>` y `on<RejectInvitation>` en `lib/presentation/blocs/organizacion/organizacion_bloc.dart`.
 6. Insertar notificación en cada transición (`invitacion_organizacion`, `aceptacion_invitacion`, `rechazo_invitacion`).
-7. Fase 7 solo si las fases 4 y 5 están cerradas.
+7. Fase 7 solo si 4 y 5 están cerradas y sobra tiempo; no cuenta para el compromiso de 3 semanas.
 
 **Archivos propios:** `notificacion*`, `organizacion*`, `presentation/pages/vendedor/{mi_organizacion,invitaciones}_page.dart`, `presentation/widgets/organizacion/*`, `core/services/push_notification_service.dart`, `supabase/functions/send-push/*`, `0007_push.sql`.
 
@@ -97,34 +99,47 @@ Editor de Supabase** (el archivo ya está en el repo).
 
 ### Tarea D — Experiencia, QA y entrega
 
-**Fases:** 8, 9.
-**Puede empezar:** día 1 (la Fase 8 no depende de nadie).
+**Fases:** 8.2–8.6, 9. **Favoritos (8.1) pasa a B.**
+**Puede empezar:** día 1 (historial, compartir y mapa no dependen de nadie).
 
 **Documentación de contexto:**
 - `doc/1_PROJECT/PLAN_IMPLEMENTACION_FASES.md`: §4 → Fase 8, §4 → Fase 9, §7 (matriz de pruebas), §8 (riesgos).
-- `doc/1_PROJECT/ANALISIS_DE_REQUERIMIENTOS.md`: RF-06, RF-08, RF-09.2, RF-09.3, RF-10.
+- `doc/1_PROJECT/ANALISIS_DE_REQUERIMIENTOS.md`: RF-08, RF-09.2, RF-09.3, RF-10.
 
 **Indicaciones:**
-1. Favoritos: persistencia y reactividad al iniciar/cerrar sesión (RF-06).
-2. Historial local y limpieza de caché (RF-08.1).
-3. Compartir robusto, sin dejar la app cargando (RF-08.2).
-4. Mapa embebido con fallback al navegador (RF-08.3).
-5. Ajustes: tema persistente y limpiar caché (RF-09.2).
-6. Soporte, términos y privacidad (RF-09.3).
-7. Escribir y ejecutar la matriz de pruebas y la regresión.
-8. Preparar APK release, actualizar documentación y guion de demo.
+1. Historial local y limpieza de caché (RF-08.1).
+2. Compartir robusto, sin dejar la app cargando (RF-08.2).
+3. Mapa embebido con fallback al navegador (RF-08.3).
+4. Ajustes: tema persistente y limpiar caché (RF-09.2).
+5. Soporte, términos y privacidad (RF-09.3).
+6. Escribir la matriz de pruebas desde la semana 1 y ejecutar regresión continua.
+7. Fase 9: APK release, documentación y guion de demo.
 
-**Archivos propios:** `presentation/blocs/favorito/*`, `presentation/pages/favoritos/*`, `presentation/pages/historial/*`, `core/utils/share_service.dart`, `core/utils/app_utils.dart`, `presentation/pages/settings/*`, `presentation/pages/soporte/*`, `test/*`, documentos de cierre.
+**Archivos propios:** `presentation/pages/historial/*`, `core/utils/share_service.dart`, `core/utils/app_utils.dart`, `presentation/pages/settings/*`, `presentation/pages/soporte/*`, `test/*`, documentos de cierre.
 
-**Aceptación:** RF restantes validados, APK instalable y documentación sin referencias a Contabo.
+**Aceptación:** RF-08 y RF-09.2/09.3 validados, APK instalable y documentación sin referencias a Contabo.
 
 ### Cronograma paralelo (3 semanas)
 
 | Semana | A | B | C | D |
 |---|---|---|---|---|
-| 1 | Fase 1 | Fase 3 (handlers + UI) | Fase 4 + inicio Fase 5 | Fase 8 (favoritos/historial/share) + matriz |
-| 2 | Cierre Fase 1 + Fase 2 | Cierre Fase 3 + Fase 6 | Fase 5 (invitaciones) | Cierre Fase 8 + regresión |
-| 3 | Cierre Fase 2 + apoyo | Cierre Fase 6 + apoyo QA | Cierre Fase 5 (+ Fase 7) | Fase 9 (APK, docs, demo) |
+| 1 | Fase 1 | Fase 3 (handlers + UI) + Favoritos | Fase 4 + inicio Fase 5 | Historial + Compartir + Mapa + matriz |
+| 2 | Cierre Fase 1 + Fase 2 | Cierre Fase 3 + Fase 6 | Fase 5 (invitaciones) | Ajustes + Soporte + regresión |
+| 3 | Cierre Fase 2 + apoyo | Cierre Fase 6 + apoyo QA | Cierre Fase 5 (+ Fase 7 stretch) | Fase 9 (APK, docs, demo) |
+
+**Carga estimada:** A 11–13 días · B 10–13.5 · C 11–12 · D 9.5–12.5.
+
+### Reparto por archivos (para no pisarse)
+
+| Área | Dueño | Archivos clave |
+|---|---|---|
+| Router, DI y constantes | A (merge) | `app_router.dart`, `service_locator.dart`, `app_constants.dart` |
+| Identidad y admin | A | `auth_*`, `usuario.dart`, `presentation/pages/admin/*`, `plazoleta_repository*`, `categoria_repository*`, `usuario_repository*` |
+| Comercio y favoritos | B | `tienda_*`, `producto_*`, `valoracion*`, `favorito*`, `presentation/pages/vendedor/mis_*`, `producto_detail_page.dart` |
+| Organización y notificaciones | C | `organizacion*`, `notificacion*`, `presentation/pages/vendedor/{mi_organizacion,invitaciones}_page.dart`, `presentation/widgets/organizacion/*` |
+| Experiencia y QA | D | `historial*`, `share_service.dart`, `app_utils.dart`, `presentation/pages/settings/*`, `presentation/pages/soporte/*`, `test/*` |
+
+Si necesitas un cambio en un archivo ajeno, pídelo al dueño; no lo edites directamente.
 
 ### Reglas de código que aplican a las 4 tareas
 
