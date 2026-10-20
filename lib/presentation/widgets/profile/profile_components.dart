@@ -103,12 +103,10 @@ class ProfileGlassSection extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════
 class ProfileSignedOutContent extends StatelessWidget {
   final VoidCallback onSignIn;
-  final VoidCallback onContinueAsGuest;
 
   const ProfileSignedOutContent({
     super.key,
     required this.onSignIn,
-    required this.onContinueAsGuest,
   });
 
   @override
@@ -175,20 +173,6 @@ class ProfileSignedOutContent extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             ProfileShimmerButton(label: 'INICIAR SESIÓN', onTap: onSignIn),
-            const SizedBox(height: 14),
-            GestureDetector(
-              onTap: onContinueAsGuest,
-              child: Text(
-                'Continuar como invitado',
-                style: TextStyle(
-                  color: kGold.withValues(alpha: 0.80),
-                  fontSize: 14,
-                  decoration: TextDecoration.underline,
-                  decorationColor: kGold.withValues(alpha: 0.40),
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ),
           ],
         ),
       ),

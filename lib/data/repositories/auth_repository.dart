@@ -202,21 +202,39 @@ class AuthRepository implements AuthRepositoryInterface {
   }
 
   /// Verificar si el usuario tiene un rol específico
+  @override
   Future<bool> hasRole(String role) async {
     try {
-      final user = await getCurrentUser();
-      if (user == null) return false;
+      final roleId = currentRoleId;
+      if (roleId == null) return false;
 
-      // Aquí puedes implementar lógica para verificar roles
-      // Por ejemplo, verificar en la tabla de roles de Supabase
-      // final userRole = user['roles_id'];
-      // Implementar lógica específica según tu esquema de roles
-
-      return false; // Placeholder
+      final normalized = role.trim().toLowerCase();
+      switch (roleId) {
+        case 1:
+          return normalized == 'administrador' || normalized == 'admin';
+        case 2:
+          return normalized == 'vendedor' ||
+              normalized == 'emprendedor' ||
+              normalized == 'anfitrion' ||
+              normalized == 'anfitrión';
+        case 3:
+          return normalized == 'cliente';
+        default:
+          return false;
+      }
     } catch (e) {
       _logger.e('Error checking role: $e');
       return false;
     }
+  }
+
+  /// Obtener el id de rol del usuario autenticado
+  int? get currentRoleId {
+    final raw = _firebaseAuthService.userProfile?['roles_id'];
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw);
+    return null;
   }
 
   /// Verificar si el usuario es administrador

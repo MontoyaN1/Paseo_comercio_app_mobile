@@ -9,7 +9,6 @@ abstract class ImagenBase extends Equatable {
   final int id;
   final String urlOriginal;
   final String? urlR2;
-  final String? urlS3;
   final String? urlSupabase;
   final String nombreArchivo;
   final String extension;
@@ -38,7 +37,6 @@ abstract class ImagenBase extends Equatable {
     required this.id,
     required this.urlOriginal,
     this.urlR2,
-    this.urlS3,
     this.urlSupabase,
     required this.nombreArchivo,
     required this.extension,
@@ -67,7 +65,6 @@ abstract class ImagenBase extends Equatable {
   /// Obtener URL preferida según proveedor configurado
   String get urlPreferida {
     if (proveedorPrincipal == 'r2' && urlR2 != null) return urlR2!;
-    if (proveedorPrincipal == 's3' && urlS3 != null) return urlS3!;
     if (proveedorPrincipal == 'supabase' && urlSupabase != null) {
       return urlSupabase!;
     }
@@ -150,7 +147,6 @@ abstract class ImagenBase extends Equatable {
     id,
     urlOriginal,
     urlR2,
-    urlS3,
     urlSupabase,
     nombreArchivo,
     extension,
@@ -188,7 +184,6 @@ class ImagenTienda extends ImagenBase {
     required int id,
     required String urlOriginal,
     String? urlR2,
-    String? urlS3,
     String? urlSupabase,
     required String nombreArchivo,
     required String extension,
@@ -217,7 +212,6 @@ class ImagenTienda extends ImagenBase {
          id: id,
          urlOriginal: urlOriginal,
          urlR2: urlR2,
-         urlS3: urlS3,
          urlSupabase: urlSupabase,
          nombreArchivo: nombreArchivo,
          extension: extension,
@@ -254,7 +248,6 @@ class ImagenTienda extends ImagenBase {
     int? id,
     String? urlOriginal,
     String? urlR2,
-    String? urlS3,
     String? urlSupabase,
     String? nombreArchivo,
     String? extension,
@@ -284,7 +277,6 @@ class ImagenTienda extends ImagenBase {
       id: id ?? this.id,
       urlOriginal: urlOriginal ?? this.urlOriginal,
       urlR2: urlR2 ?? this.urlR2,
-      urlS3: urlS3 ?? this.urlS3,
       urlSupabase: urlSupabase ?? this.urlSupabase,
       nombreArchivo: nombreArchivo ?? this.nombreArchivo,
       extension: extension ?? this.extension,
@@ -322,7 +314,6 @@ class ImagenProducto extends ImagenBase {
     required int id,
     required String urlOriginal,
     String? urlR2,
-    String? urlS3,
     String? urlSupabase,
     required String nombreArchivo,
     required String extension,
@@ -352,7 +343,6 @@ class ImagenProducto extends ImagenBase {
          id: id,
          urlOriginal: urlOriginal,
          urlR2: urlR2,
-         urlS3: urlS3,
          urlSupabase: urlSupabase,
          nombreArchivo: nombreArchivo,
          extension: extension,
@@ -392,7 +382,6 @@ class ImagenProducto extends ImagenBase {
     int? id,
     String? urlOriginal,
     String? urlR2,
-    String? urlS3,
     String? urlSupabase,
     String? nombreArchivo,
     String? extension,
@@ -423,7 +412,6 @@ class ImagenProducto extends ImagenBase {
       id: id ?? this.id,
       urlOriginal: urlOriginal ?? this.urlOriginal,
       urlR2: urlR2 ?? this.urlR2,
-      urlS3: urlS3 ?? this.urlS3,
       urlSupabase: urlSupabase ?? this.urlSupabase,
       nombreArchivo: nombreArchivo ?? this.nombreArchivo,
       extension: extension ?? this.extension,
@@ -461,7 +449,6 @@ class ImagenPlazoleta extends ImagenBase {
     required int id,
     required String urlOriginal,
     String? urlR2,
-    String? urlS3,
     String? urlSupabase,
     required String nombreArchivo,
     required String extension,
@@ -490,7 +477,6 @@ class ImagenPlazoleta extends ImagenBase {
          id: id,
          urlOriginal: urlOriginal,
          urlR2: urlR2,
-         urlS3: urlS3,
          urlSupabase: urlSupabase,
          nombreArchivo: nombreArchivo,
          extension: extension,
@@ -527,7 +513,6 @@ class ImagenPlazoleta extends ImagenBase {
     int? id,
     String? urlOriginal,
     String? urlR2,
-    String? urlS3,
     String? urlSupabase,
     String? nombreArchivo,
     String? extension,
@@ -557,7 +542,6 @@ class ImagenPlazoleta extends ImagenBase {
       id: id ?? this.id,
       urlOriginal: urlOriginal ?? this.urlOriginal,
       urlR2: urlR2 ?? this.urlR2,
-      urlS3: urlS3 ?? this.urlS3,
       urlSupabase: urlSupabase ?? this.urlSupabase,
       nombreArchivo: nombreArchivo ?? this.nombreArchivo,
       extension: extension ?? this.extension,

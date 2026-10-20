@@ -164,7 +164,6 @@ class _ProfilePageState extends State<ProfilePage>
                       } else {
                         return ProfileSignedOutContent(
                           onSignIn: () => Navigator.pop(context),
-                          onContinueAsGuest: () => Navigator.pop(context),
                         );
                       }
                     },

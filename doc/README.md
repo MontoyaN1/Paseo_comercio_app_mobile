@@ -15,6 +15,7 @@ doc/
 │   ├── PROGRESO_Y_PLAN.md              # Estado actual y roadmap
 │   ├── MOVIL_PLAN.md                   # Plan de implementación móvil
 │   └── FUNCIONALIDADES_PENDIENTES.md    # Catálogo de features pendientes
+│   └── PLAN_IMPLEMENTACION_FASES.md     # Plan por fases y división en 4 personas
 │
 ├── 2_ARCHITECTURE/                    # Arquitectura técnica
 │   ├── README.md                       # Índice de arquitectura
@@ -60,6 +61,7 @@ doc/
 | **PROGRESO_Y_PLAN.md** | Estado actual del proyecto, fases completadas, próximo roadmap |
 | **MOVIL_PLAN.md** | Plan detallado de implementación móvil (Fases 1-7) |
 | **FUNCIONALIDADES_PENDIENTES.md** | Catálogo completo: pendientes de testing, pendientes de implementar, postergadas |
+| **PLAN_IMPLEMENTACION_FASES.md** | Plan técnico por fases/subfases, tareas por archivo, reglas de organización e invitaciones y división en 4 personas |
 
 ### 2_ARCHITECTURE - Arquitectura
 

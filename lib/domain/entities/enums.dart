@@ -363,7 +363,6 @@ enum EstadoConexion {
 /// Tipo de proveedor de imágenes
 enum TipoProveedorImagen {
   r2('r2'),
-  s3('s3'),
   supabase('supabase');
 
   final String value;

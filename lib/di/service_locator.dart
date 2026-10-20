@@ -11,7 +11,6 @@ import '../core/utils/firebase_auth_service.dart';
 import '../core/utils/share_service.dart';
 import '../core/utils/app_utils_simple.dart';
 import '../data/datasources/remote/supabase_client.dart';
-import '../data/datasources/remote/s3_client.dart';
 import '../data/datasources/local/local_database.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/tienda_repository.dart';
@@ -73,9 +72,8 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
     r2SecretAccessKey: appConfig.cloudflareR2SecretAccessKey,
     r2BucketName: appConfig.cloudflareR2BucketName,
     r2AccountId: appConfig.cloudflareAccountId,
-    s3BaseUrl: appConfig.s3BaseUrl,
     supabaseUrl: appConfig.supabaseUrl,
-    supabaseBucket: appConfig.awsS3BucketName,
+    supabaseBucket: 'imagenes',
   );
   getIt.registerSingleton<ImageService>(imageService);
 
@@ -101,18 +99,6 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
 
   // Registrar AvatarProvider para gestión de avatar de usuario
   getIt.registerSingleton<AvatarProvider>(AvatarProvider());
-
-  // Registrar servicio S3 si está configurado
-  if (appConfig.isS3Configured && appConfig.awsAccessKeyId.isNotEmpty) {
-    final s3Service = S3ImageService(
-      endpoint: appConfig.s3EndpointUrl,
-      bucketName: appConfig.awsS3BucketName,
-      accessKey: appConfig.awsAccessKeyId,
-      secretKey: appConfig.awsSecretAccessKey,
-      region: appConfig.awsRegion,
-    );
-    getIt.registerSingleton<S3ImageService>(s3Service);
-  }
 
   // Inicializar base de datos local
   final localDatabase = LocalCacheService();
@@ -177,16 +163,6 @@ Future<void> setupServiceLocator(AppConfig appConfig) async {
       supabaseClient: getIt<SupabaseClientService>(),
       cacheService: getIt<CacheService>(),
       connectivityService: getIt<ConnectivityService>(),
-    ),
-  );
-
-  getIt.registerLazySingleton<ImagenRepository>(
-    () => ImagenRepository(
-      supabaseClient: getIt<SupabaseClientService>(),
-      cacheService: getIt<CacheService>(),
-      imageService: getIt<ImageService>(),
-      s3Service:
-          getIt.isRegistered<S3ImageService>() ? getIt<S3ImageService>() : null,
     ),
   );
 

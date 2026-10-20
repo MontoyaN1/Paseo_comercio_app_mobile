@@ -1,11 +1,14 @@
 // lib/core/routing/app_router.dart
 
+import 'dart:async';
+
 import '../../presentation/widgets/shared/custom_app_bar.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../utils/auth_state.dart';
 import '../../core/utils/firebase_auth_service.dart';
 import '../../di/service_locator.dart';
 import '../../presentation/pages/splash/splash_page.dart';
@@ -24,12 +27,33 @@ import '../../presentation/pages/historial/historial_page.dart';
 import '../../presentation/pages/settings/terminos_page.dart';
 import '../../presentation/pages/settings/privacidad_page.dart';
 import '../../domain/entities/organizacion.dart';
+import '../../presentation/pages/admin/admin_shell_page.dart';
+import '../../presentation/pages/admin/admin_plazoletas_page.dart';
+import '../../presentation/pages/admin/admin_plazoleta_form_page.dart';
+import '../../presentation/pages/admin/admin_categorias_page.dart';
+import '../../presentation/pages/admin/admin_categoria_form_page.dart';
+import '../../presentation/pages/admin/admin_usuarios_page.dart';
+import '../../presentation/pages/admin/admin_tiendas_page.dart';
+import '../../presentation/pages/admin/admin_organizaciones_page.dart';
+import '../../presentation/pages/vendedor/vendedor_home_page.dart';
+import '../../presentation/pages/vendedor/mis_tiendas_page.dart';
+import '../../presentation/pages/vendedor/tienda_form_page.dart';
+import '../../presentation/pages/vendedor/mis_productos_page.dart';
+import '../../presentation/pages/vendedor/producto_form_page.dart';
+import '../../presentation/pages/vendedor/mi_organizacion_page.dart';
+import '../../presentation/pages/vendedor/invitaciones_page.dart';
+import '../../presentation/pages/notificaciones/notificaciones_page.dart';
 
 /// Configuración de rutas de la aplicación usando GoRouter
 class AppRouter {
+  static final _AuthRefreshListenable _refreshListenable =
+      _AuthRefreshListenable();
+
   static final GoRouter router = GoRouter(
     debugLogDiagnostics: true,
     initialLocation: '/',
+    refreshListenable: _refreshListenable,
+    redirect: _redirect,
     routes: [
       // Ruta raíz - pantalla de splash
       GoRoute(
@@ -459,6 +483,217 @@ class AppRouter {
         },
       ),
 
+      // Administración
+      GoRoute(
+        path: '/admin',
+        name: 'admin',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminShellPage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/admin/plazoletas',
+        name: 'admin_plazoletas',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminPlazoletasPage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/admin/plazoletas/nueva',
+        name: 'admin_plazoleta_nueva',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminPlazoletaFormPage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/admin/plazoletas/:id/editar',
+        name: 'admin_plazoleta_editar',
+        pageBuilder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '');
+          return MaterialPage<void>(
+            key: state.pageKey,
+            child: AdminPlazoletaFormPage(plazoletaId: id),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/admin/categorias',
+        name: 'admin_categorias',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminCategoriasPage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/admin/categorias/nueva',
+        name: 'admin_categoria_nueva',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminCategoriaFormPage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/admin/categorias/:id/editar',
+        name: 'admin_categoria_editar',
+        pageBuilder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '');
+          return MaterialPage<void>(
+            key: state.pageKey,
+            child: AdminCategoriaFormPage(categoriaId: id),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/admin/usuarios',
+        name: 'admin_usuarios',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminUsuariosPage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/admin/tiendas',
+        name: 'admin_tiendas',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminTiendasPage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/admin/organizaciones',
+        name: 'admin_organizaciones',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminOrganizacionesPage(),
+            ),
+      ),
+
+      // Panel del vendedor
+      GoRoute(
+        path: '/vendedor',
+        name: 'vendedor',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const VendedorHomePage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/vendedor/tiendas',
+        name: 'vendedor_tiendas',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const MisTiendasPage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/vendedor/tiendas/nueva',
+        name: 'vendedor_tienda_nueva',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const TiendaFormPage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/vendedor/tiendas/:id/editar',
+        name: 'vendedor_tienda_editar',
+        pageBuilder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '');
+          return MaterialPage<void>(
+            key: state.pageKey,
+            child: TiendaFormPage(tiendaId: id),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/vendedor/productos',
+        name: 'vendedor_productos',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const MisProductosPage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/vendedor/productos/nuevo',
+        name: 'vendedor_producto_nuevo',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const ProductoFormPage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/vendedor/productos/:id/editar',
+        name: 'vendedor_producto_editar',
+        pageBuilder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '');
+          return MaterialPage<void>(
+            key: state.pageKey,
+            child: ProductoFormPage(productoId: id),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/vendedor/organizacion',
+        name: 'vendedor_organizacion',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const MiOrganizacionPage(),
+            ),
+      ),
+
+      GoRoute(
+        path: '/vendedor/invitaciones',
+        name: 'vendedor_invitaciones',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const InvitacionesPage(),
+            ),
+      ),
+
+      // Notificaciones
+      GoRoute(
+        path: '/notificaciones',
+        name: 'notificaciones',
+        pageBuilder:
+            (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const NotificacionesPage(),
+            ),
+      ),
+
       // Ruta de error 404
       GoRoute(
         path: '/error',
@@ -543,21 +778,77 @@ class AppRouter {
           ),
         ),
 
-    // Redirecciones
-    redirect: (context, state) {
-      // TODO: Implementar lógica de redirección basada en autenticación
-      // Por ejemplo:
-      // - Si el usuario no está autenticado y trata de acceder a rutas protegidas
-      // - Si el usuario está autenticado y trata de acceder a login/register
-
-      return null; // No redirigir
-    },
-
     // Observador de rutas
     observers: [
       // TODO: Agregar observadores para analytics o logging
     ],
   );
+
+  static int? _currentRoleId() {
+    try {
+      return getIt<FirebaseAuthService>().currentRoleId;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _homeForRole(int roleId) {
+    switch (roleId) {
+      case 1:
+        return '/admin';
+      case 2:
+        return '/vendedor';
+      default:
+        return '/plazoletas';
+    }
+  }
+
+  static String? _redirect(BuildContext context, GoRouterState state) {
+    final location = state.uri.path;
+
+    try {
+      if (getIt<FirebaseAuthService>().isSigningOut) {
+        return null;
+      }
+    } catch (_) {}
+
+    final user = FirebaseAuth.instance.currentUser;
+    final isPublic =
+        location == '/' ||
+        location == '/splash' ||
+        location == '/login' ||
+        location == '/error';
+
+    if (user == null) {
+      return isPublic ? null : '/login';
+    }
+
+    final roleId = _currentRoleId();
+
+    if (roleId == null) {
+      if (location == '/' || location == '/splash') {
+        return null;
+      }
+      return '/splash';
+    }
+
+    final home = _homeForRole(roleId);
+
+    if (location == '/' || location == '/splash' || location == '/login') {
+      return home;
+    }
+
+    if (roleId == 1) {
+      if (location == '/error') return null;
+      if (!location.startsWith('/admin')) return '/admin';
+      return null;
+    }
+
+    if (location.startsWith('/admin')) return home;
+    if (location.startsWith('/vendedor') && roleId != 2) return home;
+
+    return null;
+  }
 
   /// Método auxiliar para navegar a una ruta
   static void go(BuildContext context, String location, {Object? extra}) {
@@ -633,5 +924,29 @@ class AppRouter {
   /// Obtener extra de la ruta actual
   static Object? currentExtra(BuildContext context) {
     return GoRouterState.of(context).extra;
+  }
+}
+
+class _AuthRefreshListenable extends ChangeNotifier {
+  StreamSubscription<AuthState>? _authSubscription;
+  StreamSubscription<void>? _profileSubscription;
+
+  _AuthRefreshListenable() {
+    try {
+      final auth = getIt<FirebaseAuthService>();
+      _authSubscription = auth.onAuthStateChanged.listen((_) {
+        notifyListeners();
+      });
+      _profileSubscription = auth.onProfileChanged.listen((_) {
+        notifyListeners();
+      });
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    _profileSubscription?.cancel();
+    super.dispose();
   }
 }

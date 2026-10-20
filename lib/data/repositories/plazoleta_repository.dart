@@ -4,8 +4,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:logger/logger.dart';
 
-import '../../core/app/app_config.dart';
-
 import '../datasources/remote/supabase_client.dart';
 
 import '../../domain/repositories/plazoleta_repository_interface.dart';
@@ -23,7 +21,6 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
   final ConnectivityService _connectivityService;
   final CacheService _cacheService;
   final Logger _logger;
-  final AppConfig _appConfig;
 
   PlazoletaRepository({
     required SupabaseClientService supabaseClient,
@@ -32,7 +29,6 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
   }) : _supabaseClient = supabaseClient,
        _connectivityService = connectivityService,
        _cacheService = cacheService,
-       _appConfig = AppConfig(),
        _logger = Logger(
          level: Level.warning,
          printer: PrettyPrinter(
@@ -473,14 +469,6 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
             final esPrincipal = tipoImagenStr == 'principal';
             String urlOriginal = data['url_imagen'] as String? ?? '';
 
-            // Transformar URL de Contabo a Cloudflare R2 para todas las imágenes
-            if (urlOriginal.contains('contabostorage.com')) {
-              urlOriginal = _transformContaboUrlToR2(urlOriginal);
-            }
-
-            // Reemplazar HTTPS con HTTP solo para URLs de Contabo Storage
-            urlOriginal = _convertHttpsToHttp(urlOriginal) ?? urlOriginal;
-
             // Extraer nombre de archivo y extensión de la URL
             String nombreArchivo = 'imagen_plazoleta_${data['id']}';
             String extension = 'jpg';
@@ -506,22 +494,6 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
             String? urlThumb = data['url_thumb'] as String?;
             String? urlMedium = data['url_medium'] as String?;
             String? urlLarge = data['url_large'] as String?;
-
-            // Reemplazar HTTPS con HTTP en URLs de variantes y transformar Contabo a R2
-            urlThumb = _convertHttpsToHttp(urlThumb);
-            urlMedium = _convertHttpsToHttp(urlMedium);
-            urlLarge = _convertHttpsToHttp(urlLarge);
-
-            // Transformar URLs de Contabo a R2
-            if (urlThumb != null && urlThumb.contains('contabostorage.com')) {
-              urlThumb = _transformContaboUrlToR2(urlThumb);
-            }
-            if (urlMedium != null && urlMedium.contains('contabostorage.com')) {
-              urlMedium = _transformContaboUrlToR2(urlMedium);
-            }
-            if (urlLarge != null && urlLarge.contains('contabostorage.com')) {
-              urlLarge = _transformContaboUrlToR2(urlLarge);
-            }
 
             if (urlThumb != null || urlMedium != null || urlLarge != null) {
               urlsVariantes = {};
@@ -555,23 +527,10 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
                     datosVariante is Map<String, dynamic>) {
                   final urlVariante = datosVariante['url'] as String?;
                   if (urlVariante != null && urlVariante.isNotEmpty) {
-                    // Transformar URL de Contabo a R2 si es necesario
-                    String urlTransformada = urlVariante;
-                    if (urlTransformada.contains('contabostorage.com')) {
-                      urlTransformada = _transformContaboUrlToR2(
-                        urlTransformada,
-                      );
-                    }
-                    // Reemplazar HTTPS con HTTP en URLs del JSON
-                    final urlVarianteHttp = _convertHttpsToHttp(
-                      urlTransformada,
-                    );
                     urlsVariantes ??= {};
-                    if (urlVarianteHttp != null) {
-                      urlsVariantes[nombreVariante] = urlVarianteHttp;
-                    }
+                    urlsVariantes[nombreVariante] = urlVariante;
                     _logger.i(
-                      'Agregada variante $nombreVariante desde JSON: $urlVarianteHttp',
+                      'Agregada variante $nombreVariante desde JSON: $urlVariante',
                     );
                   }
 
@@ -702,14 +661,6 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         final esPrincipal = tipoImagenStr == 'principal';
         String urlOriginal = data['url_imagen'] as String? ?? '';
 
-        // Transformar URL de Contabo a Cloudflare R2 para todas las imágenes
-        if (urlOriginal.contains('contabostorage.com')) {
-          urlOriginal = _transformContaboUrlToR2(urlOriginal);
-        }
-
-        // Reemplazar HTTPS con HTTP solo para URLs de Contabo Storage
-        urlOriginal = _convertHttpsToHttp(urlOriginal) ?? urlOriginal;
-
         // Extraer nombre de archivo y extensión de la URL
         String nombreArchivo = 'imagen_plazoleta_${data['id']}';
         String extension = 'jpg';
@@ -735,22 +686,6 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
         String? urlThumb = data['url_thumb'] as String?;
         String? urlMedium = data['url_medium'] as String?;
         String? urlLarge = data['url_large'] as String?;
-
-        // Reemplazar HTTPS con HTTP en URLs de variantes y transformar Contabo a R2
-        urlThumb = _convertHttpsToHttp(urlThumb);
-        urlMedium = _convertHttpsToHttp(urlMedium);
-        urlLarge = _convertHttpsToHttp(urlLarge);
-
-        // Transformar URLs de Contabo a R2
-        if (urlThumb != null && urlThumb.contains('contabostorage.com')) {
-          urlThumb = _transformContaboUrlToR2(urlThumb);
-        }
-        if (urlMedium != null && urlMedium.contains('contabostorage.com')) {
-          urlMedium = _transformContaboUrlToR2(urlMedium);
-        }
-        if (urlLarge != null && urlLarge.contains('contabostorage.com')) {
-          urlLarge = _transformContaboUrlToR2(urlLarge);
-        }
 
         if (urlThumb != null || urlMedium != null || urlLarge != null) {
           urlsVariantes = {};
@@ -784,19 +719,10 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
                 datosVariante is Map<String, dynamic>) {
               final urlVariante = datosVariante['url'] as String?;
               if (urlVariante != null && urlVariante.isNotEmpty) {
-                // Transformar URL de Contabo a R2 si es necesario
-                String urlTransformada = urlVariante;
-                if (urlTransformada.contains('contabostorage.com')) {
-                  urlTransformada = _transformContaboUrlToR2(urlTransformada);
-                }
-                // Reemplazar HTTPS con HTTP en URLs del JSON
-                final urlVarianteHttp = _convertHttpsToHttp(urlTransformada);
                 urlsVariantes ??= {};
-                if (urlVarianteHttp != null) {
-                  urlsVariantes[nombreVariante] = urlVarianteHttp;
-                }
+                urlsVariantes[nombreVariante] = urlVariante;
                 _logger.i(
-                  'Agregada variante $nombreVariante desde JSON: $urlVarianteHttp',
+                  'Agregada variante $nombreVariante desde JSON: $urlVariante',
                 );
               }
 
@@ -1062,22 +988,6 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
             response
                 .map((json) {
                   try {
-                    // Transformar URLs de imágenes de Contabo a Cloudflare R2
-                    final imagenes = json['imagen_productos'] as List<dynamic>?;
-                    if (imagenes != null && imagenes.isNotEmpty) {
-                      for (final imagen in imagenes) {
-                        if (imagen is Map<String, dynamic>) {
-                          final urlOriginal = imagen['url_imagen'] as String?;
-                          if (urlOriginal != null && urlOriginal.isNotEmpty) {
-                            if (urlOriginal.contains('contabostorage.com')) {
-                              imagen['url_imagen'] = _transformContaboUrlToR2(
-                                urlOriginal,
-                              );
-                            }
-                          }
-                        }
-                      }
-                    }
                     return Producto.fromJson(json);
                   } catch (e, stackTrace) {
                     _logger.e(
@@ -1720,65 +1630,6 @@ class PlazoletaRepository implements PlazoletaRepositoryInterface {
       _logger.e('=== ERROR en getUltimaActualizacionPlazoletas ===');
       _logger.e('Error: $e', error: e, stackTrace: stackTrace);
       return null;
-    }
-  }
-
-  String? _convertHttpsToHttp(String? url) {
-    if (url == null) return null;
-    if (url.isEmpty) return url;
-    // Solo convertir HTTPS a HTTP para URLs de Contabo Storage
-    if (url.startsWith('https://') && url.contains('contabostorage.com')) {
-      return url.replaceFirst('https://', 'http://');
-    }
-    return url;
-  }
-
-  /// Transforma una URL de Contabo Storage a Cloudflare R2
-  /// Ejemplo: https://usc1.contabostorage.com/paseocomercio/plazoletas/1771266396412-996725795.gif
-  ///          → https://[cloudflareR2PublicUrl]/plazoletas/1771266396412-996725795.gif
-  String _transformContaboUrlToR2(String contaboUrl) {
-    try {
-      if (_appConfig.cloudflareR2PublicUrl.isEmpty) {
-        _logger.w('Cloudflare R2 no configurado, manteniendo URL original');
-        return contaboUrl;
-      }
-
-      final uri = Uri.parse(contaboUrl);
-      final pathSegments = uri.pathSegments;
-
-      // Buscar el índice de 'paseocomercio' en la ruta
-      final paseocomercioIndex = pathSegments.indexWhere(
-        (segment) => segment == 'paseocomercio',
-      );
-      if (paseocomercioIndex == -1 ||
-          paseocomercioIndex >= pathSegments.length - 1) {
-        _logger.w('URL de Contabo no tiene formato esperado: $contaboUrl');
-        return contaboUrl;
-      }
-
-      // Construir ruta relativa después de 'paseocomercio'
-      final relativePath = pathSegments
-          .sublist(paseocomercioIndex + 1)
-          .join('/');
-
-      // Normalizar URL base eliminando barra final si existe
-      String baseUrl = _appConfig.cloudflareR2PublicUrl.trim();
-      if (baseUrl.endsWith('/')) {
-        baseUrl = baseUrl.substring(0, baseUrl.length - 1);
-      }
-
-      // Construir URL de R2
-      final r2Url = '$baseUrl/$relativePath';
-
-      _logger.i('URL transformada de Contabo a R2: $contaboUrl → $r2Url');
-      return r2Url;
-    } catch (e, stackTrace) {
-      _logger.e(
-        'Error transformando URL de Contabo a R2: $e',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      return contaboUrl;
     }
   }
 }

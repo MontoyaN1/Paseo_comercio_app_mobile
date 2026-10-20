@@ -534,7 +534,7 @@ class SupabaseClientService {
         'ultimo_login': DateTime.now().toIso8601String(),
         'perfil_publico': true,
         'estado_usuario': 'activo',
-        'roles_id': 1, // Valor por defecto para cliente
+        'roles_id': 3, // Valor por defecto para cliente
       };
 
       // Primero intentar con avatar_url si está presente y no está vacío

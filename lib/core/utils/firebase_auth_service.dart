@@ -123,14 +123,34 @@ class FirebaseAuthService {
   /// Verificar si el usuario está autenticado
   bool get isAuthenticated => _currentState == AuthState.authenticated;
 
-  /// Verificar si el usuario es invitado
-  bool get isGuest => _currentState == AuthState.guest;
-
   /// Obtener usuario actual de Firebase
   User? get currentUser => _currentUser;
 
   /// Obtener perfil del usuario actual
   Map<String, dynamic>? get userProfile => _userProfile;
+
+  /// Obtener el id de rol del usuario actual (1 admin, 2 vendedor, 3 cliente)
+  int? get currentRoleId {
+    final raw = _userProfile?['roles_id'];
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw);
+    return null;
+  }
+
+  /// Obtener el nombre del rol del usuario actual
+  String? get currentRoleName {
+    switch (currentRoleId) {
+      case 1:
+        return 'administrador';
+      case 2:
+        return 'vendedor';
+      case 3:
+        return 'cliente';
+      default:
+        return null;
+    }
+  }
 
   /// Obtener ID del usuario actual
   String? get currentUserId => _currentUser?.uid;
@@ -587,35 +607,6 @@ class FirebaseAuthService {
     } finally {
       // Siempre resetting el flag al terminar
       _isSigningInWithMicrosoft = false;
-    }
-  }
-
-  /// Iniciar sesión como invitado
-  Future<Result<void, Exception>> signInAsGuest() async {
-    try {
-      // Crear usuario anónimo en Firebase
-      final userCredential = await _auth.signInAnonymously();
-
-      if (userCredential.user != null) {
-        // Sincronizar con Supabase
-        await _syncUserWithSupabase(userCredential.user!);
-        await _loadUserProfile(userCredential.user!.uid);
-        await _updateAuthState(AuthState.authenticated);
-        return Result.success(null);
-      } else {
-        return Result.error(
-          AuthException(message: 'Error al crear usuario anónimo'),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      return Result.error(_handleFirebaseAuthError(e));
-    } catch (error) {
-      return Result.error(
-        AuthException(
-          message: 'Error al iniciar sesión como invitado',
-          cause: error,
-        ),
-      );
     }
   }
 

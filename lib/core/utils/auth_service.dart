@@ -73,9 +73,6 @@ class AuthService {
   /// Verificar si el usuario está autenticado
   bool get isAuthenticated => _currentState == AuthState.authenticated;
 
-  /// Verificar si el usuario es invitado
-  bool get isGuest => _currentState == AuthState.guest;
-
   /// Obtener usuario actual
   User? get currentUser => _currentUser;
 
@@ -190,21 +187,6 @@ class AuthService {
     } catch (error) {
       return Result.error(
         AuthException(message: 'Error al registrar usuario', cause: error),
-      );
-    }
-  }
-
-  /// Iniciar sesión como invitado
-  Future<Result<void, Exception>> signInAsGuest() async {
-    try {
-      await _updateAuthState(AuthState.guest);
-      return Result.success(null);
-    } catch (error) {
-      return Result.error(
-        AuthException(
-          message: 'Error al iniciar sesión como invitado',
-          cause: error,
-        ),
       );
     }
   }

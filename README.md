@@ -3,6 +3,138 @@
 Aplicación Flutter para el Centro Comercial Virtual "Paseo del Comercio". 
 Arquitectura Clean Architecture con integración Supabase, Clerk y Cloudflare R2.
 
+> **Vigencia:** el plan normativo es
+> [`doc/1_PROJECT/PLAN_IMPLEMENTACION_FASES.md`](doc/1_PROJECT/PLAN_IMPLEMENTACION_FASES.md).
+> Las secciones históricas de este README (Clerk, Contabo, 22 tablas, 92%) están desactualizadas:
+> el proyecto usa Firebase Auth, Cloudflare R2 y PostgreSQL en Supabase.
+
+## TRABAJO EN PARALELO — 4 TAREAS
+
+**Sí se puede trabajar en simultáneo**, siempre que el día 1 se ejecute la **Fase 0.5 — Contratos**
+(~1 día, la hace la Persona A). Sin esa fase hay cinco cuellos de botella reales:
+`lib/core/routing/app_router.dart`, `lib/di/service_locator.dart`,
+`lib/core/constants/app_constants.dart`, el modo invitado y la migración `0006`.
+
+### Reglas para no bloquearse
+
+| Regla | Detalle |
+|---|---|
+| Fase 0.5 primero | A elimina el modo invitado, activa `hasRole()`, deja todas las rutas con stubs de página y aplica `0006`. |
+| Nombres finales desde el día 1 | Los stubs usan las clases definitivas (`MisTiendasPage`, `MiOrganizacionPage`, `NotificacionesPage`, etc.). Cada dueño rellena el cuerpo; **nadie edita el router después**. |
+| Un dueño por archivo caliente | `app_router.dart`, `service_locator.dart` y `app_constants.dart` los mergea solo A. |
+| DI sin conflictos | Cada dueño agrega su bloque de registro al final de la sección que le corresponde; A resuelve el merge. |
+| Migraciones | Solo A las aplica en Supabase. C diseña las reglas de invitación y las revisa. |
+| Ramas | `feat/a-nucleo`, `feat/b-comercio`, `feat/c-organizacion`, `feat/d-experiencia`. |
+| PR | `flutter analyze` sin errores + revisión cruzada. |
+| Documentos prohibidos | No editar `doc/2_ARCHITECTURE/*`. |
+
+### Tarea A — Núcleo, roles y administración
+
+**Fases:** 0.5, 1, 2.
+**Puede empezar:** día 1, sin esperar a nadie.
+
+**Documentación de contexto:**
+- `doc/1_PROJECT/PLAN_IMPLEMENTACION_FASES.md`: §1, §2.1, §2.2, §4 → Fase 1, §4 → Fase 2, §5.1.
+- `doc/1_PROJECT/ANALISIS_DE_REQUERIMIENTOS.md`: RF-01, RF-02.
+- `doc/2_ARCHITECTURE/ESTRUCTURA_PROYECTO.md`: capas, DI y routing (solo lectura).
+- `doc/AGENTS.md`: comandos y estilo (verificar; puede estar desactualizado).
+
+**Indicaciones:**
+1. Día 1: eliminar el modo invitado en `lib/core/utils/auth_state.dart`, `auth_service.dart`, `firebase_auth_service.dart`, `lib/core/constants/app_constants.dart:166`, `lib/presentation/widgets/profile/profile_components.dart:106`, `lib/presentation/pages/profile/profile_page.dart:167`, `lib/presentation/blocs/favorito/favorito_bloc.dart:47`; borrar `lib/core/utils/auth_service_simple.dart`.
+2. Día 1: implementar `hasRole()` real en `lib/data/repositories/auth_repository.dart:205` y exponer el rol en `AuthBloc`.
+3. Día 1: dejar en `lib/core/routing/app_router.dart` todas las rutas de las 4 tareas con stubs.
+4. Día 1: aplicar la migración `supabase/migrations/0006_organizacion_invitaciones.sql`.
+5. Fase 1: redirección por rol y guard estricto de `/admin`.
+6. Fase 2: CRUD de plazoletas, implementar `CategoriaRepository`, panel admin y listados simples.
+
+**Archivos propios:** `auth_*`, `usuario.dart`, `plazoleta_repository*`, `categoria_repository.dart`, `usuario_repository*`, `presentation/pages/admin/*`, `app_router.dart`, `service_locator.dart`, `app_constants.dart`.
+
+**Aceptación:** cliente → catálogo, vendedor → `/vendedor`, admin → `/admin`; sin “continuar como invitado”; CRUD admin funcional.
+
+### Tarea B — Comercio: tiendas, productos y valoraciones
+
+**Fases:** 3, 6.
+**Puede empezar:** día 1 con handlers y repositorio; la UI desde el día 2, cuando existan los stubs de ruta.
+
+**Documentación de contexto:**
+- `doc/1_PROJECT/PLAN_IMPLEMENTACION_FASES.md`: §1, §2.5, §4 → Fase 3, §4 → Fase 6.
+- `doc/1_PROJECT/ANALISIS_DE_REQUERIMIENTOS.md`: RF-03, RF-04, RF-07.
+- Referencia de patrón: `lib/presentation/blocs/favorito/*`, `lib/data/repositories/favorito_repository_impl.dart`, `lib/data/datasources/remote/favorito_remote_datasource.dart`.
+
+**Indicaciones:**
+1. Registrar `on<TiendaCreateRequested>`, `on<TiendaUpdateRequested>`, `on<TiendaDeleteRequested>` y `on<TiendaByPropietarioRequested>` en `lib/presentation/blocs/tienda/tienda_bloc.dart` (hoy los eventos existen pero no están registrados).
+2. Hacer lo mismo con los eventos CRUD de `lib/presentation/blocs/producto/producto_bloc.dart`.
+3. Construir formularios, subida de imágenes con `lib/core/utils/image_service.dart:199` y pantallas “Mis tiendas” / “Mis productos”.
+4. Validar propiedad en repositorio y BLoC: solo el dueño edita/elimina; usar `PermissionFailure`.
+5. Fase 6: crear interfaz, data source, repositorio y BLoC de valoraciones; mover el insert inline de `lib/presentation/pages/productos/producto_detail_page.dart:518`.
+6. Permitir editar/eliminar la reseña propia y calcular promedio real.
+
+**Archivos propios:** `tienda_bloc.dart`, `producto_bloc.dart`, `tienda_repository.dart`, `producto_repository.dart`, `presentation/pages/vendedor/{mis_tiendas,mis_productos,tienda_form,producto_form}_page.dart`, `presentation/blocs/valoracion/*`, `data/**/valoracion*`, `producto_detail_page.dart`, `presentation/widgets/producto/detail/*`.
+
+**Aceptación:** CRUD completo; un vendedor no puede tocar tiendas de otro; una reseña por usuario, editable y eliminable.
+
+### Tarea C — Notificaciones, organización e invitaciones
+
+**Fases:** 4, 5, 7 (condicional).
+**Puede empezar:** día 1 con la entidad y el repositorio; la UI desde el día 2. La migración `0006` la aplica A el día 1.
+
+**Documentación de contexto:**
+- `doc/1_PROJECT/PLAN_IMPLEMENTACION_FASES.md`: §2.2, §2.3, §2.4, §4 → Fase 4, §4 → Fase 5, §5.1, §5.2.
+- `doc/1_PROJECT/ANALISIS_DE_REQUERIMIENTOS.md`: RF-05, RF-09.1.
+- `supabase/migrations/0002_tables.sql` y `0005_seed.sql`: columnas reales de `notificacion`, `organizacion` y `miembros_organizacion`.
+
+**Indicaciones:**
+1. Alinear `lib/domain/entities/notificacion.dart` con la tabla real (`destinatario_id`, `asunto`, `created_at`, `accion_url`, `referencia_id`, `referencia_tipo`, `metadata`).
+2. Crear repositorio, data source, BLoC, bandeja y badge de no leídas.
+3. Corregir `createOrganizacion` en `lib/data/repositories/organizacion_repository.dart:871` (inserta la columna inexistente `metadata`) y registrar al dueño como miembro `Activo`.
+4. Implementar invitaciones: buscar por correo, validar que sea vendedor, que no sea uno mismo, que no pertenezca a otra organización y que no tenga invitación pendiente.
+5. Registrar `on<InviteToOrganizacion>`, `on<AcceptInvitation>` y `on<RejectInvitation>` en `lib/presentation/blocs/organizacion/organizacion_bloc.dart`.
+6. Insertar notificación en cada transición (`invitacion_organizacion`, `aceptacion_invitacion`, `rechazo_invitacion`).
+7. Fase 7 solo si las fases 4 y 5 están cerradas.
+
+**Archivos propios:** `notificacion*`, `organizacion*`, `presentation/pages/vendedor/{mi_organizacion,invitaciones}_page.dart`, `presentation/widgets/organizacion/*`, `core/services/push_notification_service.dart`, `supabase/functions/send-push/*`, `0007_push.sql`.
+
+**Aceptación:** ciclo invitar → notificar → aceptar/rechazar → notificar → re-invitar; una sola organización por usuario; borrado bloqueado si hay tiendas.
+
+### Tarea D — Experiencia, QA y entrega
+
+**Fases:** 8, 9.
+**Puede empezar:** día 1 (la Fase 8 no depende de nadie).
+
+**Documentación de contexto:**
+- `doc/1_PROJECT/PLAN_IMPLEMENTACION_FASES.md`: §4 → Fase 8, §4 → Fase 9, §7 (matriz de pruebas), §8 (riesgos).
+- `doc/1_PROJECT/ANALISIS_DE_REQUERIMIENTOS.md`: RF-06, RF-08, RF-09.2, RF-09.3, RF-10.
+
+**Indicaciones:**
+1. Favoritos: persistencia y reactividad al iniciar/cerrar sesión (RF-06).
+2. Historial local y limpieza de caché (RF-08.1).
+3. Compartir robusto, sin dejar la app cargando (RF-08.2).
+4. Mapa embebido con fallback al navegador (RF-08.3).
+5. Ajustes: tema persistente y limpiar caché (RF-09.2).
+6. Soporte, términos y privacidad (RF-09.3).
+7. Escribir y ejecutar la matriz de pruebas y la regresión.
+8. Preparar APK release, actualizar documentación y guion de demo.
+
+**Archivos propios:** `presentation/blocs/favorito/*`, `presentation/pages/favoritos/*`, `presentation/pages/historial/*`, `core/utils/share_service.dart`, `core/utils/app_utils.dart`, `presentation/pages/settings/*`, `presentation/pages/soporte/*`, `test/*`, documentos de cierre.
+
+**Aceptación:** RF restantes validados, APK instalable y documentación sin referencias a Contabo.
+
+### Cronograma paralelo (3 semanas)
+
+| Semana | A | B | C | D |
+|---|---|---|---|---|
+| 1 | Fase 0.5 + Fase 1 | Fase 3 (handlers + UI) | Fase 4 + inicio Fase 5 | Fase 8 (favoritos/historial/share) + matriz |
+| 2 | Cierre Fase 1 + Fase 2 | Cierre Fase 3 + Fase 6 | Fase 5 (invitaciones) | Cierre Fase 8 + regresión |
+| 3 | Cierre Fase 2 + apoyo | Cierre Fase 6 + apoyo QA | Cierre Fase 5 (+ Fase 7) | Fase 9 (APK, docs, demo) |
+
+### Reglas de código que aplican a las 4 tareas
+
+- Ninguna página llama a Supabase directamente: pasa por repositorio.
+- Toda feature nueva sigue el orden entidad → interfaz → data source → repositorio → DI → BLoC → página → ruta.
+- Usar `Result`/`Failure` y `Equatable`; no introducir `dartz`.
+- No reintroducir Contabo, Wompi ni modo invitado.
+- `flutter analyze` sin errores antes de cada PR.
+
 ## 📋 DOCUMENTACIÓN ORGANIZADA
 
 

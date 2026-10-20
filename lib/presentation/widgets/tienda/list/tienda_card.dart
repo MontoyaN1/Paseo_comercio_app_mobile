@@ -18,7 +18,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/app/app_config.dart';
 import '../../../../di/service_locator.dart';
 import '../../../blocs/favorito/favorito_bloc.dart';
 import '../../../blocs/favorito/favorito_event.dart';
@@ -151,7 +150,7 @@ class _TiendaCardState extends State<TiendaCard>
     if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
       return null;
     }
-    return _transformContaboUrlToR2(rawUrl);
+    return rawUrl;
   }
 
   String _getNombre() {
@@ -201,24 +200,6 @@ class _TiendaCardState extends State<TiendaCard>
   bool _isActiva() {
     final s = _getEstado();
     return s == 'activa' || s == 'abierta';
-  }
-
-  String _transformContaboUrlToR2(String url) {
-    try {
-      if (!url.contains('contabostorage.com')) return url;
-      final appConfig = getIt<AppConfig>();
-      if (appConfig.cloudflareR2PublicUrl.isEmpty) return url;
-      final uri = Uri.parse(url);
-      final segs = uri.pathSegments;
-      final idx = segs.indexWhere((s) => s == 'paseocomercio');
-      if (idx == -1 || idx >= segs.length - 1) return url;
-      final rel = segs.sublist(idx + 1).join('/');
-      String base = appConfig.cloudflareR2PublicUrl.trim();
-      if (base.endsWith('/')) base = base.substring(0, base.length - 1);
-      return '$base/$rel';
-    } catch (_) {
-      return url;
-    }
   }
 
   IconData _getCategoryIcon() {

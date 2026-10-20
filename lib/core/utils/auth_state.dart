@@ -14,9 +14,6 @@ enum AuthState {
   /// En proceso de autenticación
   authenticating('authenticating'),
 
-  /// Modo invitado (solo lectura)
-  guest('guest'),
-
   /// Error de autenticación
   error('error'),
 
@@ -44,9 +41,6 @@ enum AuthState {
 
   /// Verificar si el estado indica que el usuario no está autenticado
   bool get isUnauthenticated => this == AuthState.unauthenticated;
-
-  /// Verificar si el estado indica modo invitado
-  bool get isGuest => this == AuthState.guest;
 
   /// Verificar si el estado indica error
   bool get isError => this == AuthState.error;
@@ -83,8 +77,6 @@ enum AuthState {
         return 'No autenticado';
       case AuthState.authenticating:
         return 'Autenticando...';
-      case AuthState.guest:
-        return 'Modo invitado';
       case AuthState.error:
         return 'Error de autenticación';
       case AuthState.expired:
@@ -109,8 +101,6 @@ enum AuthState {
         return 'person_outline';
       case AuthState.authenticating:
         return 'hourglass_empty';
-      case AuthState.guest:
-        return 'person';
       case AuthState.error:
         return 'error_outline';
       case AuthState.expired:
@@ -137,8 +127,6 @@ enum AuthState {
         return 'secondary';
       case AuthState.authenticating:
         return 'info';
-      case AuthState.guest:
-        return 'primary';
       case AuthState.error:
         return 'error';
       case AuthState.expired:
@@ -171,9 +159,6 @@ enum AuthState {
             targetState == AuthState.unauthenticated ||
             targetState == AuthState.error ||
             targetState == AuthState.requiresVerification;
-      case AuthState.guest:
-        return targetState == AuthState.authenticated ||
-            targetState == AuthState.unauthenticated;
       case AuthState.error:
         return targetState == AuthState.unauthenticated ||
             targetState == AuthState.authenticating;
