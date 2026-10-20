@@ -392,4 +392,4 @@ CLOUDFLARE_R2_PUBLIC_URL=https://pub-1234567890abcdef.r2.dev
 **📁 Documentación:** Organizada en carpeta `doc/`  
 **🗃️ Base de datos:** 22 tablas documentadas con relaciones  
 **📱 Objetivos:** 6 objetivos principales definidos y alineados con DB  
-**🔧 Configuración:** Clerk simplificado + Supabase + R2 multi-CDN
+**🔧 Configuración:** Clerk simplificado + Supabase + R2 multi-CDN 
