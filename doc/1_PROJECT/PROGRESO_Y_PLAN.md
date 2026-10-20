@@ -1,5 +1,8 @@
 # PROGRESO Y PLAN - App Móvil Paseo del Comercio
 
+> **Documento histórico (marzo 2026).** El plan vigente es
+> [`PLAN_IMPLEMENTACION_FASES.md`](./PLAN_IMPLEMENTACION_FASES.md).
+
 **Fecha:** Marzo 2026  
 **Estado:** 🚧 EN DESARROLLO - Preparación para testing profesional  
 **Próximo Hito:** Testing MVP Android
