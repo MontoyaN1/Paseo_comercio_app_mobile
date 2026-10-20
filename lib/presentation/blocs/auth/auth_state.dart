@@ -27,6 +27,47 @@ class AuthAuthenticated extends AuthState {
 
   const AuthAuthenticated({this.user, this.authenticatedAt});
 
+  /// Id del rol: 1 administrador, 2 vendedor, 3 cliente.
+  int? get roleId {
+    final raw = user?['roles_id'];
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw);
+    return null;
+  }
+
+  /// Nombre del rol listo para mostrar en la UI.
+  String? get roleName {
+    switch (roleId) {
+      case 1:
+        return 'administrador';
+      case 2:
+        return 'vendedor';
+      case 3:
+        return 'cliente';
+      default:
+        return null;
+    }
+  }
+
+  /// Verificar si el usuario autenticado tiene un rol.
+  bool hasRole(String role) {
+    final normalized = role.trim().toLowerCase();
+    switch (roleId) {
+      case 1:
+        return normalized == 'administrador' || normalized == 'admin';
+      case 2:
+        return normalized == 'vendedor' ||
+            normalized == 'emprendedor' ||
+            normalized == 'anfitrion' ||
+            normalized == 'anfitrión';
+      case 3:
+        return normalized == 'cliente';
+      default:
+        return false;
+    }
+  }
+
   @override
   List<Object?> get props => [user, authenticatedAt];
 

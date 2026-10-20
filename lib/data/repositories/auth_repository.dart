@@ -75,12 +75,10 @@ class AuthRepository implements AuthRepositoryInterface {
     }
   }
 
-  /// Obtener usuario actual (placeholder hasta que implementemos Clerk)
+  /// Obtener usuario actual desde Firebase Auth
   Future<Map<String, dynamic>?> getCurrentUser() async {
     try {
-      // TODO: Implementar integración real con Clerk Flutter
-      // Por ahora, retornamos null o un usuario de prueba
-      return null;
+      return _firebaseAuthService.userProfile;
     } catch (e) {
       _logger.e('Error getting current user: $e');
       return null;
@@ -116,8 +114,7 @@ class AuthRepository implements AuthRepositoryInterface {
   /// Verificar si el usuario está autenticado
   @override
   Future<bool> isAuthenticated() async {
-    // TODO: Implementar verificación real con Clerk
-    return false;
+    return _firebaseAuthService.isAuthenticated;
   }
 
   /// Obtener ID del usuario actual
@@ -229,6 +226,7 @@ class AuthRepository implements AuthRepositoryInterface {
   }
 
   /// Obtener el id de rol del usuario autenticado
+  @override
   int? get currentRoleId {
     final raw = _firebaseAuthService.userProfile?['roles_id'];
     if (raw is int) return raw;
@@ -236,6 +234,10 @@ class AuthRepository implements AuthRepositoryInterface {
     if (raw is String) return int.tryParse(raw);
     return null;
   }
+
+  /// Obtener el nombre del rol del usuario autenticado
+  @override
+  String? get currentRoleName => _firebaseAuthService.currentRoleName;
 
   /// Verificar si el usuario es administrador
   Future<bool> isAdmin() async {
