@@ -209,7 +209,6 @@ class ImageBloc extends Bloc<ImageEvent, ImageState> {
 
     // Si la URL ya es de un proveedor conocido, mantenerla
     if (originalUrl.contains('r2.cloudflarestorage.com') ||
-        originalUrl.contains('contabostorage.com') ||
         originalUrl.contains('supabase.co') ||
         originalUrl.contains('.r2.dev')) {
       return [originalUrl];
@@ -241,21 +240,7 @@ class ImageBloc extends Bloc<ImageEvent, ImageState> {
           // Ignorar error, continuar con siguiente proveedor
         }
 
-        // S3 (fallback 1)
-        try {
-          final s3Url = _imageService.getImageUrl(
-            entityType: entityType,
-            entityId: entityId,
-            imageName: imageName,
-            provider: 's3',
-            size: width,
-          );
-          urls.add(s3Url);
-        } catch (e) {
-          // Ignorar error, continuar con siguiente proveedor
-        }
-
-        // Supabase (fallback 2)
+        // Supabase (fallback)
         try {
           final supabaseUrl = _imageService.getImageUrl(
             entityType: entityType,

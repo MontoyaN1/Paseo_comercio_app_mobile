@@ -43,7 +43,7 @@ presentation/   → domain/   → data/   → core/
 
 ### Auth (Autenticación)
 - Firebase Auth + Google Sign In
-- Estados: autenticado, no autenticado, invitado
+- Estados: autenticado, no autenticado
 
 ### Favoritos
 - Sistema de favoritos para tiendas y productos

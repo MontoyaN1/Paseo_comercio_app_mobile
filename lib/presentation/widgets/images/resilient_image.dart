@@ -13,11 +13,10 @@ import '../../../di/service_locator.dart';
 ///
 /// Características:
 /// 1. Intenta cargar desde Cloudflare R2 (primario)
-/// 2. Fallback a Contabo S3 si R2 falla
-/// 3. Fallback a Supabase Storage si ambos fallan
-/// 4. Cache local con Hive
-/// 5. Optimización automática según tamaño de pantalla
-/// 6. Placeholder personalizable
+/// 2. Fallback a Supabase Storage si R2 falla
+/// 3. Cache local con Hive
+/// 4. Optimización automática según tamaño de pantalla
+/// 5. Placeholder personalizable
 /// 7. Error widget personalizable
 /// 8. Soporte para modo offline
 class ResilientImage extends StatefulWidget {
@@ -149,7 +148,6 @@ class _ResilientImageState extends State<ResilientImage> {
 
     // Si la URL ya es de un proveedor conocido, mantenerla
     if (originalUrl.contains('r2.cloudflarestorage.com') ||
-        originalUrl.contains('contabostorage.com') ||
         originalUrl.contains('supabase.co') ||
         originalUrl.contains('.r2.dev')) {
       _fallbackUrls = [originalUrl];
@@ -184,21 +182,7 @@ class _ResilientImageState extends State<ResilientImage> {
           // Ignorar error, continuar con siguiente proveedor
         }
 
-        // S3 (fallback 1)
-        try {
-          final s3Url = _imageService.getImageUrl(
-            entityType: entityType,
-            entityId: entityId,
-            imageName: imageName,
-            provider: 's3',
-            size: widget.width?.toInt(),
-          );
-          urls.add(s3Url);
-        } catch (e) {
-          // Ignorar error, continuar con siguiente proveedor
-        }
-
-        // Supabase (fallback 2)
+        // Supabase (fallback)
         try {
           final supabaseUrl = _imageService.getImageUrl(
             entityType: entityType,

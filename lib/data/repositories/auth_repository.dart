@@ -75,12 +75,10 @@ class AuthRepository implements AuthRepositoryInterface {
     }
   }
 
-  /// Obtener usuario actual (placeholder hasta que implementemos Clerk)
+  /// Obtener usuario actual desde Firebase Auth
   Future<Map<String, dynamic>?> getCurrentUser() async {
     try {
-      // TODO: Implementar integración real con Clerk Flutter
-      // Por ahora, retornamos null o un usuario de prueba
-      return null;
+      return _firebaseAuthService.userProfile;
     } catch (e) {
       _logger.e('Error getting current user: $e');
       return null;
@@ -116,8 +114,7 @@ class AuthRepository implements AuthRepositoryInterface {
   /// Verificar si el usuario está autenticado
   @override
   Future<bool> isAuthenticated() async {
-    // TODO: Implementar verificación real con Clerk
-    return false;
+    return _firebaseAuthService.isAuthenticated;
   }
 
   /// Obtener ID del usuario actual
@@ -202,22 +199,45 @@ class AuthRepository implements AuthRepositoryInterface {
   }
 
   /// Verificar si el usuario tiene un rol específico
+  @override
   Future<bool> hasRole(String role) async {
     try {
-      final user = await getCurrentUser();
-      if (user == null) return false;
+      final roleId = currentRoleId;
+      if (roleId == null) return false;
 
-      // Aquí puedes implementar lógica para verificar roles
-      // Por ejemplo, verificar en la tabla de roles de Supabase
-      // final userRole = user['roles_id'];
-      // Implementar lógica específica según tu esquema de roles
-
-      return false; // Placeholder
+      final normalized = role.trim().toLowerCase();
+      switch (roleId) {
+        case 1:
+          return normalized == 'administrador' || normalized == 'admin';
+        case 2:
+          return normalized == 'vendedor' ||
+              normalized == 'emprendedor' ||
+              normalized == 'anfitrion' ||
+              normalized == 'anfitrión';
+        case 3:
+          return normalized == 'cliente';
+        default:
+          return false;
+      }
     } catch (e) {
       _logger.e('Error checking role: $e');
       return false;
     }
   }
+
+  /// Obtener el id de rol del usuario autenticado
+  @override
+  int? get currentRoleId {
+    final raw = _firebaseAuthService.userProfile?['roles_id'];
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw);
+    return null;
+  }
+
+  /// Obtener el nombre del rol del usuario autenticado
+  @override
+  String? get currentRoleName => _firebaseAuthService.currentRoleName;
 
   /// Verificar si el usuario es administrador
   Future<bool> isAdmin() async {

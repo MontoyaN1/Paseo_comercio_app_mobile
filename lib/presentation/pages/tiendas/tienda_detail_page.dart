@@ -10,7 +10,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:paseo_del_comercio/core/app/app_config.dart';
 import 'package:paseo_del_comercio/core/utils/share_service.dart';
 import 'package:paseo_del_comercio/data/datasources/remote/supabase_client.dart';
 import 'package:paseo_del_comercio/di/service_locator.dart';
@@ -60,7 +59,6 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
   Map<String, dynamic>? _tiendaData;
   List<Map<String, dynamic>> _productos = [];
   List<Map<String, dynamic>> _horarios = [];
-  final AppConfig _appConfig = AppConfig();
 
   int _productosPage = 1;
   bool _hasMoreProductos = true;
@@ -174,23 +172,9 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
       if (bloc.isClosed) return;
 
       if (widget.tienda != null) {
-        final logoUrl = _transformUrlToR2(widget.tienda!.logoUrl);
+        final logoUrl = widget.tienda!.logoUrl;
 
-        dynamic imagenTienda = widget.tienda!.imagenTienda;
-        if (imagenTienda is List) {
-          final nuevasImagenes = <Map<String, dynamic>>[];
-          for (final img in imagenTienda) {
-            if (img is Map<String, dynamic>) {
-              final nuevaImagen = Map<String, dynamic>.from(img);
-              final urlImagen = nuevaImagen['url_imagen'] as String?;
-              if (urlImagen != null) {
-                nuevaImagen['url_imagen'] = _transformUrlToR2(urlImagen);
-              }
-              nuevasImagenes.add(nuevaImagen);
-            }
-          }
-          imagenTienda = nuevasImagenes;
-        }
+        final imagenTienda = widget.tienda!.imagenTienda;
 
         _tiendaData = {
           'id': widget.tienda!.id,
@@ -231,36 +215,6 @@ class _TiendaDetailPageState extends State<TiendaDetailPage>
       }
     } catch (e) {
       debugPrint('❌ _loadTienda error: $e');
-    }
-  }
-
-  String? _transformUrlToR2(String? url) {
-    if (url == null || url.isEmpty) return url;
-    if (!url.contains('contabostorage.com')) return url;
-
-    try {
-      if (_appConfig.cloudflareR2PublicUrl.isEmpty) return url;
-
-      final uri = Uri.parse(url);
-      final pathSegments = uri.pathSegments;
-      final paseocomercioIndex = pathSegments.indexWhere(
-        (segment) => segment == 'paseocomercio',
-      );
-
-      if (paseocomercioIndex == -1 ||
-          paseocomercioIndex >= pathSegments.length - 1)
-        return url;
-
-      final relativePath = pathSegments
-          .sublist(paseocomercioIndex + 1)
-          .join('/');
-      String baseUrl = _appConfig.cloudflareR2PublicUrl.trim();
-      if (baseUrl.endsWith('/')) {
-        baseUrl = baseUrl.substring(0, baseUrl.length - 1);
-      }
-      return '$baseUrl/$relativePath';
-    } catch (e) {
-      return url;
     }
   }
 

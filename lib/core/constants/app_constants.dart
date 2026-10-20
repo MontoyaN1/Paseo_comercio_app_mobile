@@ -67,7 +67,7 @@ class AppConstants {
 
   // URLs y endpoints
   static const String supabaseStorageUrl = 'storage/v1/object/public';
-  static const String s3ImageBasePath = 'images';
+  static const String imageBasePath = 'images';
 
   // Tamaños de imágenes
   static const List<int> imageVariants = [150, 500, 1200];
@@ -163,11 +163,9 @@ class AppConstants {
   // Modos de autenticación
   static const String authModeClerk = 'clerk';
   static const String authModeSupabase = 'supabase';
-  static const String authModeGuest = 'guest';
 
   // Proveedores de almacenamiento de imágenes
   static const String imageProviderR2 = 'r2';
-  static const String imageProviderS3 = 's3';
   static const String imageProviderSupabase = 'supabase';
 
   // Tipos de entidades para imágenes
@@ -228,7 +226,7 @@ class AppConstants {
 
   /// Obtener URL base para imágenes según entidad
   static String getImageBasePath(String entityType) {
-    return '$s3ImageBasePath/$entityType';
+    return '$imageBasePath/$entityType';
   }
 
   /// Obtener nombre de tabla por entidad

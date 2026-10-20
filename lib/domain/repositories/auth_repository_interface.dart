@@ -8,6 +8,15 @@ abstract class AuthRepositoryInterface {
   /// Verificar si el usuario está autenticado
   Future<bool> isAuthenticated();
 
+  /// Verificar si el usuario tiene un rol específico
+  Future<bool> hasRole(String role);
+
+  /// Obtener el nombre del rol del usuario autenticado
+  String? get currentRoleName;
+
+  /// Obtener el id del rol del usuario autenticado
+  int? get currentRoleId;
+
   /// Obtener usuario actual
   Future<Map<String, dynamic>?> getCurrentUser();
 

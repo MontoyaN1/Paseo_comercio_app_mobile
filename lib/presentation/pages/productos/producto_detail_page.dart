@@ -187,12 +187,12 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
 
   void _procesarProducto(Map<String, dynamic> producto) async {
     if (producto['tienda'] != null) {
-      _tiendaData = _transformTiendaUrlsToR2(
+      _tiendaData = Map<String, dynamic>.from(
         producto['tienda'] as Map<String, dynamic>,
       );
       if (mounted) setState(() {});
     } else if (producto['tiendas'] != null) {
-      _tiendaData = _transformTiendaUrlsToR2(
+      _tiendaData = Map<String, dynamic>.from(
         producto['tiendas'] as Map<String, dynamic>,
       );
       if (mounted) setState(() {});
@@ -208,9 +208,7 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
             .limit(1);
 
         if (tiendaResponse.isNotEmpty) {
-          _tiendaData = _transformTiendaUrlsToR2(
-            Map<String, dynamic>.from(tiendaResponse.first),
-          );
+          _tiendaData = Map<String, dynamic>.from(tiendaResponse.first);
           if (mounted) setState(() {});
         } else {
           _tiendaData = {'id': producto['tienda_id']};
@@ -393,10 +391,6 @@ class _ProductoDetailPageState extends State<ProductoDetailPage>
     } catch (e) {
       debugPrint('Error actualizando estadísticas: $e');
     }
-  }
-
-  Map<String, dynamic> _transformTiendaUrlsToR2(Map<String, dynamic> tienda) {
-    return _dataHelpers.transformTiendaUrlsToR2(tienda);
   }
 
   String? _getProductImageUrl() {

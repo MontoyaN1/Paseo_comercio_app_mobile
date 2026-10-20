@@ -43,8 +43,7 @@ class FavoritoBloc extends Bloc<FavoritoEvent, FavoritoState> {
       if (authState == AuthState.authenticated) {
         _logger.i('Auth state changed to authenticated - loading favorites');
         await _loadInitialFavorites();
-      } else if (authState == AuthState.unauthenticated ||
-          authState == AuthState.guest) {
+      } else if (authState == AuthState.unauthenticated) {
         _logger.i('Auth state changed to unauthenticated - clearing favorites');
         add(const ClearFavoritos());
         _currentUsuarioId = null;

@@ -9,7 +9,6 @@ import '../datasources/remote/supabase_client.dart';
 import '../datasources/local/local_database.dart';
 import '../../core/utils/connectivity_service.dart';
 import '../../core/utils/cache_service.dart';
-import '../../core/app/app_config.dart';
 
 /// Repositorio de Productos con datos reales de Supabase
 class ProductoRepository implements ProductoRepositoryInterface {
@@ -29,7 +28,6 @@ class ProductoRepository implements ProductoRepositoryInterface {
       printTime: false,
     ),
   );
-  final AppConfig _appConfig = AppConfig();
 
   ProductoRepository({
     required SupabaseClientService supabaseClient,
@@ -78,13 +76,7 @@ class ProductoRepository implements ProductoRepositoryInterface {
           .order('fecha_creacion', ascending: false)
           .range((page - 1) * limit, page * limit - 1);
 
-      // Transformar URLs de Contabo a Cloudflare R2
-      final productosTransformados =
-          response.map((producto) {
-            return _transformProductoUrlsToR2(producto);
-          }).toList();
-
-      return productosTransformados;
+      return response;
     } catch (e, stackTrace) {
       _logger.e(
         'Error obteniendo productos: $e',
@@ -92,79 +84,6 @@ class ProductoRepository implements ProductoRepositoryInterface {
         stackTrace: stackTrace,
       );
       return [];
-    }
-  }
-
-  /// Transformar URLs de Contabo a Cloudflare R2 en los datos del producto
-  Map<String, dynamic> _transformProductoUrlsToR2(
-    Map<String, dynamic> producto,
-  ) {
-    final productoTransformado = Map<String, dynamic>.from(producto);
-
-    // Transformar imagen_productos (array de imágenes)
-    final imagenesProducto = productoTransformado['imagen_productos'];
-    if (imagenesProducto is List) {
-      final nuevasImagenes = <Map<String, dynamic>>[];
-      for (final img in imagenesProducto) {
-        if (img is Map<String, dynamic>) {
-          final nuevaImagen = Map<String, dynamic>.from(img);
-          // Transformar url_imagen
-          final urlImagen = nuevaImagen['url_imagen'] as String?;
-          if (urlImagen != null && urlImagen.contains('contabostorage.com')) {
-            nuevaImagen['url_imagen'] = _transformContaboUrlToR2(urlImagen);
-          }
-          // Transformar url_original si existe
-          final urlOriginal = nuevaImagen['url_original'] as String?;
-          if (urlOriginal != null &&
-              urlOriginal.contains('contabostorage.com')) {
-            nuevaImagen['url_original'] = _transformContaboUrlToR2(urlOriginal);
-          }
-          nuevasImagenes.add(nuevaImagen);
-        }
-      }
-      productoTransformado['imagen_productos'] = nuevasImagenes;
-    }
-
-    return productoTransformado;
-  }
-
-  /// Transformar URL de Contabo a Cloudflare R2
-  String _transformContaboUrlToR2(String contaboUrl) {
-    try {
-      if (_appConfig.cloudflareR2PublicUrl.isEmpty) {
-        return contaboUrl;
-      }
-
-      final uri = Uri.parse(contaboUrl);
-      final pathSegments = uri.pathSegments;
-
-      // Buscar el índice de 'paseocomercio' en la ruta
-      final paseocomercioIndex = pathSegments.indexWhere(
-        (segment) => segment == 'paseocomercio',
-      );
-      if (paseocomercioIndex == -1 ||
-          paseocomercioIndex >= pathSegments.length - 1) {
-        return contaboUrl;
-      }
-
-      // Construir ruta relativa después de 'paseocomercio'
-      final relativePath = pathSegments
-          .sublist(paseocomercioIndex + 1)
-          .join('/');
-
-      // Normalizar URL base eliminando barra final si existe
-      String baseUrl = _appConfig.cloudflareR2PublicUrl.trim();
-      if (baseUrl.endsWith('/')) {
-        baseUrl = baseUrl.substring(0, baseUrl.length - 1);
-      }
-
-      // Construir URL de R2
-      final r2Url = '$baseUrl/$relativePath';
-
-      return r2Url;
-    } catch (e) {
-      _logger.e('Error transformando URL: $e');
-      return contaboUrl;
     }
   }
 
@@ -258,17 +177,7 @@ class ProductoRepository implements ProductoRepositoryInterface {
         }
       }
 
-      // Transformar URLs de Contabo a Cloudflare R2
-      final productoTransformado = _transformProductoUrlsToR2(productoFinal);
-
-      // Transformar datos de la tienda si existe
-      if (productoTransformado['tienda'] != null) {
-        productoTransformado['tienda'] = _transformTiendaDataToR2(
-          productoTransformado['tienda'] as Map<String, dynamic>,
-        );
-      }
-
-      return productoTransformado;
+      return productoFinal;
     } catch (e, stackTrace) {
       _logger.e(
         'Error obteniendo producto por ID: $e',
@@ -277,45 +186,6 @@ class ProductoRepository implements ProductoRepositoryInterface {
       );
       return null;
     }
-  }
-
-  /// Transformar URLs de Contabo a Cloudflare R2 en los datos de la tienda
-  Map<String, dynamic> _transformTiendaDataToR2(Map<String, dynamic> tienda) {
-    final tiendaTransformada = Map<String, dynamic>.from(tienda);
-
-    // Transformar logo
-    final logoUrl =
-        tiendaTransformada['logo_url'] ??
-        tiendaTransformada['url_logo'] ??
-        tiendaTransformada['logo'];
-    if (logoUrl != null && logoUrl is String && logoUrl.isNotEmpty) {
-      final logoTransformado = _transformContaboUrlToR2(logoUrl);
-      tiendaTransformada['logoUrl'] = logoTransformado;
-      tiendaTransformada['logo_url'] = logoTransformado;
-    }
-
-    // Transformar imagen_tienda (array de imágenes)
-    final imagenesTienda = tiendaTransformada['imagen_tienda'];
-    if (imagenesTienda is List) {
-      final nuevasImagenes = <Map<String, dynamic>>[];
-      for (final img in imagenesTienda) {
-        if (img is Map<String, dynamic>) {
-          final nuevaImagen = Map<String, dynamic>.from(img);
-          final urlImagen = nuevaImagen['url_imagen'] as String?;
-          if (urlImagen != null) {
-            nuevaImagen['url_imagen'] = _transformContaboUrlToR2(urlImagen);
-          }
-          final urlOriginal = nuevaImagen['url_original'] as String?;
-          if (urlOriginal != null) {
-            nuevaImagen['url_original'] = _transformContaboUrlToR2(urlOriginal);
-          }
-          nuevasImagenes.add(nuevaImagen);
-        }
-      }
-      tiendaTransformada['imagen_tienda'] = nuevasImagenes;
-    }
-
-    return tiendaTransformada;
   }
 
   @override

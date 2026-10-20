@@ -27,16 +27,6 @@ class AppConfig {
   String cloudflareR2BucketName = '';
   String cloudflareR2PublicUrl = '';
 
-  // Configuración de Contabo Object Storage (fallback)
-  String awsAccessKeyId = '';
-  String awsSecretAccessKey = '';
-  String awsS3BucketName = '';
-  String awsRegion = '';
-  String s3EndpointUrl = '';
-  String s3BaseUrl = '';
-  String contaboTenantId = '';
-  String contaboBucketFolder = '';
-
   // Configuración de caché
   int cacheTtlHours = 1; // Tiempo de vida de caché en horas
   int maxCacheSizeMB = 100; // Tamaño máximo de caché en MB
@@ -89,16 +79,6 @@ class AppConfig {
     cloudflareR2BucketName = env['CLOUDFLARE_R2_BUCKET_NAME'] ?? '';
     cloudflareR2PublicUrl = env['CLOUDFLARE_R2_PUBLIC_URL'] ?? '';
 
-    // Contabo S3 (fallback)
-    awsAccessKeyId = env['AWS_ACCESS_KEY_ID'] ?? '';
-    awsSecretAccessKey = env['AWS_SECRET_ACCESS_KEY'] ?? '';
-    awsS3BucketName = env['AWS_S3_BUCKET_NAME'] ?? '';
-    awsRegion = env['AWS_REGION'] ?? '';
-    s3EndpointUrl = env['S3_ENDPOINT_URL'] ?? '';
-    s3BaseUrl = env['S3_BASE_URL'] ?? '';
-    contaboTenantId = env['CONTABO_TENANT_ID'] ?? '';
-    contaboBucketFolder = env['CONTABO_BUCKET_FOLDER'] ?? '';
-
     // Configuración de caché
     final cacheTtl = env['CACHE_TTL_HOURS'];
     if (cacheTtl != null) {
@@ -143,13 +123,6 @@ class AppConfig {
     }
   }
 
-  /// Verificar si la configuración de S3 está completa
-  bool get isS3Configured =>
-      awsAccessKeyId.isNotEmpty &&
-      awsSecretAccessKey.isNotEmpty &&
-      awsS3BucketName.isNotEmpty &&
-      s3EndpointUrl.isNotEmpty;
-
   /// Verificar si la configuración de R2 está completa
   bool get isR2Configured =>
       cloudflareAccountId.isNotEmpty &&
@@ -166,12 +139,10 @@ class AppConfig {
   /// Siempre es true porque se usa firebase_options.dart
   bool get isFirebaseConfigured => true;
 
-  /// Obtener URL base para imágenes (prioriza R2, luego S3)
+  /// Obtener URL base para imágenes (R2)
   String getImageBaseUrl(String entityType, String entityId) {
     if (isR2Configured) {
       return '$cloudflareR2PublicUrl/$entityType/$entityId';
-    } else if (isS3Configured) {
-      return '$s3BaseUrl/$contaboBucketFolder/$entityType/$entityId';
     }
     return '';
   }
@@ -212,22 +183,12 @@ class AppConfig {
       // Firebase - configurado automáticamente con firebase_options.dart
       // No se necesitan variables de entorno
 
-      // Cloudflare R2 (opcionales, para migración)
+      // Cloudflare R2 (opcionales, para imágenes)
       'CLOUDFLARE_ACCOUNT_ID': 'ID de cuenta de Cloudflare',
       'CLOUDFLARE_R2_ACCESS_KEY_ID': 'Access Key ID de R2',
       'CLOUDFLARE_R2_SECRET_ACCESS_KEY': 'Secret Access Key de R2',
       'CLOUDFLARE_R2_BUCKET_NAME': 'Nombre del bucket R2',
       'CLOUDFLARE_R2_PUBLIC_URL': 'URL pública del bucket R2',
-
-      // Contabo S3 (opcionales, fallback)
-      'AWS_ACCESS_KEY_ID': 'Access Key ID de S3',
-      'AWS_SECRET_ACCESS_KEY': 'Secret Access Key de S3',
-      'AWS_S3_BUCKET_NAME': 'Nombre del bucket S3',
-      'AWS_REGION': 'Región de S3',
-      'S3_ENDPOINT_URL': 'URL del endpoint S3',
-      'S3_BASE_URL': 'URL base para imágenes S3',
-      'CONTABO_TENANT_ID': 'ID del tenant Contabo',
-      'CONTABO_BUCKET_FOLDER': 'Carpeta del bucket Contabo',
 
       // Configuración (opcionales)
       'DEBUG_MODE': 'true/false para modo debug',
@@ -257,7 +218,6 @@ AppConfig:
   Supabase: ${isSupabaseConfigured ? 'Configurado' : 'No configurado'}
   Firebase: Configurado (firebase_options.dart)
   Cloudflare R2: ${isR2Configured ? 'Configurado' : 'No configurado'}
-  Contabo S3: ${isS3Configured ? 'Configurado' : 'No configurado'}
   Cache: ${cacheTtlHours}h, ${maxCacheSizeMB}MB
   Debug: $debugMode
 ''';

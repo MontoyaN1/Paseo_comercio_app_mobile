@@ -153,8 +153,9 @@ class Usuario extends Equatable {
 
   // Métodos de utilidad
   bool get isActive => estadoUsuario == EstadoUsuario.activo;
-  bool get isAdmin =>
-      rolesId != null && rolesId! > 2; // Suponiendo que admin tiene ID > 2
+  bool get isAdmin => rolesId == 1;
+  bool get isVendedor => rolesId == 2;
+  bool get isCliente => rolesId == 3;
   String get nombreCorto {
     final partes = nombreCompleto.split(' ');
     return partes.length > 1

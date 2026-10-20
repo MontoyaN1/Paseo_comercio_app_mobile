@@ -9,6 +9,7 @@ Documentación del estado del proyecto, progreso y planificación.
 | [PROGRESO_Y_PLAN.md](./PROGRESO_Y_PLAN.md) | Estado actual del proyecto, roadmap y progreso de fases |
 | [MOVIL_PLAN.md](./MOVIL_PLAN.md) | Plan de implementación móvil detallado |
 | [FUNCIONALIDADES_PENDIENTES.md](./FUNCIONALIDADES_PENDIENTES.md) | Catálogo completo de funcionalidades pendientes y postergadas |
+| [PLAN_IMPLEMENTACION_FASES.md](./PLAN_IMPLEMENTACION_FASES.md) | Plan técnico por fases y subfases, reglas de negocio, tareas por archivo y división en 4 personas |
 
 ## Resumen
 

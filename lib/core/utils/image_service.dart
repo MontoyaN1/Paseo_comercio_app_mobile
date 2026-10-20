@@ -13,7 +13,7 @@ import 'cache_service.dart';
 import 'image_info.dart';
 import 'result.dart';
 
-/// Servicio para manejar imágenes con Cloudflare R2 y fallback a Contabo S3
+/// Servicio para manejar imágenes con Cloudflare R2 y fallback a Supabase Storage
 class ImageService {
   // Singleton pattern
   static final ImageService _instance = ImageService._internal();
@@ -22,7 +22,6 @@ class ImageService {
 
   // URLs base para los diferentes proveedores
   String? _r2BaseUrl;
-  String? _s3BaseUrl;
   String? _supabaseStorageUrl;
 
   // Credenciales de Cloudflare R2
@@ -42,7 +41,6 @@ class ImageService {
     String? r2SecretAccessKey,
     String? r2BucketName,
     String? r2AccountId,
-    String? s3BaseUrl,
     String? supabaseUrl,
     String? supabaseBucket,
   }) {
@@ -51,21 +49,18 @@ class ImageService {
     _r2SecretAccessKey = r2SecretAccessKey;
     _r2BucketName = r2BucketName;
     _r2AccountId = r2AccountId;
-    _s3BaseUrl = s3BaseUrl;
 
     if (supabaseUrl != null && supabaseBucket != null) {
       _supabaseStorageUrl =
           '$supabaseUrl/storage/v1/object/public/$supabaseBucket';
     }
 
-    _isConfigured =
-        _r2BaseUrl != null || _s3BaseUrl != null || _supabaseStorageUrl != null;
+    _isConfigured = _r2BaseUrl != null || _supabaseStorageUrl != null;
 
     if (kDebugMode) {
       print(
         'ImageService: Configurado con proveedores - '
         'R2: ${_r2BaseUrl != null ? "Sí" : "No"}, '
-        'S3: ${_s3BaseUrl != null ? "Sí" : "No"}, '
         'Supabase: ${_supabaseStorageUrl != null ? "Sí" : "No"}',
       );
     }
@@ -395,7 +390,6 @@ class ImageService {
   void setPrimaryProvider(String provider) {
     if (![
       AppConstants.imageProviderR2,
-      AppConstants.imageProviderS3,
       AppConstants.imageProviderSupabase,
     ].contains(provider)) {
       throw ArgumentError('Proveedor no válido: $provider');
@@ -415,7 +409,6 @@ class ImageService {
   List<String> get availableProviders {
     final providers = <String>[];
     if (_r2BaseUrl != null) providers.add(AppConstants.imageProviderR2);
-    if (_s3BaseUrl != null) providers.add(AppConstants.imageProviderS3);
     if (_supabaseStorageUrl != null)
       providers.add(AppConstants.imageProviderSupabase);
     return providers;
@@ -450,12 +443,6 @@ class ImageService {
           );
         }
         return '$_r2BaseUrl/$imagePath';
-
-      case AppConstants.imageProviderS3:
-        if (_s3BaseUrl == null) {
-          throw ConfigurationException(message: 'S3 no está configurado');
-        }
-        return '$_s3BaseUrl/$imagePath';
 
       case AppConstants.imageProviderSupabase:
         if (_supabaseStorageUrl == null) {
