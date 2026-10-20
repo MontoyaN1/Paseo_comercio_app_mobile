@@ -10,16 +10,16 @@ Arquitectura Clean Architecture con integración Supabase, Clerk y Cloudflare R2
 
 ## TRABAJO EN PARALELO — 4 TAREAS
 
-**Sí se puede trabajar en simultáneo**, siempre que el día 1 se ejecute la **Fase 0.5 — Contratos**
-(~1 día, la hace la Persona A). Sin esa fase hay cinco cuellos de botella reales:
-`lib/core/routing/app_router.dart`, `lib/di/service_locator.dart`,
-`lib/core/constants/app_constants.dart`, el modo invitado y la migración `0006`.
+**La Fase 0.5 — Contratos ya está completada** (commit `a872933`): modo invitado eliminado,
+`hasRole()` real, rutas con stubs y migración `0006` creada. Las 4 personas pueden empezar
+el día 1 sin esperar a nadie. Único pendiente operativo: **A debe ejecutar `0006` en el SQL
+Editor de Supabase** (el archivo ya está en el repo).
 
 ### Reglas para no bloquearse
 
 | Regla | Detalle |
 |---|---|
-| Fase 0.5 primero | A elimina el modo invitado, activa `hasRole()`, deja todas las rutas con stubs de página y aplica `0006`. |
+| Fase 0.5 completada | Modo invitado eliminado, `hasRole()` real, rutas con stubs y `0006` creada. Solo falta ejecutar `0006` en Supabase. |
 | Nombres finales desde el día 1 | Los stubs usan las clases definitivas (`MisTiendasPage`, `MiOrganizacionPage`, `NotificacionesPage`, etc.). Cada dueño rellena el cuerpo; **nadie edita el router después**. |
 | Un dueño por archivo caliente | `app_router.dart`, `service_locator.dart` y `app_constants.dart` los mergea solo A. |
 | DI sin conflictos | Cada dueño agrega su bloque de registro al final de la sección que le corresponde; A resuelve el merge. |
@@ -30,8 +30,9 @@ Arquitectura Clean Architecture con integración Supabase, Clerk y Cloudflare R2
 
 ### Tarea A — Núcleo, roles y administración
 
-**Fases:** 0.5, 1, 2.
+**Fases:** 1, 2.
 **Puede empezar:** día 1, sin esperar a nadie.
+**Estado:** Fase 0.5 cerrada (commit `a872933`); Fase 1 base implementada (commit `73ee4fa`).
 
 **Documentación de contexto:**
 - `doc/1_PROJECT/PLAN_IMPLEMENTACION_FASES.md`: §1, §2.1, §2.2, §4 → Fase 1, §4 → Fase 2, §5.1.
@@ -40,12 +41,10 @@ Arquitectura Clean Architecture con integración Supabase, Clerk y Cloudflare R2
 - `doc/AGENTS.md`: comandos y estilo (verificar; puede estar desactualizado).
 
 **Indicaciones:**
-1. Día 1: eliminar el modo invitado en `lib/core/utils/auth_state.dart`, `auth_service.dart`, `firebase_auth_service.dart`, `lib/core/constants/app_constants.dart:166`, `lib/presentation/widgets/profile/profile_components.dart:106`, `lib/presentation/pages/profile/profile_page.dart:167`, `lib/presentation/blocs/favorito/favorito_bloc.dart:47`; borrar `lib/core/utils/auth_service_simple.dart`.
-2. Día 1: implementar `hasRole()` real en `lib/data/repositories/auth_repository.dart:205` y exponer el rol en `AuthBloc`.
-3. Día 1: dejar en `lib/core/routing/app_router.dart` todas las rutas de las 4 tareas con stubs.
-4. Día 1: aplicar la migración `supabase/migrations/0006_organizacion_invitaciones.sql`.
-5. Fase 1: redirección por rol y guard estricto de `/admin`.
-6. Fase 2: CRUD de plazoletas, implementar `CategoriaRepository`, panel admin y listados simples.
+1. Fase 1: validar en dispositivo la redirección por rol y el guard estricto de `/admin` (la base ya está en `app_router.dart` y `AuthBloc`).
+2. Fase 2: CRUD de plazoletas, implementar `CategoriaRepository`, panel admin y listados simples.
+
+**Pendiente operativo:** ejecutar `supabase/migrations/0006_organizacion_invitaciones.sql` en el SQL Editor de Supabase.
 
 **Archivos propios:** `auth_*`, `usuario.dart`, `plazoleta_repository*`, `categoria_repository.dart`, `usuario_repository*`, `presentation/pages/admin/*`, `app_router.dart`, `service_locator.dart`, `app_constants.dart`.
 
@@ -123,7 +122,7 @@ Arquitectura Clean Architecture con integración Supabase, Clerk y Cloudflare R2
 
 | Semana | A | B | C | D |
 |---|---|---|---|---|
-| 1 | Fase 0.5 + Fase 1 | Fase 3 (handlers + UI) | Fase 4 + inicio Fase 5 | Fase 8 (favoritos/historial/share) + matriz |
+| 1 | Fase 1 | Fase 3 (handlers + UI) | Fase 4 + inicio Fase 5 | Fase 8 (favoritos/historial/share) + matriz |
 | 2 | Cierre Fase 1 + Fase 2 | Cierre Fase 3 + Fase 6 | Fase 5 (invitaciones) | Cierre Fase 8 + regresión |
 | 3 | Cierre Fase 2 + apoyo | Cierre Fase 6 + apoyo QA | Cierre Fase 5 (+ Fase 7) | Fase 9 (APK, docs, demo) |
 

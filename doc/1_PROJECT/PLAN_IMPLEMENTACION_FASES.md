@@ -183,6 +183,8 @@ Estas reglas aplican a todas las fases y deben validarse en la capa de datos, no
 
 ### Fase 0.5 — Contratos compartidos (1 día, habilita el paralelismo)
 
+**Estado:** ✅ completada en código (commit `a872933`); 0.5.3 pendiente de ejecutar en Supabase.
+
 **Objetivo:** eliminar los cuellos de botella de archivos compartidos antes de que las 4 personas empiecen.
 **Responsable:** A, con revisión de C para la migración.
 **Dependencias:** Fase 0.
@@ -487,17 +489,17 @@ CREATE TABLE dispositivo (
 
 ## 6. División en 4 personas
 
-### 6.0 Condición para paralelizar: Fase 0.5 (1 día)
+### 6.0 Fase 0.5 ya completada (habilita el paralelismo)
 
-Las 4 personas pueden trabajar en simultáneo, pero **solo si el día 1 se cierran los contratos compartidos**:
+La Fase 0.5 se ejecutó en código (commit `a872933`), así que las 4 personas arrancan el día 1 sin esperar:
 
-1. A elimina el modo invitado y deja `hasRole()` funcionando.
-2. A deja en `app_router.dart` todas las rutas con stubs de página, usando desde ya los nombres finales de clase que usarán B, C y D. Así nadie vuelve a editar el router.
-3. A aplica la migración `0006` (con revisión de C).
-4. Cada dueño define su interfaz de repositorio y agrega su registro en `service_locator.dart`.
-5. Se congelan `app_constants.dart` y las firmas de las interfaces.
+1. Modo invitado eliminado y `hasRole()` funcionando.
+2. `app_router.dart` con todas las rutas y stubs, usando los nombres finales de clase de B, C y D. Nadie vuelve a editar el router.
+3. Migración `0006` creada (con revisión de C); **pendiente ejecutarla en Supabase**.
+4. Interfaces de repositorio y `service_locator.dart` con los registros base.
+5. `app_constants.dart` y firmas de interfaces congeladas.
 
-Sin esta fase, los cuellos de botella son: `app_router.dart`, `service_locator.dart`, `app_constants.dart`, el modo invitado y la migración `0006`.
+Los cuellos de botella (`app_router.dart`, `service_locator.dart`, `app_constants.dart`, modo invitado y `0006`) ya están resueltos.
 
 ### 6.1 Perfiles
 
@@ -505,8 +507,10 @@ Sin esta fase, los cuellos de botella son: `app_router.dart`, `service_locator.d
 |---|---|---|---|
 | **A** | Núcleo, autenticación y administración | 1, 2 | 11–13 días |
 | **B** | Comercio: vendedor, tiendas, productos, reseñas | 3, 6 | 9–12 días |
-| **C** | Notificaciones, organización e invitaciones, push | 4, 5, 7 | 11–19 días |
+| **C** | Notificaciones, organización e invitaciones, push | 4, 5, 7 | 11–12 días (sin 7); 17–20 con 7 |
 | **D** | Calidad, integración, RF restantes y entrega | 8, 9 | 9–11 días |
+
+**Lectura del balance:** las dependencias están bien aisladas (cada persona es dueña de una vertical), pero la carga no es pareja. A y C son la ruta crítica: A queda con poca holgura (11–13 de 15 días) y C es el punto más pesado (Fase 5). La Fase 7 **no cabe** en 3 semanas: es extra, solo si C cierra 4 y 5 antes. D tiene carga adecuada, pero su Fase 9 está al final; debe escribir la matriz de pruebas desde la semana 1 y ejecutar regresión continua, no esperar a la semana 3.
 
 ### 6.2 Responsabilidades por persona
 
@@ -547,7 +551,7 @@ Las 4 tareas avanzan al mismo tiempo. No hay “turnos”: cada persona es dueñ
 
 | Semana | A (núcleo/admin) | B (comercio) | C (notificaciones/organización) | D (experiencia/QA) |
 |---|---|---|---|---|
-| 1 | Fase 0.5 + Fase 1 | Fase 3 (handlers + UI) | Fase 4 + inicio Fase 5 (organización) | Fase 8 (favoritos/historial/share) + matriz de pruebas |
+| 1 | Fase 1 | Fase 3 (handlers + UI) | Fase 4 + inicio Fase 5 (organización) | Fase 8 (favoritos/historial/share) + matriz de pruebas |
 | 2 | Cierre Fase 1 + Fase 2 | Cierre Fase 3 + Fase 6 | Fase 5 (invitaciones) | Cierre Fase 8 + regresión |
 | 3 | Cierre Fase 2 + apoyo a Fase 5 | Cierre Fase 6 + apoyo QA | Cierre Fase 5 (+ Fase 7 si hay tiempo) | Fase 9 (APK, docs, demo) |
 
