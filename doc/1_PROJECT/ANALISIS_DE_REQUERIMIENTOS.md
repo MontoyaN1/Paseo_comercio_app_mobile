@@ -5,7 +5,7 @@
 **Asignatura:** Ingeniería de Software — Primer Semestre, Ingeniería de Sistemas
 **Proyecto:** `paseo-del-comercio-app-mobile-flutter`
 **Versión del documento:** 1.0 — 25/09/2026
-**Estado del proyecto analizado:** MVP funcional / Fase 1 ~92% (según `doc/`)
+**Estado del proyecto analizado:** Fase 0.5 cerrada y Fase 1 base implementada (plan vigente: `PLAN_IMPLEMENTACION_FASES.md`)
 
 ---
 
@@ -26,7 +26,7 @@ La app es la vitrina móvil del centro comercial virtual: el comerciante santand
 - `lib/presentation/pages/` (auth, tiendas, productos, plazoletas, organizaciones, favoritos, historial, profile, settings, soporte, splash)
 - `lib/presentation/blocs/` (auth, tienda, producto, plazoleta, organización, favorito, image)
 - `doc/1_PROJECT/` (MOVIL_PLAN, PROGRESO_Y_PLAN, FUNCIONALIDADES_PENDIENTES)
-- `doc/3_DATABASE/ESQUEMA_BASE_DATOS.md` (22 tablas, 40+ relaciones, 8 enums)
+- `doc/3_DATABASE/ESQUEMA_BASE_DATOS.md` (25 tablas, 40+ relaciones, 8 enums)
 - `.env.example` (Supabase, Firebase, R2/S3)
 
 ---
@@ -180,9 +180,9 @@ Criterios de selección: (a) esencia del negocio (vitrina nacional con catálogo
 | Framework móvil | **Flutter 3.7+ (Dart)** | React Native; nativo Kotlin+Swift; PWA | Un código → Android/iOS/Web; rendimiento nativo compilado; ideal para catálogo con imágenes y animaciones; equipo ya lo usa. Costo: mantener 1 base vs 2 nativas. |
 | Lenguaje de UI/estado | **BLoC (`flutter_bloc`) + `equatable` + `dartz`** | Provider solo; Riverpod; GetX | Estado predecible por eventos/estados, testeable — crítico para auth, favoritos y catálogo. `dartz` modela errores (Either) en capa dominio (Clean). |
 | Navegación | **GoRouter** | Navigator 1.0 imperativo | Rutas declarativas + deep linking (compartir un producto por link) → clave para "compra a nivel nacional" por difusión. 15+ rutas ya configuradas. |
-| Backend / BD | **Supabase (Postgres + Auth + Storage + Realtime)** | Firebase Firestore; backend propio (Django/Node); Airtable | Postgres relacional modela bien `tienda–producto–plazoleta–organizacion` (22 tablas, 40+ relaciones, 8 enums, triggers); misma BD que la app web = consistencia; Realtime para notificaciones/estadísticas; costo inicial nulo y RLS. |
-| Autenticación | **Firebase Auth (+ Google y Microsoft) / Clerk como SSO en plan** | Solo Supabase Auth; Auth0 (pago); login propio | Login social reduce fricción de registro nacional; Firebase ya integra Google/Microsoft y está en `pubspec` + `firebase_options.dart`; Clerk se contempla como SSO unificado con la web. |
-| Imágenes | **Cloudflare R2 (principal) → Contabo S3 → Supabase Storage → asset local** | Solo Supabase Storage; solo S3 | El catálogo nacional = miles de fotos. R2 abarata ancho de banda; la cadena multi-CDN (`ImageService` + `ResilientImage` + `cached_network_image`) garantiza que una foto nunca rompa la vitrina. |
+| Backend / BD | **Supabase (Postgres + Auth + Storage + Realtime)** | Firebase Firestore; backend propio (Django/Node); Airtable | Postgres relacional modela bien `tienda–producto–plazoleta–organizacion` (25 tablas, 40+ relaciones, 8 enums, triggers); misma BD que la app web = consistencia; Realtime para notificaciones/estadísticas; costo inicial nulo y RLS. |
+| Autenticación | **Firebase Auth (+ Google y Microsoft)** | Solo Supabase Auth; Auth0 (pago); login propio | Login social reduce fricción de registro nacional; Firebase ya integra Google/Microsoft y está en `pubspec` + `firebase_options.dart`. |
+| Imágenes | **Cloudflare R2 (principal) → Supabase Storage → asset local** | Solo Supabase Storage; solo S3 | El catálogo nacional = miles de fotos. R2 abarata ancho de banda; la cadena de fallback (`ImageService` + `ResilientImage` + `cached_network_image`) garantiza que una foto nunca rompa la vitrina. |
 | Caché offline | **Hive + `connectivity_plus` + `flutter_secure_storage`** | SQLite puro; SharedPreferences solo | Hive es local NoSQL rápido sin SQL boilerplate → historial y catálogo offline-first; tokens en storage seguro. Necesario porque compradores fuera de Bucaramanga pueden tener conectividad intermitente. |
 | Red | **Dio + http + `path` + `crypto`** | Solo http | Dio aporta interceptores, reintentos y timeouts para Supabase/R2; `crypto` para firmas S3. |
 | DI | **GetIt** | GetX / manual | Service locator simple que sostiene las 4 capas Clean sin acoplar UI a datos. |
@@ -215,7 +215,7 @@ Criterios de selección: (a) esencia del negocio (vitrina nacional con catálogo
 ---
 
 ## 8. Conclusión
-El análisis muestra que los objetivos (cuentas, plazoletas, tiendas, productos, organizaciones, fidelización) están cubiertos por RF-01…RF-10 y son trazables a las 22 tablas, 19 entidades, 7 BLoCs y páginas existentes. El stack **Flutter + Supabase + Firebase Auth + Hive + BLoC + R2/S3 multi-CDN** es el adecuado porque maximiza alcance nacional con mínimo costo y equipo, mantiene consistencia con la app web y deja abierta la evolución hacia pagos y envíos, que es donde la esencia —comerciantes de Santander vendiendo a todo el país— se completa.
+El análisis muestra que los objetivos (cuentas, plazoletas, tiendas, productos, organizaciones, fidelización) están cubiertos por RF-01…RF-10 y son trazables a las 25 tablas, 19 entidades, 7 BLoCs y páginas existentes. El stack **Flutter + Supabase + Firebase Auth + Hive + BLoC + R2/Supabase Storage** es el adecuado porque maximiza alcance nacional con mínimo costo y equipo, mantiene consistencia con la app web y deja abierta la evolución hacia pagos y envíos, que es donde la esencia —comerciantes de Santander vendiendo a todo el país— se completa.
 
 ---
 

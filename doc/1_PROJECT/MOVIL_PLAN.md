@@ -1,5 +1,8 @@
 # PLAN MÓVIL - App Cliente Paseo del Comercio
 
+> **Documento histórico (marzo 2026).** El plan vigente es
+> [`PLAN_IMPLEMENTACION_FASES.md`](./PLAN_IMPLEMENTACION_FASES.md).
+
 **Fecha:** Marzo 2026  
 **Estado:** Plan para implementación  
 **Objetivo:** App funcional para testing profesional (Android)

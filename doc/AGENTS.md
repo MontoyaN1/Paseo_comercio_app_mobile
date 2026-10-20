@@ -10,7 +10,9 @@ This file contains essential information for AI agents working on this Flutter p
 **State Management:** BLoC Pattern  
 **Database:** Supabase PostgreSQL + Hive local cache  
 **Authentication:** Firebase Auth + Google Sign In  
-**Image Storage:** Cloudflare R2 (primary) + Contabo S3 + Supabase Storage
+**Image Storage:** Cloudflare R2 (primary) + Supabase Storage (fallback)
+
+> **Plan normativo:** [`doc/1_PROJECT/PLAN_IMPLEMENTACION_FASES.md`](1_PROJECT/PLAN_IMPLEMENTACION_FASES.md). Contabo, Wompi y el modo invitado están fuera de alcance.
 
 ## 🚀 Build & Development Commands
 

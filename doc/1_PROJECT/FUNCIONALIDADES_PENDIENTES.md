@@ -1,5 +1,8 @@
 # FUNCIONALIDADES PENDIENTES
 
+> **Documento histórico (marzo 2026).** El plan vigente es
+> [`PLAN_IMPLEMENTACION_FASES.md`](./PLAN_IMPLEMENTACION_FASES.md).
+
 **Fecha:** Marzo 2026  
 **Estado del proyecto:** MVP Funcional - En fase de refinamiento  
 **Documento:** Catálogo de funcionalidades pendientes y postergadas  
